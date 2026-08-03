@@ -182,6 +182,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
         athleticism: prospect.athleticism, basketballIq: prospect.basketballIq,
         stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)),
         potential: prospect.potential, characterRating: prospect.characterRating,
+        disciplineRating: prospect.disciplineRating,
         eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4,
       },
     });
@@ -198,7 +199,8 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
-      characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
+      characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+      scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
       prioritiesJson: JSON.stringify(p.priorities),
     });
   }
@@ -210,7 +212,8 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
-      characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
+      characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+      scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
       prioritiesJson: JSON.stringify(p.priorities),
     });
   }
@@ -222,7 +225,8 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
-      characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
+      characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+      scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
       prioritiesJson: JSON.stringify(p.priorities),
     });
   }
@@ -244,7 +248,8 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)), potential: p.ratings.potential,
-      characterRating: p.ratings.characterRating, eligibilityYearsLeft: 4,
+      characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+      eligibilityYearsLeft: 4,
     }));
     if (rows.length > 0) await prisma.player.createMany({ data: rows });
   }

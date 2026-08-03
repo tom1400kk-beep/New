@@ -160,12 +160,15 @@ model Player {
 
   // Off-court
   characterRating  Int      // 1-100 locker room reputation; low = drama-prone
+  disciplineRating Int      @default(65) // 1-100 off-court judgment/legal risk; low = more incident-prone
   chemistryImpact  Int      @default(0) // computed modifier applied to team chemistry
 
   eligibilityYearsLeft Int  @default(4)
   inTransferPortal Boolean  @default(false)
   isInjured        Boolean  @default(false)
   injuryWeeksLeft  Int      @default(0)
+  isSuspended      Boolean  @default(false)
+  suspensionDaysLeft Int    @default(0)
 
   gameStats        PlayerGameStat[]
 
@@ -200,6 +203,7 @@ model Prospect {
   basketballIq     Int
   potential        Int
   characterRating  Int
+  disciplineRating Int      @default(65)
   scoutingNoise    Int      @default(10) // +/- uncertainty applied when displaying ratings to the user
 
   graduationYear   Int      // season year they become available to sign

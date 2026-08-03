@@ -58,7 +58,7 @@ export default function RecruitingPage() {
             <tr>
               <th>Name</th><th>Pos</th><th>Stars</th><th>Home</th><th>Source</th>
               <th>Priorities</th>
-              <th>Scoring</th><th>Defense</th><th>Character*</th><th>Interest</th><th>Points</th><th></th>
+              <th>Scoring</th><th>Defense</th><th>Character*</th><th>Discipline*</th><th>Interest</th><th>Points</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -73,6 +73,7 @@ export default function RecruitingPage() {
                 <td>{p.scouted.scoring}</td>
                 <td>{p.scouted.defense}</td>
                 <td>{p.scouted.characterRating}</td>
+                <td>{p.scouted.disciplineRating}</td>
                 <td>{p.interestLevel}</td>
                 <td>{p.pointsInvested}</td>
                 <td><button className="secondary" onClick={() => pursue(p.id)}>Pursue (15 pts)</button></td>

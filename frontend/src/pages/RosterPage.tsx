@@ -28,7 +28,7 @@ export default function RosterPage() {
           <thead>
             <tr>
               <th>Name</th><th>Pos</th><th>Home</th><th>Yr</th><th>OVR</th><th>Scoring</th><th>3PT</th><th>Finish</th>
-              <th>Playmaking</th><th>Rebounding</th><th>Defense</th><th>Character</th><th>Status</th>
+              <th>Playmaking</th><th>Rebounding</th><th>Defense</th><th>Character</th><th>Discipline</th><th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -48,7 +48,16 @@ export default function RosterPage() {
                 <td className={p.characterRating < 40 ? "text-bad" : p.characterRating > 75 ? "text-good" : ""}>
                   {p.characterRating}
                 </td>
-                <td>{p.isInjured ? `Injured (${p.injuryWeeksLeft}d)` : "Healthy"}</td>
+                <td className={p.disciplineRating < 40 ? "text-bad" : p.disciplineRating > 75 ? "text-good" : ""}>
+                  {p.disciplineRating}
+                </td>
+                <td>
+                  {p.isSuspended
+                    ? `Suspended (${p.suspensionDaysLeft}d)`
+                    : p.isInjured
+                    ? `Injured (${p.injuryWeeksLeft}d)`
+                    : "Healthy"}
+                </td>
               </tr>
             ))}
           </tbody>

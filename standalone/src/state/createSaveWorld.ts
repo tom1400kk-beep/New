@@ -83,8 +83,10 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
           playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
           athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
           stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)),
-          potential: p.ratings.potential, characterRating: p.ratings.characterRating, chemistryImpact: 0,
+          potential: p.ratings.potential, characterRating: p.ratings.characterRating,
+          disciplineRating: p.ratings.disciplineRating, chemistryImpact: 0,
           eligibilityYearsLeft: p.eligibilityYearsLeft, inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
+          isSuspended: false, suspensionDaysLeft: 0,
         });
       }
     }
@@ -132,7 +134,8 @@ function prospectFromGenerated(p: ReturnType<typeof generateHighSchoolProspect>)
     scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
     playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
     athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
-    characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
+    characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+    scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
     signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
   };
 }

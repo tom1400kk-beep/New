@@ -152,8 +152,10 @@ export function runOffseason(state: WorldState): OffseasonResult {
       playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
       athleticism: prospect.athleticism, basketballIq: prospect.basketballIq,
       stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)),
-      potential: prospect.potential, characterRating: prospect.characterRating, chemistryImpact: 0,
+      potential: prospect.potential, characterRating: prospect.characterRating,
+      disciplineRating: prospect.disciplineRating, chemistryImpact: 0,
       eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4, inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
+      isSuspended: false, suspensionDaysLeft: 0,
     });
   }
 
@@ -166,7 +168,8 @@ export function runOffseason(state: WorldState): OffseasonResult {
       countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
-      potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
+      potential: p.ratings.potential, characterRating: p.ratings.characterRating,
+      disciplineRating: p.ratings.disciplineRating, scoutingNoise: p.scoutingNoise,
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
@@ -177,7 +180,8 @@ export function runOffseason(state: WorldState): OffseasonResult {
       countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
-      potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
+      potential: p.ratings.potential, characterRating: p.ratings.characterRating,
+      disciplineRating: p.ratings.disciplineRating, scoutingNoise: p.scoutingNoise,
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
@@ -188,7 +192,8 @@ export function runOffseason(state: WorldState): OffseasonResult {
       countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
-      potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
+      potential: p.ratings.potential, characterRating: p.ratings.characterRating,
+      disciplineRating: p.ratings.disciplineRating, scoutingNoise: p.scoutingNoise,
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
@@ -208,8 +213,10 @@ export function runOffseason(state: WorldState): OffseasonResult {
         playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
         athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
         stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)), potential: p.ratings.potential,
-        characterRating: p.ratings.characterRating, chemistryImpact: 0, eligibilityYearsLeft: 4,
+        characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+        chemistryImpact: 0, eligibilityYearsLeft: 4,
         inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
+        isSuspended: false, suspensionDaysLeft: 0,
       });
     }
   }

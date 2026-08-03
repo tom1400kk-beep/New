@@ -54,13 +54,19 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
     if (weeksLeft <= 0) { p.isInjured = false; p.injuryWeeksLeft = 0; } else { p.injuryWeeksLeft = weeksLeft; }
   }
 
+  for (const p of state.players) {
+    if (!p.isSuspended) continue;
+    const daysLeft = p.suspensionDaysLeft - 1;
+    if (daysLeft <= 0) { p.isSuspended = false; p.suspensionDaysLeft = 0; } else { p.suspensionDaysLeft = daysLeft; }
+  }
+
   let generatedEvent: GameEventRow | null = null;
   if (state.save.coachTeamId) {
     const pendingCount = state.events.filter((e) => e.status === "PENDING").length;
     if (pendingCount === 0) {
       const rosterPlayers = state.players
         .filter((p) => p.teamId === state.save.coachTeamId)
-        .map((p) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, characterRating: p.characterRating, scoring: p.scoring, countryOfOrigin: p.countryOfOrigin }));
+        .map((p) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, characterRating: p.characterRating, disciplineRating: p.disciplineRating, scoring: p.scoring, countryOfOrigin: p.countryOfOrigin }));
       const chemistry = computeTeamChemistry(rosterPlayers);
       const phase: EventContext["phase"] = state.save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
       const ctx: EventContext = { teamId: state.save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5 };

@@ -128,6 +128,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
           stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)),
           potential: p.ratings.potential,
           characterRating: p.ratings.characterRating,
+          disciplineRating: p.ratings.disciplineRating,
           eligibilityYearsLeft: p.eligibilityYearsLeft,
         });
       }
@@ -215,6 +216,7 @@ function prospectFromGenerated(saveGameId: string, p: ReturnType<typeof generate
     basketballIq: p.ratings.basketballIq,
     potential: p.ratings.potential,
     characterRating: p.ratings.characterRating,
+    disciplineRating: p.ratings.disciplineRating,
     scoutingNoise: p.scoutingNoise,
     graduationYear: p.graduationYear,
     prioritiesJson: JSON.stringify(p.priorities),

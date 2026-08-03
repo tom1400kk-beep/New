@@ -18,6 +18,7 @@ export function playGames(state: WorldState, gameIds: string[]): void {
       id: p.id, position: p.position, scoring: p.scoring, threePoint: p.threePoint, finishing: p.finishing,
       playmaking: p.playmaking, rebounding: p.rebounding, defense: p.defense, athleticism: p.athleticism,
       basketballIq: p.basketballIq, characterRating: p.characterRating, isInjured: p.isInjured,
+      isSuspended: p.isSuspended,
     });
   }
 

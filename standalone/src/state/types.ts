@@ -81,11 +81,14 @@ export interface PlayerRow {
   stamina: number;
   potential: number;
   characterRating: number;
+  disciplineRating: number;
   chemistryImpact: number;
   eligibilityYearsLeft: number;
   inTransferPortal: boolean;
   isInjured: boolean;
   injuryWeeksLeft: number;
+  isSuspended: boolean;
+  suspensionDaysLeft: number;
 }
 
 export interface ProspectRow {
@@ -107,6 +110,7 @@ export interface ProspectRow {
   basketballIq: number;
   potential: number;
   characterRating: number;
+  disciplineRating: number;
   scoutingNoise: number;
   graduationYear: number;
   signed: boolean;

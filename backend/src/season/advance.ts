@@ -70,6 +70,16 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
     });
   }
 
+  // 2b. Suspension countdown ticks
+  const suspended = await prisma.player.findMany({ where: { saveGameId, isSuspended: true } });
+  for (const p of suspended) {
+    const daysLeft = p.suspensionDaysLeft - 1;
+    await prisma.player.update({
+      where: { id: p.id },
+      data: daysLeft <= 0 ? { isSuspended: false, suspensionDaysLeft: 0 } : { suspensionDaysLeft: daysLeft },
+    });
+  }
+
   // 3. Random event roll for the user's team (only if nothing pending)
   let generatedEvent: any = null;
   if (save.coachTeamId) {
@@ -77,7 +87,7 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
     if (pendingCount === 0) {
       const rosterPlayers = await prisma.player.findMany({
         where: { saveGameId, teamId: save.coachTeamId },
-        select: { id: true, firstName: true, lastName: true, characterRating: true, scoring: true, countryOfOrigin: true },
+        select: { id: true, firstName: true, lastName: true, characterRating: true, disciplineRating: true, scoring: true, countryOfOrigin: true },
       });
       const chemistry = computeTeamChemistry(rosterPlayers);
       const phase: EventContext["phase"] = save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";

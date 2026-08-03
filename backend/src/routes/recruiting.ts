@@ -63,6 +63,7 @@ recruitingRouter.get("/saves/:id/recruiting", async (req, res) => {
         defense: noisy(rng, p.defense, p.scoutingNoise),
         athleticism: noisy(rng, p.athleticism, p.scoutingNoise),
         characterRating: noisy(rng, p.characterRating, p.scoutingNoise + 5),
+        disciplineRating: noisy(rng, p.disciplineRating, p.scoutingNoise + 8),
       },
       interestLevel: interest?.interestLevel ?? 0,
       pointsInvested: interest?.pointsInvested ?? 0,

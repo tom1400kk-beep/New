@@ -3,7 +3,7 @@ import { clamp } from "./rng";
 export interface EventContext {
   teamId: string;
   players: {
-    id: string; firstName: string; lastName: string; characterRating: number; scoring: number;
+    id: string; firstName: string; lastName: string; characterRating: number; disciplineRating: number; scoring: number;
     countryOfOrigin: string | null;
   }[];
   chemistry: number; // 0-100
@@ -26,6 +26,7 @@ export interface EventEffects {
   playerCharacterDelta?: number;
   injuryWeeks?: number;
   removePlayer?: boolean; // player leaves team (transfer out)
+  suspensionDays?: number;
 }
 
 export interface GeneratedEvent {
@@ -44,6 +45,24 @@ function pickWeightedPlayer(
   if (players.length === 0) return null;
   if (!favorLowCharacter) return players[Math.floor(rng() * players.length)];
   const weights = players.map((p) => ({ item: p, weight: Math.max(1, 100 - p.characterRating) }));
+  const total = weights.reduce((s, w) => s + w.weight, 0);
+  let r = rng() * total;
+  for (const w of weights) {
+    r -= w.weight;
+    if (r <= 0) return w.item;
+  }
+  return players[players.length - 1];
+}
+
+// Weighted toward low disciplineRating — poor off-court judgment makes legal
+// trouble more likely, independent of how good a locker-room presence the
+// player otherwise is (a well-liked player can still make a bad decision).
+function pickWeightedByLowDiscipline(
+  rng: () => number,
+  players: EventContext["players"],
+): EventContext["players"][number] | null {
+  if (players.length === 0) return null;
+  const weights = players.map((p) => ({ item: p, weight: Math.max(1, 105 - p.disciplineRating) ** 2 }));
   const total = weights.reduce((s, w) => s + w.weight, 0);
   let r = rng() * total;
   for (const w of weights) {
@@ -243,6 +262,53 @@ const TEMPLATES: Template[] = [
             label: "Leave it to them",
             description: "Risk losing them for a stretch of the season.",
             effects: { injuryWeeks: rng() < 0.3 ? 3 : 0 },
+          },
+        ],
+      };
+    },
+  },
+  {
+    type: "ARREST",
+    phase: "ANY",
+    baseWeight: 2,
+    weightModifier: (ctx) => {
+      const riskiest = Math.min(...ctx.players.map((p) => p.disciplineRating));
+      if (riskiest < 35) return 2.4;
+      if (riskiest < 55) return 1.3;
+      if (riskiest < 75) return 0.5;
+      return 0.15;
+    },
+    generate: (rng, ctx) => {
+      const p = pickWeightedByLowDiscipline(rng, ctx.players)!;
+      return {
+        type: "ARREST",
+        title: `${p.firstName} ${p.lastName} arrested`,
+        description: `${p.firstName} ${p.lastName} was arrested overnight on a misdemeanor charge after an off-campus incident. It's already circulating on social media and local news has picked it up. The administration is waiting on you to decide how the program responds.`,
+        playerId: p.id,
+        options: [
+          {
+            id: "suspend_indefinite",
+            label: "Suspend indefinitely pending the investigation",
+            description: "Hold them out until the legal process resolves. Costs you the player for a while, but shows standards.",
+            effects: { suspensionDays: 21, chemistryDelta: 3, prestigeDelta: 1, hotSeatDelta: -2 },
+          },
+          {
+            id: "suspend_games",
+            label: "Suspend a few games",
+            description: "A short, defined suspension while things play out — a middle-ground response.",
+            effects: { suspensionDays: 7, chemistryDelta: 1 },
+          },
+          {
+            id: "stand_by",
+            label: "Stand by the player, no suspension",
+            description: "Keep them available. Protects your roster, but the optics are bad if it becomes a bigger story.",
+            effects: { hotSeatDelta: 5, prestigeDelta: -3, chemistryDelta: -4 },
+          },
+          {
+            id: "dismiss",
+            label: "Dismiss them from the team",
+            description: "Cut ties entirely. Opens a scholarship spot and sends a clear message, but you lose the player for good.",
+            effects: { removePlayer: true, chemistryDelta: 3, prestigeDelta: 2, hotSeatDelta: -3 },
           },
         ],
       };

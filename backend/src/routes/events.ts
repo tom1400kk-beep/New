@@ -56,6 +56,10 @@ async function applyEffects(saveGameId: string, teamId: string | null, playerId:
         data.isInjured = true;
         data.injuryWeeksLeft = effects.injuryWeeks * 7;
       }
+      if (effects.suspensionDays) {
+        data.isSuspended = true;
+        data.suspensionDaysLeft = effects.suspensionDays;
+      }
       if (effects.removePlayer) data.teamId = null;
       if (Object.keys(data).length > 0) {
         await prisma.player.update({ where: { id: player.id }, data });

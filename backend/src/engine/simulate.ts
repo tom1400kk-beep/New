@@ -14,6 +14,7 @@ export interface SimPlayer {
   basketballIq: number;
   characterRating: number;
   isInjured: boolean;
+  isSuspended: boolean;
 }
 
 export interface SimTeam {
@@ -63,7 +64,7 @@ function overall(p: SimPlayer): number {
 const MINUTES_CURVE = [34, 32, 30, 28, 24, 18, 14, 10, 10];
 
 function buildRotation(players: SimPlayer[]): { player: SimPlayer; minutes: number }[] {
-  const available = players.filter((p) => !p.isInjured);
+  const available = players.filter((p) => !p.isInjured && !p.isSuspended);
   const sorted = [...available].sort((a, b) => overall(b) - overall(a));
   const rotation = sorted.slice(0, Math.min(9, sorted.length));
   return rotation.map((player, i) => ({ player, minutes: MINUTES_CURVE[i] ?? 6 }));

@@ -21,7 +21,7 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
     select: {
       id: true, teamId: true, position: true, scoring: true, threePoint: true, finishing: true,
       playmaking: true, rebounding: true, defense: true, athleticism: true, basketballIq: true,
-      characterRating: true, isInjured: true,
+      characterRating: true, isInjured: true, isSuspended: true,
     },
   });
 
@@ -33,6 +33,7 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
       id: p.id, position: p.position, scoring: p.scoring, threePoint: p.threePoint, finishing: p.finishing,
       playmaking: p.playmaking, rebounding: p.rebounding, defense: p.defense, athleticism: p.athleticism,
       basketballIq: p.basketballIq, characterRating: p.characterRating, isInjured: p.isInjured,
+      isSuspended: p.isSuspended,
     });
   }
 

@@ -38,7 +38,7 @@ export interface RecruitingBoardEntry {
   topPriorities: PriorityKey[];
   scouted: {
     scoring: number; threePoint: number; finishing: number; playmaking: number;
-    rebounding: number; defense: number; athleticism: number; characterRating: number;
+    rebounding: number; defense: number; athleticism: number; characterRating: number; disciplineRating: number;
   };
   interestLevel: number;
   pointsInvested: number;
@@ -65,6 +65,7 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
           finishing: noisy(rng, p.finishing, p.scoutingNoise), playmaking: noisy(rng, p.playmaking, p.scoutingNoise),
           rebounding: noisy(rng, p.rebounding, p.scoutingNoise), defense: noisy(rng, p.defense, p.scoutingNoise),
           athleticism: noisy(rng, p.athleticism, p.scoutingNoise), characterRating: noisy(rng, p.characterRating, p.scoutingNoise + 5),
+          disciplineRating: noisy(rng, p.disciplineRating, p.scoutingNoise + 8),
         },
         interestLevel: interest?.interestLevel ?? 0, pointsInvested: interest?.pointsInvested ?? 0, offered: interest?.offered ?? false,
       };
@@ -162,6 +163,7 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
     if (player) {
       if (effects.playerCharacterDelta) player.characterRating = Math.round(clamp(player.characterRating + effects.playerCharacterDelta, 5, 99));
       if (effects.injuryWeeks) { player.isInjured = true; player.injuryWeeksLeft = effects.injuryWeeks * 7; }
+      if (effects.suspensionDays) { player.isSuspended = true; player.suspensionDaysLeft = effects.suspensionDays; }
       if (effects.removePlayer) player.teamId = null;
     }
   }

@@ -45,6 +45,7 @@ const SKILL_KEYS: SkillKey[] = [
 export interface GeneratedRatings extends Record<SkillKey, number> {
   potential: number;
   characterRating: number;
+  disciplineRating: number;
   heightInches: number;
 }
 
@@ -82,7 +83,12 @@ export function generateRatings(
   const characterVariance = 14 + (starTier - 1) * 3;
   const characterRating = Math.round(clamp(randNormal(rng, 62, characterVariance), 5, 99));
 
-  return { ...skills, potential, characterRating, heightInches: heightForPosition(rng, position) };
+  // Discipline (off-court judgment/legal risk) is related to but distinct from
+  // character (locker-room fit) — a great teammate can still have poor impulse
+  // control, and a locker-room pain can otherwise stay out of trouble.
+  const disciplineRating = Math.round(clamp(randNormal(rng, characterRating * 0.4 + 39, 20), 5, 99));
+
+  return { ...skills, potential, characterRating, disciplineRating, heightInches: heightForPosition(rng, position) };
 }
 
 export interface GeneratedProspect {
