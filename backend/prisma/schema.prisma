@@ -72,6 +72,7 @@ model Team {
   academicReputation Int      @default(55) // 1-100, independent of prestige
   baseSalary         Int      @default(300000) // annual head coach salary this program pays, in dollars
   venueCapacity      Int      @default(5000) // home arena seating capacity
+  arenaUpgradeRequestedThisSeason Boolean @default(false) // reset each offseason
   isPlayerControlled Boolean  @default(false)
 
   players           Player[]

@@ -115,7 +115,8 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 
       teams.push({
         id: teamId, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity, isPlayerControlled,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity,
+        arenaUpgradeRequestedThisSeason: false, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
       pendingTeams.push({ id: teamId, conferenceId });

@@ -129,4 +129,10 @@ export const api = {
     await persistence.persistSave(state);
     return result;
   },
+  upgradeArena: async (saveId: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.upgradeArena(state);
+    await persistence.persistSave(state);
+    return result;
+  },
 };

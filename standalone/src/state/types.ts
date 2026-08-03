@@ -33,6 +33,7 @@ export interface TeamRow {
   academicReputation: number;
   baseSalary: number;
   venueCapacity: number;
+  arenaUpgradeRequestedThisSeason: boolean;
   isPlayerControlled: boolean;
   headCoachId: string;
   athleticDirectorId: string;

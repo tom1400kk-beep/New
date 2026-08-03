@@ -53,4 +53,5 @@ export const api = {
   requestRaise: (saveId: string) => request<any>(`/saves/${saveId}/request-raise`, { method: "POST" }),
   resignAndAccept: (saveId: string, teamId: string) =>
     request<any>(`/saves/${saveId}/resign-and-accept`, { method: "POST", body: JSON.stringify({ teamId }) }),
+  upgradeArena: (saveId: string) => request<any>(`/saves/${saveId}/upgrade-arena`, { method: "POST" }),
 };

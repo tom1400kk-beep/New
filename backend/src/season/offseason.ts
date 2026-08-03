@@ -151,7 +151,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       });
     }
 
-    await prisma.team.update({ where: { id: team.id }, data: { prestige: newPrestige } });
+    await prisma.team.update({ where: { id: team.id }, data: { prestige: newPrestige, arenaUpgradeRequestedThisSeason: false } });
   }
 
   // ---- Athletic director turnover: ~7-year average tenure (memoryless yearly

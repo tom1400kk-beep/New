@@ -9,11 +9,12 @@ import { COACH_ARCHETYPES, type CoachArchetype } from "../engine/coachArchetypes
 import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrounds";
 import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
-import { meetsLegalityBar } from "../engine/career";
+import { meetsLegalityBar, expectedWinPct } from "../engine/career";
 import { parseAdRelationships, adRelationshipScore, updateAdRelationship } from "../engine/athleticDirector";
 import { EUROPEAN_COUNTRIES } from "../engine/countries";
 import { mulberry32, clamp } from "../engine/rng";
 import { costOfLivingIndex } from "../engine/costOfLiving";
+import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import { randomFirstName, randomLastName } from "../engine/names";
 import type { Division } from "../types";
@@ -137,7 +138,18 @@ savesRouter.get("/saves/:id/dashboard", async (req, res) => {
   const adRelationships = team.headCoach ? parseAdRelationships(team.headCoach.adRelationshipsJson) : {};
   const adPerception = team.athleticDirector ? adRelationshipScore(adRelationships, team.athleticDirector.id) : null;
 
-  res.json({ save, team: { ...team, costOfLivingIndex: costOfLivingIndex(team.state), adPerception }, record, nextGame, pendingEvents });
+  const homeGames = await prisma.game.findMany({
+    where: { saveGameId: save.id, seasonYear: save.currentSeasonYear, homeTeamId: team.id, isPlayed: true, attendance: { not: null } },
+  });
+  const avgTurnoutPct = homeGames.length >= 3
+    ? Math.round((homeGames.reduce((s, g) => s + (g.attendance ?? 0), 0) / homeGames.length / team.venueCapacity) * 100)
+    : null;
+
+  res.json({
+    save,
+    team: { ...team, costOfLivingIndex: costOfLivingIndex(team.state), adPerception, avgTurnoutPct, homeGamesPlayedThisSeason: homeGames.length },
+    record, nextGame, pendingEvents,
+  });
 });
 
 savesRouter.get("/saves/:id/job-offers", async (req, res) => {
@@ -292,6 +304,62 @@ savesRouter.post("/saves/:id/resign-and-accept", async (req, res) => {
 
   await prisma.saveGame.update({ where: { id: save.id }, data: { coachTeamId: teamId, currentPhase: "PRESEASON" } });
   res.json({ ok: true, newSalary: negotiatedSalary });
+});
+
+// Whether the AD signs off on expanding the arena — gated on team success
+// (record vs. what's expected for this prestige level), the building
+// actually generating box-office demand right now ("making money"), and how
+// receptive this specific AD is, in general and toward this coach.
+savesRouter.post("/saves/:id/upgrade-arena", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (!save.coachTeamId) return res.status(400).json({ error: "Not currently employed" });
+  const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { headCoach: true, athleticDirector: true } });
+  const coach = team.headCoach;
+  if (!coach) return res.status(400).json({ error: "No coach on this team" });
+  if (team.arenaUpgradeRequestedThisSeason) return res.status(400).json({ error: "Already asked the AD about the arena this season" });
+  if (isArenaNearCap(team.venueCapacity, team.division as Division)) {
+    return res.status(400).json({ error: "The arena is already about as big as this level of program supports" });
+  }
+
+  const standings = await computeStandings(save.id, save.currentSeasonYear);
+  const record = standings.get(team.id);
+  const gamesPlayed = record ? record.wins + record.losses : 0;
+  const seasonWinPct = gamesPlayed >= 3 && record ? winPct(record) : null;
+
+  const homeGames = await prisma.game.findMany({
+    where: { saveGameId: save.id, seasonYear: save.currentSeasonYear, homeTeamId: team.id, isPlayed: true, attendance: { not: null } },
+  });
+  const avgTurnoutPct = homeGames.length >= 3
+    ? (homeGames.reduce((s, g) => s + (g.attendance ?? 0), 0) / homeGames.length / team.venueCapacity) * 100
+    : null;
+
+  const relationships = parseAdRelationships(coach.adRelationshipsJson);
+  const relScore = team.athleticDirector ? adRelationshipScore(relationships, team.athleticDirector.id) : undefined;
+
+  const grantChance = arenaUpgradeGrantChance({
+    prestige: team.prestige, division: team.division as Division, expectedWinPct: expectedWinPct(team.prestige),
+    seasonWinPct, avgTurnoutPct, adWinFocus: team.athleticDirector?.winFocus, adRelationshipScore: relScore,
+  });
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const granted = rng() < grantChance;
+  const oldCapacity = team.venueCapacity;
+  const newCapacity = granted ? nextArenaCapacity(rng, team.venueCapacity, team.division as Division) : team.venueCapacity;
+
+  await prisma.team.update({
+    where: { id: team.id },
+    data: {
+      venueCapacity: newCapacity,
+      arenaUpgradeRequestedThisSeason: true,
+      facilitiesRating: granted ? Math.round(clamp(team.facilitiesRating + 3 + rng() * 5, 10, 99)) : team.facilitiesRating,
+    },
+  });
+  if (granted && team.athleticDirector) {
+    const updated = { ...relationships, [team.athleticDirector.id]: Math.round(clamp((relScore ?? 50) + 2, 5, 99)) };
+    await prisma.coach.update({ where: { id: coach.id }, data: { adRelationshipsJson: JSON.stringify(updated) } });
+  }
+
+  res.json({ granted, oldCapacity, newCapacity, avgTurnoutPct, seasonWinPct });
 });
 
 savesRouter.post("/saves/:id/advance", async (req, res) => {

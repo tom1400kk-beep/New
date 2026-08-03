@@ -144,6 +144,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     }
 
     team.prestige = newPrestige;
+    team.arenaUpgradeRequestedThisSeason = false;
   }
 
   // Athletic director turnover: ~7-year average tenure (memoryless yearly

@@ -2,10 +2,12 @@ import { computeInterestGain, weeklyRecruitingPoints, type RecruitingProspectInp
 import { PRIORITY_KEYS, topPriorities, type PriorityKey, type PriorityProfile } from "../engine/priorities";
 import { clamp, randInt, mulberry32 } from "../engine/rng";
 import type { EventEffects, EventOption } from "../engine/events";
-import { meetsLegalityBar } from "../engine/career";
+import { meetsLegalityBar, expectedWinPct } from "../engine/career";
 import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { costOfLivingIndex } from "../engine/costOfLiving";
+import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
+import type { Division } from "../types";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { computeStandings, winPct } from "./standings";
@@ -367,4 +369,54 @@ export function resignAndAccept(state: WorldState, teamId: string) {
   state.save.coachTeamId = teamId;
   state.save.currentPhase = "PRESEASON";
   return { ok: true, newSalary: negotiatedSalary };
+}
+
+// Whether the AD signs off on expanding the arena — gated on team success
+// (record vs. what's expected for this prestige level), the building
+// actually generating box-office demand right now ("making money"), and how
+// receptive this specific AD is, in general and toward this coach.
+export function upgradeArena(state: WorldState) {
+  if (!state.save.coachTeamId) throw new Error("Not currently employed");
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) throw new Error("Team not found");
+  const coach = state.coaches.find((c) => c.id === team.headCoachId);
+  if (!coach) throw new Error("No coach on this team");
+  if (team.arenaUpgradeRequestedThisSeason) throw new Error("Already asked the AD about the arena this season");
+  if (isArenaNearCap(team.venueCapacity, team.division as Division)) {
+    throw new Error("The arena is already about as big as this level of program supports");
+  }
+
+  const standings = computeStandings(state, state.save.currentSeasonYear);
+  const record = standings.get(team.id);
+  const gamesPlayed = record ? record.wins + record.losses : 0;
+  const seasonWinPct = gamesPlayed >= 3 && record ? winPct(record) : null;
+
+  const homeGames = state.games.filter((g) => g.seasonYear === state.save.currentSeasonYear && g.homeTeamId === team.id && g.isPlayed && g.attendance != null);
+  const avgTurnoutPct = homeGames.length >= 3
+    ? (homeGames.reduce((s, g) => s + (g.attendance ?? 0), 0) / homeGames.length / team.venueCapacity) * 100
+    : null;
+
+  const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+  const relationships = parseAdRelationships(coach.adRelationshipsJson);
+  const relScore = ad ? adRelationshipScore(relationships, ad.id) : undefined;
+
+  const grantChance = arenaUpgradeGrantChance({
+    prestige: team.prestige, division: team.division as Division, expectedWinPct: expectedWinPct(team.prestige),
+    seasonWinPct, avgTurnoutPct, adWinFocus: ad?.winFocus, adRelationshipScore: relScore,
+  });
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const granted = rng() < grantChance;
+  const oldCapacity = team.venueCapacity;
+
+  team.arenaUpgradeRequestedThisSeason = true;
+  if (granted) {
+    team.venueCapacity = nextArenaCapacity(rng, team.venueCapacity, team.division as Division);
+    team.facilitiesRating = Math.round(clamp(team.facilitiesRating + 3 + rng() * 5, 10, 99));
+    if (ad) {
+      coach.adRelationshipsJson = JSON.stringify({ ...relationships, [ad.id]: Math.round(clamp((relScore ?? 50) + 2, 5, 99)) });
+    }
+  }
+
+  return { granted, oldCapacity, newCapacity: team.venueCapacity, avgTurnoutPct, seasonWinPct };
 }

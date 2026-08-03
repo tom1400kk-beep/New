@@ -32,9 +32,17 @@ export function getDashboard(state: WorldState) {
   const adRelationships = parseAdRelationships(headCoach.adRelationshipsJson);
   const adPerception = athleticDirector ? adRelationshipScore(adRelationships, athleticDirector.id) : null;
 
+  const homeGames = state.games.filter((g) => g.seasonYear === save.currentSeasonYear && g.homeTeamId === team.id && g.isPlayed && g.attendance != null);
+  const avgTurnoutPct = homeGames.length >= 3
+    ? Math.round((homeGames.reduce((s, g) => s + (g.attendance ?? 0), 0) / homeGames.length / team.venueCapacity) * 100)
+    : null;
+
   return {
     save,
-    team: { ...team, headCoach, conference, athleticDirector, costOfLivingIndex: costOfLivingIndex(team.state), adPerception },
+    team: {
+      ...team, headCoach, conference, athleticDirector, costOfLivingIndex: costOfLivingIndex(team.state), adPerception,
+      avgTurnoutPct, homeGamesPlayedThisSeason: homeGames.length,
+    },
     record, nextGame: nextGameOut, pendingEvents,
   };
 }

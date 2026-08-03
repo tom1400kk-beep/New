@@ -89,6 +89,8 @@ export default function DashboardPage() {
   const [askingRaise, setAskingRaise] = useState(false);
   const [marketOpen, setMarketOpen] = useState(false);
   const [marketLoading, setMarketLoading] = useState(false);
+  const [arenaResult, setArenaResult] = useState<any>(null);
+  const [upgradingArena, setUpgradingArena] = useState(false);
 
   async function refresh() {
     if (!activeSaveId) return;
@@ -120,6 +122,7 @@ export default function DashboardPage() {
       const result = await api.advance(activeSaveId);
       setLastResult(result);
       setRaiseResult(null);
+      setArenaResult(null);
       await refresh();
     } finally {
       setAdvancing(false);
@@ -147,6 +150,20 @@ export default function DashboardPage() {
       await refresh();
     } finally {
       setAskingRaise(false);
+    }
+  }
+
+  async function handleUpgradeArena() {
+    if (!activeSaveId) return;
+    setUpgradingArena(true);
+    try {
+      const result = await api.upgradeArena(activeSaveId);
+      setArenaResult(result);
+      await refresh();
+    } catch (err: any) {
+      setArenaResult({ granted: false, error: err.message });
+    } finally {
+      setUpgradingArena(false);
     }
   }
 
@@ -312,6 +329,28 @@ export default function DashboardPage() {
             {raiseResult.granted
               ? `Raise granted! New salary: ${fmtMoney(raiseResult.newSalary)}/yr`
               : "The AD turned you down. Maybe it's time to test the waters elsewhere."}
+          </p>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Facilities</h3>
+        <p>
+          Arena capacity: <strong>{team.venueCapacity.toLocaleString()}</strong>
+          {team.avgTurnoutPct != null
+            ? <span className="text-muted"> · averaging {team.avgTurnoutPct}% full this season ({team.homeGamesPlayedThisSeason} home games)</span>
+            : <span className="text-muted"> · not enough home games played yet this season to gauge demand</span>}
+        </p>
+        <button onClick={handleUpgradeArena} disabled={upgradingArena || team.arenaUpgradeRequestedThisSeason}>
+          {team.arenaUpgradeRequestedThisSeason ? "Already asked this season" : upgradingArena ? "Asking..." : "Ask AD to Expand Arena"}
+        </button>
+        {arenaResult && (
+          <p className={arenaResult.granted ? "text-good" : "text-bad"} style={{ marginTop: 8 }}>
+            {arenaResult.error
+              ? arenaResult.error
+              : arenaResult.granted
+                ? `Approved! New capacity: ${arenaResult.newCapacity.toLocaleString()} (up from ${arenaResult.oldCapacity.toLocaleString()})`
+                : "The AD isn't convinced it pays for itself right now — build a stronger case with wins and attendance."}
           </p>
         )}
       </div>
