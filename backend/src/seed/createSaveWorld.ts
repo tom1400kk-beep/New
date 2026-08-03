@@ -9,12 +9,16 @@ import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
+import { generateCoachSkills, randomArchetype, type CoachArchetype } from "../engine/coachArchetypes";
+import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 
 export interface CreateSaveInput {
   saveName: string;
   division: Division;
   teamSchoolName: string;
   coachName: string;
+  coachArchetype?: CoachArchetype;
+  coachBackground?: CoachBackground | null;
 }
 
 export interface CreateSaveResult {
@@ -24,6 +28,9 @@ export interface CreateSaveResult {
 
 export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSaveResult> {
   const { saveName, division, teamSchoolName, coachName } = input;
+  const chosenArchetype: CoachArchetype = input.coachArchetype ?? "PROGRAM_BUILDER";
+  const chosenBackground: CoachBackground | null = input.coachBackground ?? null;
+  const backgroundProfile = getBackgroundProfile(chosenBackground);
   const league = loadLeagueData(division);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
@@ -54,6 +61,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const coachRows: {
     id: string; saveGameId: string; name: string; isPlayerControlled: boolean; reputation: number;
     hotSeatLevel: number; offenseSkill: number; defenseSkill: number; recruitingSkill: number; developmentSkill: number;
+    archetype: string; background: string | null;
   }[] = [];
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
@@ -76,23 +84,30 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       const isPlayerControlled = member.school === teamSchoolName;
       if (isPlayerControlled) foundChosenTeam = true;
 
-      const skillMean = 45 + prestige * 0.2;
+      const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
+      const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
+      const skills = generateCoachSkills(rng, prestige, archetype, isPlayerControlled ? backgroundProfile?.deltas : undefined);
       coachRows.push({
         id: coachId,
         saveGameId: saveGame.id,
         name: isPlayerControlled ? coachName : `${randomFirstName(rng)} ${randomLastName(rng)}`,
         isPlayerControlled,
-        reputation: Math.round(clamp(randNormal(rng, prestige * 0.6 + 15, 12), 5, 95)),
+        reputation: skills.reputation,
         hotSeatLevel: 0,
-        offenseSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        defenseSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        recruitingSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        developmentSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
+        offenseSkill: skills.offenseSkill,
+        defenseSkill: skills.defenseSkill,
+        recruitingSkill: skills.recruitingSkill,
+        developmentSkill: skills.developmentSkill,
+        archetype,
+        background,
       });
 
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
-      const internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
+      let internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
+      if (isPlayerControlled && chosenBackground === "INTERNATIONAL_SCOUT") {
+        internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 25, 5, 99));
+      }
       const academicReputation = academicReputationForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 

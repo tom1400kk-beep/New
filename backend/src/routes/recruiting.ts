@@ -125,6 +125,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     hotSeatLevel: team.headCoach?.hotSeatLevel ?? 0,
     recentWinPct,
     roster: team.players.map((p) => ({ position: p.position, overall: playerOverall(p), characterRating: p.characterRating })),
+    coachBackground: team.headCoach?.background ?? null,
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);

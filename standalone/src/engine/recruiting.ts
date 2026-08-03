@@ -51,6 +51,7 @@ export interface RecruitingTeamInput {
   hotSeatLevel: number;
   recentWinPct: number; // 0-1; caller should fall back to prestige/100 pre-season
   roster: RecruitingRosterPlayer[];
+  coachBackground?: string | null;
 }
 
 // Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
@@ -118,7 +119,17 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   const resourceLevel = team.prestige * 0.6 + nilPullFactor(team.nilBudget) * 0.4;
   const difficultyPenalty = Math.max(0, prospect.starRating * 6 - resourceLevel * 0.15);
 
-  const base = pointsInvested * 0.55 + fitScore * 0.45 + internationalReach - difficultyPenalty;
+  let base = pointsInvested * 0.55 + fitScore * 0.45 + internationalReach - difficultyPenalty;
+
+  // Background perks: a coach's own history gives a specific, narrow edge on
+  // top of general fit — not a blanket recruiting boost.
+  if (team.coachBackground === "HIGH_SCHOOL_COACH" && !isInternational && prospect.hometownState === team.state) {
+    base *= 1.12; // "Home Turf" — deep local ties from running a powerhouse HS program here
+  }
+  if (team.coachBackground === "BLUE_BLOOD_ASSISTANT" && prospect.starRating >= 4) {
+    base *= 1.1; // "Big-Time Pedigree" — blue-chips recognize the résumé
+  }
+
   return clamp(base, 0, 100);
 }
 

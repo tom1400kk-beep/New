@@ -7,6 +7,7 @@ import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { commitmentWeights } from "../engine/recruiting";
+import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import type { ClassYear, Division } from "../types";
 import { DIVISION_RULES } from "../types";
 
@@ -48,10 +49,10 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const { made, wins } = await tournamentWinsForTeam(saveGameId, seasonYear, team.id);
 
-    const newHotSeat = updateHotSeat(team.headCoach.hotSeatLevel, record.wins, record.losses, team.prestige);
+    const newHotSeat = updateHotSeat(team.headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, team.headCoach.archetype);
     const fired = shouldFire(newHotSeat, rng);
     const newReputation = updateReputation(team.headCoach.reputation, record.wins, record.losses, made, wins, fired);
-    const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins);
+    const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, team.headCoach.background);
 
     if (team.headCoach.isPlayerControlled) {
       userTeamId = team.id;
@@ -62,13 +63,16 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
 
     if (fired) {
       vacancies.push({ teamId: team.id, prestige: newPrestige });
-      const skillMean = 45 + team.prestige * 0.2;
+      const replacementArchetype = randomArchetype(rng);
+      const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
       const replacementSkills = {
-        reputation: Math.round(clamp(randNormal(rng, team.prestige * 0.5 + 15, 12), 5, 90)),
-        offenseSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        defenseSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        recruitingSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        developmentSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
+        reputation: replacementSkillRoll.reputation,
+        offenseSkill: replacementSkillRoll.offenseSkill,
+        defenseSkill: replacementSkillRoll.defenseSkill,
+        recruitingSkill: replacementSkillRoll.recruitingSkill,
+        developmentSkill: replacementSkillRoll.developmentSkill,
+        archetype: replacementArchetype,
+        background: null as string | null,
       };
       if (team.headCoach.isPlayerControlled) {
         // Bench the user's coach (identity + career stats persist) rather than

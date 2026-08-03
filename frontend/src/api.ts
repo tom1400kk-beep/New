@@ -15,11 +15,14 @@ async function request<T>(path: string, opts?: RequestInit): Promise<T> {
 
 export const api = {
   listSaves: () => request<any[]>("/saves"),
-  createSave: (data: { name: string; division: string; teamSchoolName: string; coachName: string }) =>
-    request<any>("/saves", { method: "POST", body: JSON.stringify(data) }),
+  createSave: (data: {
+    name: string; division: string; teamSchoolName: string; coachName: string;
+    coachArchetype?: string; coachBackground?: string | null;
+  }) => request<any>("/saves", { method: "POST", body: JSON.stringify(data) }),
   deleteSave: (id: string) => request<void>(`/saves/${id}`, { method: "DELETE" }),
 
   listLeagueTeams: (division: string) => request<any[]>(`/league-teams?division=${division}`),
+  getCoachOptions: () => request<any>("/coach-options"),
 
   getDashboard: (saveId: string) => request<any>(`/saves/${saveId}/dashboard`),
   getRoster: (saveId: string) => request<any[]>(`/saves/${saveId}/roster`),

@@ -3,6 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 
+const SKILL_LABELS: Record<string, string> = {
+  offenseSkill: "Offense", defenseSkill: "Defense", recruitingSkill: "Recruiting",
+  developmentSkill: "Development", reputation: "Reputation",
+};
+
+function formatDeltas(deltas: Record<string, number>): string {
+  return Object.entries(deltas)
+    .map(([k, v]) => `${v > 0 ? "+" : ""}${v} ${SKILL_LABELS[k] ?? k}`)
+    .join(" · ");
+}
+
 export default function SaveSelectPage() {
   const navigate = useNavigate();
   const { setActiveSaveId } = useSave();
@@ -19,10 +30,21 @@ export default function SaveSelectPage() {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [archetypes, setArchetypes] = useState<any[]>([]);
+  const [backgrounds, setBackgrounds] = useState<any[]>([]);
+  const [coachArchetype, setCoachArchetype] = useState("");
+  const [coachBackground, setCoachBackground] = useState("");
+
   useEffect(() => {
     api.listSaves().then((s) => {
       setSaves(s);
       setLoading(false);
+    });
+    api.getCoachOptions().then((opts: any) => {
+      setArchetypes(opts.archetypes);
+      setBackgrounds(opts.backgrounds);
+      setCoachArchetype(opts.archetypes[0]?.key ?? "");
+      setCoachBackground(opts.backgrounds[0]?.key ?? "");
     });
   }, []);
 
@@ -43,7 +65,7 @@ export default function SaveSelectPage() {
     setError(null);
     setCreating(true);
     try {
-      const save = await api.createSave({ name, division, teamSchoolName, coachName });
+      const save = await api.createSave({ name, division, teamSchoolName, coachName, coachArchetype, coachBackground });
       setActiveSaveId(save.id);
       navigate("/dashboard");
     } catch (e: any) {
@@ -113,8 +135,43 @@ export default function SaveSelectPage() {
             ))}
           </select>
         </p>
-        {error && <p className="text-bad">{error}</p>}
-        <button onClick={handleCreate} disabled={creating}>
+        <p>
+          <label>Coaching philosophy</label>
+        </p>
+        <div className="option-grid">
+          {archetypes.map((a) => (
+            <div
+              key={a.key}
+              className={`option-card${coachArchetype === a.key ? " selected" : ""}`}
+              onClick={() => setCoachArchetype(a.key)}
+            >
+              <div className="option-title">{a.label}</div>
+              <div className="option-desc">{a.description}</div>
+              <div className="option-deltas">{formatDeltas(a.deltas)}</div>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ marginTop: 16 }}>
+          <label>Your past</label>
+        </p>
+        <div className="option-grid">
+          {backgrounds.map((b) => (
+            <div
+              key={b.key}
+              className={`option-card${coachBackground === b.key ? " selected" : ""}`}
+              onClick={() => setCoachBackground(b.key)}
+            >
+              <div className="option-title">{b.label}</div>
+              <div className="option-desc">{b.description}</div>
+              <div className="option-deltas">{formatDeltas(b.deltas)}</div>
+              <div className="option-perk">{b.perkLabel}: {b.perkDescription}</div>
+            </div>
+          ))}
+        </div>
+
+        {error && <p className="text-bad" style={{ marginTop: 12 }}>{error}</p>}
+        <button style={{ marginTop: 16 }} onClick={handleCreate} disabled={creating}>
           {creating ? "Building league..." : "Start Career"}
         </button>
       </div>

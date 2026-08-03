@@ -4,9 +4,15 @@ import { createSaveWorld } from "../seed/createSaveWorld";
 import { loadLeagueData, prestigeTierToScore, divisionDataAvailable } from "../seed/leagueData";
 import { advanceOneDay } from "../season/advance";
 import { computeStandings, winPct } from "../season/standings";
+import { COACH_ARCHETYPES, type CoachArchetype } from "../engine/coachArchetypes";
+import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrounds";
 import type { Division } from "../types";
 
 export const savesRouter = Router();
+
+savesRouter.get("/coach-options", (_req, res) => {
+  res.json({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS });
+});
 
 savesRouter.get("/league-teams", (req, res) => {
   const division = (req.query.division as Division) || "D1";
@@ -31,11 +37,15 @@ savesRouter.get("/saves", async (_req, res) => {
 
 savesRouter.post("/saves", async (req, res) => {
   try {
-    const { name, division, teamSchoolName, coachName } = req.body;
+    const { name, division, teamSchoolName, coachName, coachArchetype, coachBackground } = req.body;
     if (!name || !division || !teamSchoolName || !coachName) {
       return res.status(400).json({ error: "name, division, teamSchoolName, coachName are required" });
     }
-    const result = await createSaveWorld({ saveName: name, division, teamSchoolName, coachName });
+    const archetype: CoachArchetype = COACH_ARCHETYPES.some((a) => a.key === coachArchetype) ? coachArchetype : "PROGRAM_BUILDER";
+    const background: CoachBackground | null = COACH_BACKGROUNDS.some((b) => b.key === coachBackground) ? coachBackground : null;
+    const result = await createSaveWorld({
+      saveName: name, division, teamSchoolName, coachName, coachArchetype: archetype, coachBackground: background,
+    });
     const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: result.saveGameId } });
     res.status(201).json(save);
   } catch (err: any) {

@@ -4,6 +4,8 @@ import { advanceOneDay } from "./state/advance";
 import { loadLeagueData, prestigeTierToScore } from "./state/leagueData";
 import * as queries from "./state/queries";
 import * as actions from "./state/actions";
+import { COACH_ARCHETYPES, type CoachArchetype } from "./engine/coachArchetypes";
+import { COACH_BACKGROUNDS, type CoachBackground } from "./engine/coachBackgrounds";
 import type { WorldState } from "./state/types";
 import type { Division } from "./types";
 
@@ -20,14 +22,21 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
 export const api = {
   listSaves: () => persistence.listSaves(),
 
-  createSave: async (data: { name: string; division: string; teamSchoolName: string; coachName: string }) => {
+  createSave: async (data: {
+    name: string; division: string; teamSchoolName: string; coachName: string;
+    coachArchetype?: string; coachBackground?: string | null;
+  }) => {
     const state = createSaveWorld({
       saveName: data.name, division: data.division as Division, teamSchoolName: data.teamSchoolName, coachName: data.coachName,
+      coachArchetype: data.coachArchetype as CoachArchetype | undefined,
+      coachBackground: (data.coachBackground ?? null) as CoachBackground | null,
     });
     cache = state;
     await persistence.persistSave(state);
     return state.save;
   },
+
+  getCoachOptions: async () => ({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS }),
 
   deleteSave: async (id: string) => {
     if (cache?.save.id === id) cache = null;

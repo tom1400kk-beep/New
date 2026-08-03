@@ -12,6 +12,29 @@ function fmtMoney(n: number) {
   return `$${Math.round(n / 1000)}K`;
 }
 
+function formatKey(k?: string | null): string {
+  if (!k) return "";
+  return k.toLowerCase().split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+}
+
+const ARCHETYPE_LABELS: Record<string, string> = {
+  OFFENSIVE_INNOVATOR: "Offensive Innovator",
+  DEFENSIVE_ANCHOR: "Defensive Anchor",
+  RECRUITER: "The Closer",
+  PLAYER_DEVELOPER: "Player Developer",
+  PROGRAM_BUILDER: "Program Builder",
+  DISCIPLINARIAN: "Disciplinarian",
+};
+
+const BACKGROUND_LABELS: Record<string, string> = {
+  HIGH_SCHOOL_COACH: "Former High School Coach",
+  BLUE_BLOOD_ASSISTANT: "Longtime Blue-Blood Assistant",
+  FORMER_PRO_PLAYER: "Former Pro Player",
+  MID_MAJOR_GRINDER: "Mid-Major Grinder",
+  ANALYTICS_COORDINATOR: "Analytics & Video Coordinator",
+  INTERNATIONAL_SCOUT: "International Scouting Background",
+};
+
 export default function DashboardPage() {
   const { activeSaveId, setActiveSaveId } = useSave();
   const navigate = useNavigate();
@@ -103,6 +126,10 @@ export default function DashboardPage() {
       <h1>{team.name}</h1>
       <p className="text-muted">
         {team.conference.name} · {team.division} · {fmtDate(save.currentDate)} · {save.currentPhase.replace("_", " ")}
+      </p>
+      <p className="text-muted" style={{ marginTop: -8 }}>
+        Coach: {ARCHETYPE_LABELS[team.headCoach.archetype] ?? formatKey(team.headCoach.archetype)}
+        {team.headCoach.background ? ` · ${BACKGROUND_LABELS[team.headCoach.background] ?? formatKey(team.headCoach.background)}` : ""}
       </p>
 
       <div className="card stat-row">

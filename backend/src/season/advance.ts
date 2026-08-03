@@ -91,7 +91,15 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
       });
       const chemistry = computeTeamChemistry(rosterPlayers);
       const phase: EventContext["phase"] = save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
-      const ctx: EventContext = { teamId: save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5 };
+      const coachTeam = await prisma.team.findUnique({
+        where: { id: save.coachTeamId },
+        select: { headCoach: { select: { archetype: true, background: true } } },
+      });
+      const ctx: EventContext = {
+        teamId: save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5,
+        coachArchetype: coachTeam?.headCoach?.archetype ?? null,
+        coachBackground: coachTeam?.headCoach?.background ?? null,
+      };
       const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
       const ev = maybeGenerateEvent(rng, ctx);
       if (ev) {

@@ -7,12 +7,14 @@ export function expectedWinPct(prestige: number): number {
   return clamp(0.3 + (prestige / 100) * 0.45, 0.3, 0.75);
 }
 
-export function updateHotSeat(currentHotSeat: number, wins: number, losses: number, prestige: number): number {
+export function updateHotSeat(currentHotSeat: number, wins: number, losses: number, prestige: number, archetype?: string | null): number {
   const games = wins + losses || 1;
   const actual = wins / games;
   const expected = expectedWinPct(prestige);
   const diff = expected - actual; // positive = underperformed
-  const delta = diff * 140; // a full season well below expectation swings hot seat hard
+  let delta = diff * 140; // a full season well below expectation swings hot seat hard
+  // A Program Builder's administration/fanbase is more patient in both directions.
+  if (archetype === "PROGRAM_BUILDER") delta *= 0.7;
   return Math.round(clamp(currentHotSeat + delta, 0, 100));
 }
 
@@ -22,11 +24,21 @@ export function shouldFire(hotSeatLevel: number, rng: () => number): boolean {
   return rng() < fireChance;
 }
 
-export function updatePrestige(currentPrestige: number, wins: number, losses: number, madeTournament: boolean, tournamentWins: number): number {
+export function updatePrestige(
+  currentPrestige: number,
+  wins: number,
+  losses: number,
+  madeTournament: boolean,
+  tournamentWins: number,
+  background?: string | null,
+): number {
   const games = wins + losses || 1;
   const winPct = wins / games;
   const performanceScore = winPct * 100 + (madeTournament ? 8 : 0) + tournamentWins * 4;
-  const delta = (performanceScore - currentPrestige) * 0.06;
+  let delta = (performanceScore - currentPrestige) * 0.06;
+  // A Mid-Major Grinder has built a program up from nothing before — prestige
+  // climbs a bit faster for them when they're overperforming.
+  if (background === "MID_MAJOR_GRINDER" && delta > 0) delta *= 1.25;
   return Math.round(clamp(currentPrestige + delta, 5, 99));
 }
 

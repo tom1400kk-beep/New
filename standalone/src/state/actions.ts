@@ -105,6 +105,7 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant, developmentSkill: coach.developmentSkill,
     offenseSkill: coach.offenseSkill, defenseSkill: coach.defenseSkill, hotSeatLevel: coach.hotSeatLevel,
     recentWinPct, roster: roster.map((p) => ({ position: p.position, overall: playerOverall(p), characterRating: p.characterRating })),
+    coachBackground: coach.background,
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);

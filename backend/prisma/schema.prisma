@@ -99,6 +99,8 @@ model Coach {
   defenseSkill       Int      @default(50)
   recruitingSkill    Int      @default(50)
   developmentSkill   Int      @default(50)
+  archetype          String   @default("PROGRAM_BUILDER") // CoachArchetype — every coach in the league has one
+  background         String?  // CoachBackground — RPG-creator "past" choice, set only for the user's own coach
 
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)

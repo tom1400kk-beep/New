@@ -39,6 +39,12 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
 
   const teamById = new Map(teams.map((t) => [t.id, t]));
 
+  // A hidden, small edge for the Analytics & Video Coordinator background —
+  // superior preparation shows up in the game sim itself, not in a visible stat.
+  function filmStudyBonus(coach: { background: string | null } | null | undefined): number {
+    return coach?.background === "ANALYTICS_COORDINATOR" ? 3 : 0;
+  }
+
   const statRows: any[] = [];
   const gameUpdates: { id: string; homeScore: number; awayScore: number }[] = [];
 
@@ -50,14 +56,14 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
     const home: SimTeam = {
       id: homeTeam.id,
       players: playersByTeam.get(homeTeam.id) ?? [],
-      offenseSkill: homeTeam.headCoach?.offenseSkill ?? 50,
-      defenseSkill: homeTeam.headCoach?.defenseSkill ?? 50,
+      offenseSkill: (homeTeam.headCoach?.offenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach),
+      defenseSkill: (homeTeam.headCoach?.defenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach),
     };
     const away: SimTeam = {
       id: awayTeam.id,
       players: playersByTeam.get(awayTeam.id) ?? [],
-      offenseSkill: awayTeam.headCoach?.offenseSkill ?? 50,
-      defenseSkill: awayTeam.headCoach?.defenseSkill ?? 50,
+      offenseSkill: (awayTeam.headCoach?.offenseSkill ?? 50) + filmStudyBonus(awayTeam.headCoach),
+      defenseSkill: (awayTeam.headCoach?.defenseSkill ?? 50) + filmStudyBonus(awayTeam.headCoach),
     };
 
     const result = simulateGame(home, away);

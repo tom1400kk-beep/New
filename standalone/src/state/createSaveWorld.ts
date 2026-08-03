@@ -7,6 +7,8 @@ import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
+import { generateCoachSkills, randomArchetype, type CoachArchetype } from "../engine/coachArchetypes";
+import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow } from "./types";
 
 export interface CreateSaveInput {
@@ -14,10 +16,15 @@ export interface CreateSaveInput {
   division: Division;
   teamSchoolName: string;
   coachName: string;
+  coachArchetype?: CoachArchetype;
+  coachBackground?: CoachBackground | null;
 }
 
 export function createSaveWorld(input: CreateSaveInput): WorldState {
   const { saveName, division, teamSchoolName, coachName } = input;
+  const chosenArchetype: CoachArchetype = input.coachArchetype ?? "PROGRAM_BUILDER";
+  const chosenBackground: CoachBackground | null = input.coachBackground ?? null;
+  const backgroundProfile = getBackgroundProfile(chosenBackground);
   const league = loadLeagueData(division);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
@@ -46,23 +53,30 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       const isPlayerControlled = member.school === teamSchoolName;
       if (isPlayerControlled) chosenTeamId = teamId;
 
-      const skillMean = 45 + prestige * 0.2;
+      const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
+      const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
+      const skills = generateCoachSkills(rng, prestige, archetype, isPlayerControlled ? backgroundProfile?.deltas : undefined);
       coaches.push({
         id: coachId,
         name: isPlayerControlled ? coachName : `${randomFirstName(rng)} ${randomLastName(rng)}`,
         isPlayerControlled,
-        reputation: Math.round(clamp(randNormal(rng, prestige * 0.6 + 15, 12), 5, 95)),
+        reputation: skills.reputation,
         hotSeatLevel: 0,
-        offenseSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        defenseSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        recruitingSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
-        developmentSkill: Math.round(clamp(randNormal(rng, skillMean, 12), 15, 95)),
+        offenseSkill: skills.offenseSkill,
+        defenseSkill: skills.defenseSkill,
+        recruitingSkill: skills.recruitingSkill,
+        developmentSkill: skills.developmentSkill,
+        archetype,
+        background,
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       });
 
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
-      const internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
+      let internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
+      if (isPlayerControlled && chosenBackground === "INTERNATIONAL_SCOUT") {
+        internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 25, 5, 99));
+      }
       const academicReputation = academicReputationForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 

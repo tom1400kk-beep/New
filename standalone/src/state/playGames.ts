@@ -22,6 +22,10 @@ export function playGames(state: WorldState, gameIds: string[]): void {
     });
   }
 
+  function filmStudyBonus(coach: { background: string | null } | undefined): number {
+    return coach?.background === "ANALYTICS_COORDINATOR" ? 3 : 0;
+  }
+
   for (const g of games) {
     const homeTeam = teamById.get(g.homeTeamId);
     const awayTeam = teamById.get(g.awayTeamId);
@@ -31,11 +35,13 @@ export function playGames(state: WorldState, gameIds: string[]): void {
 
     const home: SimTeam = {
       id: homeTeam.id, players: playersByTeam.get(homeTeam.id) ?? [],
-      offenseSkill: homeCoach?.offenseSkill ?? 50, defenseSkill: homeCoach?.defenseSkill ?? 50,
+      offenseSkill: (homeCoach?.offenseSkill ?? 50) + filmStudyBonus(homeCoach),
+      defenseSkill: (homeCoach?.defenseSkill ?? 50) + filmStudyBonus(homeCoach),
     };
     const away: SimTeam = {
       id: awayTeam.id, players: playersByTeam.get(awayTeam.id) ?? [],
-      offenseSkill: awayCoach?.offenseSkill ?? 50, defenseSkill: awayCoach?.defenseSkill ?? 50,
+      offenseSkill: (awayCoach?.offenseSkill ?? 50) + filmStudyBonus(awayCoach),
+      defenseSkill: (awayCoach?.defenseSkill ?? 50) + filmStudyBonus(awayCoach),
     };
 
     const result = simulateGame(home, away);

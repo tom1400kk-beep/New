@@ -69,7 +69,13 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
         .map((p) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, characterRating: p.characterRating, disciplineRating: p.disciplineRating, scoring: p.scoring, countryOfOrigin: p.countryOfOrigin }));
       const chemistry = computeTeamChemistry(rosterPlayers);
       const phase: EventContext["phase"] = state.save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
-      const ctx: EventContext = { teamId: state.save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5 };
+      const coachTeam = state.teams.find((t) => t.id === state.save.coachTeamId);
+      const coach = coachTeam ? state.coaches.find((c) => c.id === coachTeam.headCoachId) : undefined;
+      const ctx: EventContext = {
+        teamId: state.save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5,
+        coachArchetype: coach?.archetype ?? null,
+        coachBackground: coach?.background ?? null,
+      };
       const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
       const ev = maybeGenerateEvent(rng, ctx);
       if (ev) {

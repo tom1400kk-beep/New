@@ -9,6 +9,8 @@ export interface EventContext {
   chemistry: number; // 0-100
   phase: "IN_SEASON" | "OFFSEASON";
   recentWinPct: number;
+  coachArchetype?: string | null;
+  coachBackground?: string | null;
 }
 
 export interface EventOption {
@@ -114,7 +116,12 @@ const TEMPLATES: Template[] = [
     type: "TRANSFER_REQUEST",
     phase: "ANY",
     baseWeight: 6,
-    weightModifier: (ctx) => (ctx.chemistry < 55 ? 1.8 : 1),
+    weightModifier: (ctx) => {
+      let w = ctx.chemistry < 55 ? 1.8 : 1;
+      // A former pro player's locker room trust means fewer players go looking elsewhere.
+      if (ctx.coachBackground === "FORMER_PRO_PLAYER") w *= 0.7;
+      return w;
+    },
     generate: (rng, ctx) => {
       const p = pickWeightedPlayer(rng, ctx.players, true)!;
       return {
@@ -149,7 +156,12 @@ const TEMPLATES: Template[] = [
     type: "CHEMISTRY_CONFLICT",
     phase: "IN_SEASON",
     baseWeight: 5,
-    weightModifier: (ctx) => (ctx.chemistry < 50 ? 2 : 0.6),
+    weightModifier: (ctx) => {
+      let w = ctx.chemistry < 50 ? 2 : 0.6;
+      if (ctx.coachArchetype === "DISCIPLINARIAN") w *= 0.6;
+      if (ctx.coachBackground === "FORMER_PRO_PLAYER") w *= 0.6;
+      return w;
+    },
     generate: (rng, ctx) => {
       const p = pickWeightedPlayer(rng, ctx.players, true)!;
       return {
@@ -273,10 +285,10 @@ const TEMPLATES: Template[] = [
     baseWeight: 2,
     weightModifier: (ctx) => {
       const riskiest = Math.min(...ctx.players.map((p) => p.disciplineRating));
-      if (riskiest < 35) return 2.4;
-      if (riskiest < 55) return 1.3;
-      if (riskiest < 75) return 0.5;
-      return 0.15;
+      let w = riskiest < 35 ? 2.4 : riskiest < 55 ? 1.3 : riskiest < 75 ? 0.5 : 0.15;
+      // A Disciplinarian's accountability culture makes off-court incidents rarer.
+      if (ctx.coachArchetype === "DISCIPLINARIAN") w *= 0.5;
+      return w;
     },
     generate: (rng, ctx) => {
       const p = pickWeightedByLowDiscipline(rng, ctx.players)!;

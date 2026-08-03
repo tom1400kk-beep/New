@@ -271,6 +271,58 @@ label {
 .text-good { color: var(--good); }
 .text-bad { color: var(--bad); }
 
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 10px 0 4px;
+}
+
+.option-card {
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.option-card:hover {
+  border-color: var(--accent);
+}
+
+.option-card.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--paper));
+}
+
+.option-card .option-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+}
+
+.option-card .option-desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.option-card .option-deltas {
+  font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.option-card .option-perk {
+  font-size: 0.76rem;
+  color: var(--accent);
+  margin-top: 6px;
+  font-weight: 600;
+}
+
 .divider-row {
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
