@@ -5,6 +5,7 @@ import { startConferenceTournaments, advanceTournamentRounds, startNationalTourn
 import { runOffseason } from "./offseason";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
+import { sortedPair } from "../engine/rivalry";
 import { computeTeamChemistry } from "../engine/chemistry";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
@@ -101,6 +102,8 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
         const myScore = (isHome ? myGameToday.homeScore : myGameToday.awayScore) ?? 0;
         const oppScore = (isHome ? myGameToday.awayScore : myGameToday.homeScore) ?? 0;
         const headCoach = await prisma.coach.findUnique({ where: { id: myTeam.headCoachId! }, select: { legalityReputation: true } });
+        const [pairA, pairB] = sortedPair(myTeam.id, oppTeam.id);
+        const rivalry = await prisma.rivalry.findFirst({ where: { saveGameId, teamAId: pairA, teamBId: pairB, active: true } });
 
         const recentGames = await prisma.game.findMany({
           where: { saveGameId, isPlayed: true, OR: [{ homeTeamId: save.coachTeamId }, { awayTeamId: save.coachTeamId }] },
@@ -120,6 +123,7 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
           opponentName: oppTeam.name, teamPrestige: myTeam.prestige, division: myTeam.division as Division,
           opponentPrestige: oppTeam.prestige, result: myScore > oppScore ? "WIN" : "LOSS", margin: myScore - oppScore,
           winStreak, lossStreak, isTournament: myGameToday.tournamentId !== null,
+          isRivalry: !!rivalry, rivalryIntensity: rivalry?.intensity,
           legalityReputation: headCoach?.legalityReputation ?? 75,
         };
         ev = maybeGenerateMediaInterview(rng, mediaCtx);

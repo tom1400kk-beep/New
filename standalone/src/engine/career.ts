@@ -14,6 +14,7 @@ export interface HotSeatModifiers {
   adPatience?: number; // AD's personal patience — damps swings independent of archetype
   adWinFocus?: number; // how much this AD weighs wins/losses vs everything else
   campusAtmosphere?: number; // 1-100 — a coach who's built something beloved gets more benefit of the doubt
+  rivalryWinPct?: number; // 0-1, this season's record specifically against active rivals — fans and the AD notice this independent of the overall record
 }
 
 export function updateHotSeat(
@@ -41,6 +42,8 @@ export function updateHotSeat(
   // Firing a coach who's built a beloved program is its own political cost —
   // a legendary atmosphere buys real leash during a rough patch.
   if (delta > 0 && mods.campusAtmosphere !== undefined) delta *= clamp(1.15 - mods.campusAtmosphere / 500, 0.85, 1.15);
+  // Beating your rivals matters on its own, independent of the overall record.
+  if (mods.rivalryWinPct !== undefined) delta += (0.5 - mods.rivalryWinPct) * 20;
   return Math.round(clamp(currentHotSeat + delta, 0, 100));
 }
 

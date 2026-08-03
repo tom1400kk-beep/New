@@ -4,6 +4,7 @@ import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
+import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedIntensity, POSTSEASON_RIVALRY_THRESHOLD } from "../engine/rivalry";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -12,7 +13,7 @@ import { commitmentWeights } from "../engine/recruiting";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import type { ClassYear, Division } from "../types";
 import { DIVISION_RULES } from "../types";
-import { newId, type WorldState } from "./types";
+import { newId, type WorldState, type RivalryRow } from "./types";
 
 const CLASS_PROGRESSION: Record<ClassYear, ClassYear | null> = { FR: "SO", SO: "JR", JR: "SR", SR: null, GR: null };
 
@@ -39,6 +40,19 @@ export function runOffseason(state: WorldState): OffseasonResult {
   const standings = computeStandings(state, seasonYear);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
+  // Rivalries: active ones feed a hot-seat term for the player (fans and the
+  // AD notice a rivalry record independent of the overall one), and all of
+  // this season's games double as the source data for meeting counts below.
+  const activeRivalries = state.rivalries.filter((r) => r.active);
+  const rivalTeamIdsByTeam = new Map<string, Set<string>>();
+  for (const r of activeRivalries) {
+    if (!rivalTeamIdsByTeam.has(r.teamAId)) rivalTeamIdsByTeam.set(r.teamAId, new Set());
+    if (!rivalTeamIdsByTeam.has(r.teamBId)) rivalTeamIdsByTeam.set(r.teamBId, new Set());
+    rivalTeamIdsByTeam.get(r.teamAId)!.add(r.teamBId);
+    rivalTeamIdsByTeam.get(r.teamBId)!.add(r.teamAId);
+  }
+  const seasonGames = state.games.filter((g) => g.seasonYear === seasonYear && g.isPlayed);
+
   let userFired = false;
   let userTeamId: string | null = null;
   let userNewReputation = 50;
@@ -59,6 +73,22 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const coachAdRelationships = parseAdRelationships(headCoach.adRelationshipsJson);
     const currentRelScore = ad ? coachAdRelationships[ad.id] ?? 50 : 50;
 
+    // Only worth computing for the player — AI coaches' hot seat never
+    // surfaces this level of detail to anyone.
+    let rivalryWinPct: number | undefined;
+    if (headCoach.isPlayerControlled) {
+      const rivalIds = rivalTeamIdsByTeam.get(team.id);
+      if (rivalIds && rivalIds.size > 0) {
+        const rivalGames = seasonGames.filter((g) =>
+          (g.homeTeamId === team.id && rivalIds.has(g.awayTeamId)) || (g.awayTeamId === team.id && rivalIds.has(g.homeTeamId)));
+        if (rivalGames.length > 0) {
+          const rivalWins = rivalGames.filter((g) =>
+            g.homeTeamId === team.id ? (g.homeScore ?? 0) > (g.awayScore ?? 0) : (g.awayScore ?? 0) > (g.homeScore ?? 0)).length;
+          rivalryWinPct = rivalWins / rivalGames.length;
+        }
+      }
+    }
+
     const newHotSeat = updateHotSeat(headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, {
       archetype: headCoach.archetype,
       legalityReputation: headCoach.legalityReputation,
@@ -66,6 +96,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       adPatience: ad?.patience,
       adWinFocus: ad?.winFocus,
       campusAtmosphere: headCoach.campusAtmosphere,
+      rivalryWinPct,
     });
     const fired = shouldFire(newHotSeat, rng, ad?.loyalty, currentRelScore);
     const newReputation = updateReputation(headCoach.reputation, record.wins, record.losses, made, wins, fired);
@@ -153,6 +184,53 @@ export function runOffseason(state: WorldState): OffseasonResult {
 
     team.prestige = newPrestige;
     team.arenaUpgradeRequestedThisSeason = false;
+  }
+
+  // Rivalries: existing ones intensify with every meeting (and cool off a
+  // notch if they didn't play at all this season); new ones can be forged
+  // once two teams have clashed enough times in the postseason.
+  const meetingsByPair = new Map<string, { total: number; postseason: number }>();
+  for (const g of seasonGames) {
+    const [a, b] = sortedPair(g.homeTeamId, g.awayTeamId);
+    const key = `${a}|${b}`;
+    const entry = meetingsByPair.get(key) ?? { total: 0, postseason: 0 };
+    entry.total += 1;
+    if (g.tournamentId) entry.postseason += 1;
+    meetingsByPair.set(key, entry);
+  }
+  const rivalryByPair = new Map(state.rivalries.map((r) => [`${r.teamAId}|${r.teamBId}`, r]));
+  const newRivalries: RivalryRow[] = [];
+
+  for (const [key, meetings] of meetingsByPair) {
+    const [teamAId, teamBId] = key.split("|");
+    const existing = rivalryByPair.get(key);
+    if (existing) {
+      if (existing.active) {
+        existing.intensity = growIntensityOnMeeting(existing.intensity);
+        existing.postseasonMeetings += meetings.postseason;
+      } else if (meetings.postseason > 0) {
+        existing.postseasonMeetings += meetings.postseason;
+        if (existing.postseasonMeetings >= POSTSEASON_RIVALRY_THRESHOLD) {
+          existing.active = true;
+          existing.intensity = postseasonForgedIntensity();
+          existing.origin = "POSTSEASON";
+          existing.establishedYear = seasonYear;
+        }
+      }
+    } else if (meetings.postseason > 0) {
+      const activate = meetings.postseason >= POSTSEASON_RIVALRY_THRESHOLD;
+      newRivalries.push({
+        id: newId(), teamAId, teamBId, postseasonMeetings: meetings.postseason, active: activate,
+        intensity: activate ? postseasonForgedIntensity() : 0, origin: "POSTSEASON", establishedYear: seasonYear,
+      });
+    }
+  }
+  state.rivalries.push(...newRivalries);
+  for (const r of state.rivalries) {
+    if (!r.active) continue;
+    if (!meetingsByPair.has(`${r.teamAId}|${r.teamBId}`)) {
+      r.intensity = decayIntensity(r.intensity);
+    }
   }
 
   // Athletic director turnover: ~7-year average tenure (memoryless yearly

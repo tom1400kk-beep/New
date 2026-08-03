@@ -24,9 +24,12 @@ export default function SchedulePage() {
           </thead>
           <tbody>
             {games.map((g) => (
-              <tr key={g.id}>
+              <tr key={g.id} style={g.isRivalry ? { background: "rgba(220, 80, 40, 0.1)" } : undefined}>
                 <td>{new Date(g.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</td>
-                <td>{g.homeTeam.name} vs {g.awayTeam.name}</td>
+                <td>
+                  {g.homeTeam.name} vs {g.awayTeam.name}
+                  {g.isRivalry && <span className="text-bad" title={`Rivalry intensity ${g.rivalryIntensity}/100`}> 🔥 Rivalry</span>}
+                </td>
                 <td>
                   {g.isPlayed ? `${g.homeScore} - ${g.awayScore}` : "—"}
                 </td>

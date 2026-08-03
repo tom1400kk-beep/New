@@ -1,6 +1,7 @@
 import { computeStandings } from "./standings";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
+import { sortedPair } from "../engine/rivalry";
 import type { WorldState } from "./types";
 
 export function getDashboard(state: WorldState) {
@@ -57,15 +58,49 @@ export function getRoster(state: WorldState) {
 export function getSchedule(state: WorldState) {
   if (!state.save.coachTeamId) return [];
   const teamId = state.save.coachTeamId;
+  const rivalIntensityByOpponent = new Map<string, number>();
+  for (const r of state.rivalries) {
+    if (!r.active) continue;
+    if (r.teamAId === teamId) rivalIntensityByOpponent.set(r.teamBId, r.intensity);
+    else if (r.teamBId === teamId) rivalIntensityByOpponent.set(r.teamAId, r.intensity);
+  }
   return state.games
     .filter((g) => g.seasonYear === state.save.currentSeasonYear && (g.homeTeamId === teamId || g.awayTeamId === teamId))
     .sort((a, b) => a.date.getTime() - b.date.getTime())
-    .map((g) => ({
-      ...g,
-      homeTeam: state.teams.find((t) => t.id === g.homeTeamId)!,
-      awayTeam: state.teams.find((t) => t.id === g.awayTeamId)!,
-      tournament: g.tournamentId ? state.tournaments.find((t) => t.id === g.tournamentId) ?? null : null,
-    }));
+    .map((g) => {
+      const opponentId = g.homeTeamId === teamId ? g.awayTeamId : g.homeTeamId;
+      const rivalryIntensity = rivalIntensityByOpponent.get(opponentId);
+      return {
+        ...g,
+        homeTeam: state.teams.find((t) => t.id === g.homeTeamId)!,
+        awayTeam: state.teams.find((t) => t.id === g.awayTeamId)!,
+        tournament: g.tournamentId ? state.tournaments.find((t) => t.id === g.tournamentId) ?? null : null,
+        isRivalry: rivalryIntensity !== undefined,
+        rivalryIntensity: rivalryIntensity ?? null,
+      };
+    });
+}
+
+export function getRivalries(state: WorldState) {
+  if (!state.save.coachTeamId) return [];
+  const teamId = state.save.coachTeamId;
+  const rivalries = state.rivalries
+    .filter((r) => r.active && (r.teamAId === teamId || r.teamBId === teamId))
+    .sort((a, b) => b.intensity - a.intensity);
+
+  return rivalries.map((r) => {
+    const opponentId = r.teamAId === teamId ? r.teamBId : r.teamAId;
+    const opponent = state.teams.find((t) => t.id === opponentId)!;
+    const [pairA, pairB] = sortedPair(teamId, opponentId);
+    const meetings = state.games.filter((g) =>
+      g.isPlayed && ((g.homeTeamId === pairA && g.awayTeamId === pairB) || (g.homeTeamId === pairB && g.awayTeamId === pairA)));
+    const wins = meetings.filter((g) => g.homeTeamId === teamId ? (g.homeScore ?? 0) > (g.awayScore ?? 0) : (g.awayScore ?? 0) > (g.homeScore ?? 0)).length;
+    return {
+      teamId: opponent.id, teamName: opponent.name, intensity: r.intensity, origin: r.origin,
+      establishedYear: r.establishedYear, postseasonMeetings: r.postseasonMeetings,
+      allTimeRecord: { wins, losses: meetings.length - wins },
+    };
+  });
 }
 
 export function getStandings(state: WorldState) {

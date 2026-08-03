@@ -2,7 +2,9 @@ import { clamp } from "./rng";
 import type { Division } from "../types";
 import type { EventOption, GeneratedEvent } from "./events";
 
-export type MediaCategory = "ROUTINE_WIN" | "ROUTINE_LOSS" | "UPSET_WIN" | "BLOWOUT_LOSS" | "WIN_STREAK" | "LOSS_STREAK" | "SCANDAL";
+export type MediaCategory =
+  | "ROUTINE_WIN" | "ROUTINE_LOSS" | "UPSET_WIN" | "BLOWOUT_LOSS" | "WIN_STREAK" | "LOSS_STREAK"
+  | "RIVALRY_WIN" | "RIVALRY_LOSS" | "SCANDAL";
 
 export interface MediaContext {
   opponentName: string;
@@ -14,6 +16,8 @@ export interface MediaContext {
   winStreak: number; // consecutive wins ending with today's game (0 if today was a loss)
   lossStreak: number; // consecutive losses ending with today's game (0 if today was a win)
   isTournament: boolean;
+  isRivalry?: boolean;
+  rivalryIntensity?: number; // 1-100, only meaningful when isRivalry is true
   legalityReputation: number;
 }
 
@@ -34,14 +38,19 @@ const NEWSWORTHY_BONUS: Record<MediaCategory, number> = {
   BLOWOUT_LOSS: 0.3,
   WIN_STREAK: 0.35,
   LOSS_STREAK: 0.3,
+  RIVALRY_WIN: 0.25,
+  RIVALRY_LOSS: 0.2,
   SCANDAL: 0, // scandal uses its own roll below, not the newsworthy-bonus path
 };
 
+// Rivalry games matter, but not more than the truly extreme storylines —
+// an upset, a blowout, or a streak still takes priority in the headline.
 function classify(ctx: MediaContext): MediaCategory {
   if (ctx.result === "WIN" && ctx.opponentPrestige - ctx.teamPrestige >= 15) return "UPSET_WIN";
   if (ctx.result === "LOSS" && ctx.margin <= -20) return "BLOWOUT_LOSS";
   if (ctx.result === "WIN" && ctx.winStreak >= 5) return "WIN_STREAK";
   if (ctx.result === "LOSS" && ctx.lossStreak >= 3) return "LOSS_STREAK";
+  if (ctx.isRivalry) return ctx.result === "WIN" ? "RIVALRY_WIN" : "RIVALRY_LOSS";
   return ctx.result === "WIN" ? "ROUTINE_WIN" : "ROUTINE_LOSS";
 }
 
@@ -96,6 +105,30 @@ function generateForCategory(category: MediaCategory, ctx: MediaContext): Genera
           opt("confident", "\"We'll turn it around\"", "Project calm confidence.", { localPerceptionDelta: 2, hotSeatDelta: -1, adRelationshipDelta: 1 }),
           opt("honest", "Be honest about the struggle", "Admit the team isn't good enough right now.", { teamPerceptionDelta: 3, nationalPerceptionDelta: -2, hotSeatDelta: 2 }),
           opt("refuse", "Refuse to discuss job security", "Shut the line of questioning down.", { adRelationshipDelta: -3, nationalPerceptionDelta: -3, localPerceptionDelta: -2 }),
+        ],
+      };
+    case "RIVALRY_WIN":
+      return {
+        type: "MEDIA_RIVALRY_WIN",
+        title: `Beat ${opp} in the rivalry game`,
+        description: `That's always the one everyone circles on the calendar. How do you want people to remember it?`,
+        playerId: null,
+        options: [
+          opt("bragging_rights", "Enjoy the bragging rights", "Let the fans have their moment.", { localPerceptionDelta: 6, teamPerceptionDelta: 3, nationalPerceptionDelta: 2 }),
+          opt("just_one_game", "Keep it in perspective", "One game doesn't define the season.", { teamPerceptionDelta: 5, nationalPerceptionDelta: 1, adRelationshipDelta: 1 }),
+          opt("trash_talk", "A little trash talk", "Have some fun with it.", { localPerceptionDelta: 8, nationalPerceptionDelta: 3, adRelationshipDelta: -1 }),
+        ],
+      };
+    case "RIVALRY_LOSS":
+      return {
+        type: "MEDIA_RIVALRY_LOSS",
+        title: `Lost to ${opp} in the rivalry game`,
+        description: `Losing this one stings more than a regular loss — fans and boosters will remember it.`,
+        playerId: null,
+        options: [
+          opt("flush_it", "Flush it and move on", "Refuse to let one game define the season.", { teamPerceptionDelta: 3, localPerceptionDelta: -2, hotSeatDelta: 1 }),
+          opt("own_it", "Own the disappointment", "Tell the fans you feel it too.", { localPerceptionDelta: 3, adRelationshipDelta: 2, hotSeatDelta: 1 }),
+          opt("motivate", "Use it as motivation", "Turn the sting into fuel for next time.", { teamPerceptionDelta: 5, hotSeatDelta: 1 }),
         ],
       };
     case "ROUTINE_WIN":
@@ -162,6 +195,7 @@ export function maybeGenerateMediaInterview(rng: () => number, ctx: MediaContext
   const category = classify(ctx);
   let chance = baseInterviewChance(ctx.teamPrestige, ctx.division) + NEWSWORTHY_BONUS[category];
   if (ctx.isTournament) chance += 0.25;
+  if (ctx.isRivalry) chance += 0.1 + ((ctx.rivalryIntensity ?? 50) / 100) * 0.15;
   chance = clamp(chance, 0, 0.97);
   if (rng() > chance) return null;
 

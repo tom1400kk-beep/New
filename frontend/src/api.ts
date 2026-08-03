@@ -31,6 +31,7 @@ export const api = {
   getRoster: (saveId: string) => request<any[]>(`/saves/${saveId}/roster`),
   getSchedule: (saveId: string) => request<any[]>(`/saves/${saveId}/schedule`),
   getStandings: (saveId: string) => request<any>(`/saves/${saveId}/standings`),
+  getRivalries: (saveId: string) => request<any[]>(`/saves/${saveId}/rivalries`),
   advance: (saveId: string) => request<any>(`/saves/${saveId}/advance`, { method: "POST" }),
 
   getRecruitingBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/recruiting`),

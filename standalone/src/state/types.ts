@@ -221,6 +221,17 @@ export interface GameEventRow {
   chosenOptionId: string | null;
 }
 
+export interface RivalryRow {
+  id: string;
+  teamAId: string;
+  teamBId: string;
+  active: boolean;
+  intensity: number;
+  postseasonMeetings: number;
+  origin: string;
+  establishedYear: number;
+}
+
 export interface WorldState {
   save: SaveGameRow;
   conferences: ConferenceRow[];
@@ -236,6 +247,7 @@ export interface WorldState {
   stats: PlayerGameStatRow[];
   tournaments: TournamentRow[];
   events: GameEventRow[];
+  rivalries: RivalryRow[];
 }
 
 export function newId(): string {

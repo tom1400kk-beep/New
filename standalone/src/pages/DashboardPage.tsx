@@ -63,6 +63,13 @@ function atmosphereLabel(atmosphere: number): string {
   return "Dead";
 }
 
+function rivalryLabel(intensity: number): string {
+  if (intensity >= 80) return "Blood Feud";
+  if (intensity >= 60) return "Heated";
+  if (intensity >= 40) return "Rivalry";
+  return "Budding Rivalry";
+}
+
 function offerLine(o: any): string {
   const parts: string[] = [];
   if (o.salaryDeltaPct !== null && o.salaryDeltaPct !== undefined) {
@@ -100,6 +107,7 @@ export default function DashboardPage() {
   const [marketLoading, setMarketLoading] = useState(false);
   const [arenaResult, setArenaResult] = useState<any>(null);
   const [upgradingArena, setUpgradingArena] = useState(false);
+  const [rivalries, setRivalries] = useState<any[]>([]);
 
   async function refresh() {
     if (!activeSaveId) return;
@@ -109,9 +117,12 @@ export default function DashboardPage() {
     if (!d.team) {
       const offers = await api.getJobOffers(activeSaveId);
       setJobOffers(offers);
+      setRivalries([]);
     } else {
       setJobOffers([]);
       setMarketOpen(false);
+      const rivals = await api.getRivalries(activeSaveId);
+      setRivalries(rivals);
     }
   }
 
@@ -323,6 +334,20 @@ export default function DashboardPage() {
         </div>
         </div>
       </div>
+
+      {rivalries.length > 0 && (
+        <div className="card">
+          <h3>Rivalries</h3>
+          {rivalries.map((r) => (
+            <div key={r.teamId} className="divider-row">
+              <strong>{r.teamName}</strong>
+              <span className={r.intensity >= 60 ? "text-bad" : ""}> — {rivalryLabel(r.intensity)} ({r.intensity}/100)</span>
+              <span className="text-muted"> · all-time {r.allTimeRecord.wins}-{r.allTimeRecord.losses}</span>
+              {r.origin === "POSTSEASON" && <span className="text-muted"> · forged in the postseason</span>}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="card">
         <h3>Contract</h3>

@@ -1,6 +1,7 @@
 import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
 import { computeAttendance } from "../engine/attendance";
 import { homeCourtBonus } from "../engine/atmosphere";
+import { sortedPair } from "../engine/rivalry";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
 import { newId, type WorldState } from "./types";
@@ -31,6 +32,8 @@ export function playGames(state: WorldState, gameIds: string[]): void {
   }
 
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const activeRivalries = state.rivalries.filter((r) => r.active && teamIds.has(r.teamAId) && teamIds.has(r.teamBId));
+  const rivalryByPair = new Map(activeRivalries.map((r) => [`${r.teamAId}|${r.teamBId}`, r]));
 
   for (const g of games) {
     const homeTeam = teamById.get(g.homeTeamId);
@@ -38,6 +41,8 @@ export function playGames(state: WorldState, gameIds: string[]): void {
     if (!homeTeam || !awayTeam) continue;
     const homeCoach = coachById.get(homeTeam.headCoachId);
     const awayCoach = coachById.get(awayTeam.headCoachId);
+    const [pairA, pairB] = sortedPair(homeTeam.id, awayTeam.id);
+    const rivalry = rivalryByPair.get(`${pairA}|${pairB}`);
 
     // A rocking home crowd is a genuine edge — the more atmosphere a program
     // has built, the tougher its building is to play in.
@@ -66,6 +71,8 @@ export function playGames(state: WorldState, gameIds: string[]): void {
       nationalPerception: homeCoach?.nationalPerception ?? 20,
       isConference: g.isConference,
       isTournament: g.tournamentId !== null,
+      isRivalry: !!rivalry,
+      rivalryIntensity: rivalry?.intensity,
     });
 
     for (const b of result.homeBox) state.stats.push({ id: newId(), gameId: g.id, ...b });

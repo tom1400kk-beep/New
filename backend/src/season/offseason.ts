@@ -6,6 +6,7 @@ import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
+import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedIntensity, POSTSEASON_RIVALRY_THRESHOLD } from "../engine/rivalry";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -41,6 +42,22 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   const standings = await computeStandings(saveGameId, seasonYear);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
+  // Rivalries: active ones feed a hot-seat term for the player (fans and the
+  // AD notice a rivalry record independent of the overall one), and all of
+  // this season's games double as the source data for meeting counts below.
+  const activeRivalries = await prisma.rivalry.findMany({ where: { saveGameId, active: true } });
+  const rivalTeamIdsByTeam = new Map<string, Set<string>>();
+  for (const r of activeRivalries) {
+    if (!rivalTeamIdsByTeam.has(r.teamAId)) rivalTeamIdsByTeam.set(r.teamAId, new Set());
+    if (!rivalTeamIdsByTeam.has(r.teamBId)) rivalTeamIdsByTeam.set(r.teamBId, new Set());
+    rivalTeamIdsByTeam.get(r.teamAId)!.add(r.teamBId);
+    rivalTeamIdsByTeam.get(r.teamBId)!.add(r.teamAId);
+  }
+  const seasonGames = await prisma.game.findMany({
+    where: { saveGameId, seasonYear, isPlayed: true },
+    select: { homeTeamId: true, awayTeamId: true, homeScore: true, awayScore: true, tournamentId: true },
+  });
+
   let userFired = false;
   let userTeamId: string | null = null;
   let userNewReputation = 50;
@@ -60,6 +77,22 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const coachAdRelationships = parseAdRelationships(team.headCoach.adRelationshipsJson);
     const currentRelScore = ad ? coachAdRelationships[ad.id] ?? 50 : 50;
 
+    // Only worth computing for the player — AI coaches' hot seat never
+    // surfaces this level of detail to anyone.
+    let rivalryWinPct: number | undefined;
+    if (team.headCoach.isPlayerControlled) {
+      const rivalIds = rivalTeamIdsByTeam.get(team.id);
+      if (rivalIds && rivalIds.size > 0) {
+        const rivalGames = seasonGames.filter((g) =>
+          (g.homeTeamId === team.id && rivalIds.has(g.awayTeamId)) || (g.awayTeamId === team.id && rivalIds.has(g.homeTeamId)));
+        if (rivalGames.length > 0) {
+          const rivalWins = rivalGames.filter((g) =>
+            g.homeTeamId === team.id ? (g.homeScore ?? 0) > (g.awayScore ?? 0) : (g.awayScore ?? 0) > (g.homeScore ?? 0)).length;
+          rivalryWinPct = rivalWins / rivalGames.length;
+        }
+      }
+    }
+
     const newHotSeat = updateHotSeat(team.headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, {
       archetype: team.headCoach.archetype,
       legalityReputation: team.headCoach.legalityReputation,
@@ -67,6 +100,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       adPatience: ad?.patience,
       adWinFocus: ad?.winFocus,
       campusAtmosphere: team.headCoach.campusAtmosphere,
+      rivalryWinPct,
     });
     const fired = shouldFire(newHotSeat, rng, ad?.loyalty, currentRelScore);
     const newReputation = updateReputation(team.headCoach.reputation, record.wins, record.losses, made, wins, fired);
@@ -159,6 +193,60 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     }
 
     await prisma.team.update({ where: { id: team.id }, data: { prestige: newPrestige, arenaUpgradeRequestedThisSeason: false } });
+  }
+
+  // ---- Rivalries: existing ones intensify with every meeting (and cool off
+  // a notch if they didn't play at all this season); new ones can be forged
+  // once two teams have clashed enough times in the postseason. ----
+  const meetingsByPair = new Map<string, { total: number; postseason: number }>();
+  for (const g of seasonGames) {
+    const [a, b] = sortedPair(g.homeTeamId, g.awayTeamId);
+    const key = `${a}|${b}`;
+    const entry = meetingsByPair.get(key) ?? { total: 0, postseason: 0 };
+    entry.total += 1;
+    if (g.tournamentId) entry.postseason += 1;
+    meetingsByPair.set(key, entry);
+  }
+  const allRivalries = await prisma.rivalry.findMany({ where: { saveGameId } });
+  const rivalryByPair = new Map(allRivalries.map((r) => [`${r.teamAId}|${r.teamBId}`, r]));
+
+  for (const [key, meetings] of meetingsByPair) {
+    const [teamAId, teamBId] = key.split("|");
+    const existing = rivalryByPair.get(key);
+    if (existing) {
+      if (existing.active) {
+        await prisma.rivalry.update({
+          where: { id: existing.id },
+          data: { intensity: growIntensityOnMeeting(existing.intensity), postseasonMeetings: existing.postseasonMeetings + meetings.postseason },
+        });
+      } else if (meetings.postseason > 0) {
+        const newCount = existing.postseasonMeetings + meetings.postseason;
+        if (newCount >= POSTSEASON_RIVALRY_THRESHOLD) {
+          await prisma.rivalry.update({
+            where: { id: existing.id },
+            data: { postseasonMeetings: newCount, active: true, intensity: postseasonForgedIntensity(), origin: "POSTSEASON", establishedYear: seasonYear },
+          });
+        } else {
+          await prisma.rivalry.update({ where: { id: existing.id }, data: { postseasonMeetings: newCount } });
+        }
+      }
+    } else if (meetings.postseason > 0) {
+      const activate = meetings.postseason >= POSTSEASON_RIVALRY_THRESHOLD;
+      await prisma.rivalry.create({
+        data: {
+          id: randomUUID(), saveGameId, teamAId, teamBId,
+          postseasonMeetings: meetings.postseason, active: activate,
+          intensity: activate ? postseasonForgedIntensity() : 0,
+          origin: "POSTSEASON", establishedYear: seasonYear,
+        },
+      });
+    }
+  }
+  for (const r of allRivalries) {
+    if (!r.active) continue;
+    if (!meetingsByPair.has(`${r.teamAId}|${r.teamBId}`)) {
+      await prisma.rivalry.update({ where: { id: r.id }, data: { intensity: decayIntensity(r.intensity) } });
+    }
   }
 
   // ---- Athletic director turnover: ~7-year average tenure (memoryless yearly

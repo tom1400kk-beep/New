@@ -3,6 +3,7 @@ import { prisma } from "../db";
 import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
 import { computeAttendance } from "../engine/attendance";
 import { homeCourtBonus } from "../engine/atmosphere";
+import { sortedPair } from "../engine/rivalry";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
 
@@ -43,6 +44,11 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
 
   const teamById = new Map(teams.map((t) => [t.id, t]));
 
+  const activeRivalries = await prisma.rivalry.findMany({
+    where: { saveGameId, active: true, teamAId: { in: teamIds }, teamBId: { in: teamIds } },
+  });
+  const rivalryByPair = new Map(activeRivalries.map((r) => [`${r.teamAId}|${r.teamBId}`, r]));
+
   // A hidden, small edge for the Analytics & Video Coordinator background —
   // superior preparation shows up in the game sim itself, not in a visible stat.
   function filmStudyBonus(coach: { background: string | null } | null | undefined): number {
@@ -74,6 +80,9 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
       defenseSkill: (awayTeam.headCoach?.defenseSkill ?? 50) + filmStudyBonus(awayTeam.headCoach),
     };
 
+    const [pairA, pairB] = sortedPair(homeTeam.id, awayTeam.id);
+    const rivalry = rivalryByPair.get(`${pairA}|${pairB}`);
+
     const result = simulateGame(home, away);
     const attendance = computeAttendance(rng, {
       capacity: homeTeam.venueCapacity,
@@ -84,6 +93,8 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
       nationalPerception: homeTeam.headCoach?.nationalPerception ?? 20,
       isConference: g.isConference,
       isTournament: g.tournamentId !== null,
+      isRivalry: !!rivalry,
+      rivalryIntensity: rivalry?.intensity,
     });
     gameUpdates.push({ id: g.id, homeScore: result.homeScore, awayScore: result.awayScore, attendance });
 

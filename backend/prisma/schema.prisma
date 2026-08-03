@@ -36,6 +36,7 @@ model SaveGame {
   games            Game[]
   tournaments      Tournament[]
   gameEvents       GameEvent[]
+  rivalries        Rivalry[]
 }
 
 // ---------- League structure ----------
@@ -363,6 +364,26 @@ model Tournament {
   games        Game[]
 
   @@index([saveGameId, seasonYear, type])
+}
+
+// A pair-of-teams row. teamAId/teamBId are always stored with teamAId < teamBId
+// (lexicographic) so a pair only ever has one row. Seeded at world creation for
+// same-state conference rivals (traditional rivalries); can also be forged
+// mid-save once two teams have met enough times in the postseason.
+model Rivalry {
+  id                 String   @id @default(cuid())
+  saveGame           SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId         String
+  teamAId            String
+  teamBId            String
+  active             Boolean  @default(false) // true once it's a real rivalry (traditional, or crossed the postseason threshold)
+  intensity          Int      @default(0) // 1-100, how big a deal this rivalry is
+  postseasonMeetings Int      @default(0) // cumulative tournament-game meetings across all seasons — the trigger for forging new rivalries
+  origin             String   @default("TRADITIONAL") // "TRADITIONAL" | "POSTSEASON"
+  establishedYear    Int
+
+  @@unique([saveGameId, teamAId, teamBId])
+  @@index([saveGameId])
 }
 
 // ---------- Random events ----------

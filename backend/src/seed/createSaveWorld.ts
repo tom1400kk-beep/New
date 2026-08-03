@@ -14,6 +14,7 @@ import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackg
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { seedPipeline } from "../engine/pipeline";
 import { generateADTraits } from "../engine/athleticDirector";
+import { TRADITIONAL_RIVALRY_CHANCE, traditionalIntensity, sortedPair } from "../engine/rivalry";
 
 export interface CreateSaveInput {
   saveName: string;
@@ -197,6 +198,46 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   await prisma.coach.createMany({ data: coachRows });
   await prisma.athleticDirector.createMany({ data: adRows });
   await prisma.team.createMany({ data: teamRows });
+
+  // ---- Seed traditional rivalries: same-state conference-mates are the
+  // strongest real-world predictor of a genuine college rivalry. Every
+  // conference is guaranteed at least one (its two most prestigious members)
+  // even if no same-state pair exists. ----
+  const rivalryRows: { id: string; saveGameId: string; teamAId: string; teamBId: string; active: boolean; intensity: number; origin: string; establishedYear: number }[] = [];
+  const seededPairs = new Set<string>();
+  const teamsByConference = new Map<string, typeof teamRows>();
+  for (const t of teamRows) {
+    if (!teamsByConference.has(t.conferenceId)) teamsByConference.set(t.conferenceId, []);
+    teamsByConference.get(t.conferenceId)!.push(t);
+  }
+  for (const confTeams of teamsByConference.values()) {
+    let seededInConf = false;
+    for (let i = 0; i < confTeams.length; i++) {
+      for (let j = i + 1; j < confTeams.length; j++) {
+        const a = confTeams[i], b = confTeams[j];
+        if (a.state !== b.state) continue;
+        if (rng() > TRADITIONAL_RIVALRY_CHANCE) continue;
+        const [teamAId, teamBId] = sortedPair(a.id, b.id);
+        const key = `${teamAId}|${teamBId}`;
+        if (seededPairs.has(key)) continue;
+        seededPairs.add(key);
+        seededInConf = true;
+        rivalryRows.push({
+          id: randomUUID(), saveGameId: saveGame.id, teamAId, teamBId, active: true,
+          intensity: traditionalIntensity(a.prestige, b.prestige), origin: "TRADITIONAL", establishedYear: seasonYear,
+        });
+      }
+    }
+    if (!seededInConf && confTeams.length >= 2) {
+      const [a, b] = [...confTeams].sort((x, y) => y.prestige - x.prestige).slice(0, 2);
+      const [teamAId, teamBId] = sortedPair(a.id, b.id);
+      rivalryRows.push({
+        id: randomUUID(), saveGameId: saveGame.id, teamAId, teamBId, active: true,
+        intensity: traditionalIntensity(a.prestige, b.prestige), origin: "TRADITIONAL", establishedYear: seasonYear,
+      });
+    }
+  }
+  if (rivalryRows.length > 0) await prisma.rivalry.createMany({ data: rivalryRows });
 
   // chunk player inserts to stay well under sqlite parameter limits
   const chunkSize = 400;
