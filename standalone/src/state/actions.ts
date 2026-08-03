@@ -1,10 +1,28 @@
-import { computeInterestGain, weeklyRecruitingPoints } from "../engine/recruiting";
+import { computeInterestGain, weeklyRecruitingPoints, type RecruitingProspectInput, type RecruitingTeamInput } from "../engine/recruiting";
+import { PRIORITY_KEYS, topPriorities, type PriorityKey, type PriorityProfile } from "../engine/priorities";
 import { clamp, randInt, mulberry32 } from "../engine/rng";
 import type { EventEffects, EventOption } from "../engine/events";
+import { computeStandings, winPct } from "./standings";
 import { newId, type WorldState } from "./types";
 
 function noisy(rng: () => number, value: number, noise: number): number {
   return Math.round(clamp(value + randInt(rng, -noise, noise), 1, 99));
+}
+
+function playerOverall(p: { scoring: number; threePoint: number; finishing: number; playmaking: number; rebounding: number; defense: number; athleticism: number; basketballIq: number }): number {
+  return Math.round((p.scoring + p.threePoint + p.finishing + p.playmaking + p.rebounding + p.defense + p.athleticism + p.basketballIq) / 8);
+}
+
+function parsePriorities(json: string): PriorityProfile {
+  try {
+    const parsed = JSON.parse(json);
+    const profile = {} as PriorityProfile;
+    for (const key of PRIORITY_KEYS) profile[key] = parsed[key] ?? 0;
+    return profile;
+  } catch {
+    const even = 100 / PRIORITY_KEYS.length;
+    return PRIORITY_KEYS.reduce((acc, k) => ({ ...acc, [k]: even }), {} as PriorityProfile);
+  }
 }
 
 export interface RecruitingBoardEntry {
@@ -17,6 +35,7 @@ export interface RecruitingBoardEntry {
   source: string;
   starRating: number;
   graduationYear: number;
+  topPriorities: PriorityKey[];
   scouted: {
     scoring: number; threePoint: number; finishing: number; playmaking: number;
     rebounding: number; defense: number; athleticism: number; characterRating: number;
@@ -40,6 +59,7 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
       return {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
         hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
+        topPriorities: topPriorities(parsePriorities(p.prioritiesJson), 3),
         scouted: {
           scoring: noisy(rng, p.scoring, p.scoutingNoise), threePoint: noisy(rng, p.threePoint, p.scoutingNoise),
           finishing: noisy(rng, p.finishing, p.scoutingNoise), playmaking: noisy(rng, p.playmaking, p.scoutingNoise),
@@ -66,13 +86,27 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
   let interest = state.interests.find((i) => i.prospectId === prospectId && i.teamId === team.id);
   const pointsInvested = (interest?.pointsInvested ?? 0) + spend;
 
-  const gain = computeInterestGain({
-    prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
-    recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant,
-    internationalScoutingRating: team.internationalScoutingRating,
-    hometownState: prospect.hometownState, teamState: team.state, isInternational: prospect.source === "INTERNATIONAL",
-    pointsInvested, prospectStarRating: prospect.starRating,
-  });
+  const standings = computeStandings(state, state.save.currentSeasonYear);
+  const record = standings.get(team.id);
+  const recentWinPct = record && record.wins + record.losses > 0 ? winPct(record) : team.prestige / 100;
+  const roster = state.players.filter((p) => p.teamId === team.id);
+
+  const prospectInput: RecruitingProspectInput = {
+    position: prospect.position, hometownState: prospect.hometownState, countryOfOrigin: prospect.countryOfOrigin,
+    characterRating: prospect.characterRating, scoring: prospect.scoring, threePoint: prospect.threePoint,
+    finishing: prospect.finishing, playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
+    starRating: prospect.starRating, priorities: parsePriorities(prospect.prioritiesJson),
+  };
+
+  const teamInput: RecruitingTeamInput = {
+    state: team.state, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
+    academicReputation: team.academicReputation, internationalScoutingRating: team.internationalScoutingRating,
+    recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant, developmentSkill: coach.developmentSkill,
+    offenseSkill: coach.offenseSkill, defenseSkill: coach.defenseSkill, hotSeatLevel: coach.hotSeatLevel,
+    recentWinPct, roster: roster.map((p) => ({ position: p.position, overall: playerOverall(p), characterRating: p.characterRating })),
+  };
+
+  const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);
 
   if (interest) {
     interest.interestLevel = Math.round(gain);

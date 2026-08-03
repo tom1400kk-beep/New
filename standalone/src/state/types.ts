@@ -30,6 +30,7 @@ export interface TeamRow {
   nilBudget: number;
   facilitiesRating: number;
   internationalScoutingRating: number;
+  academicReputation: number;
   isPlayerControlled: boolean;
   headCoachId: string;
 }
@@ -110,6 +111,7 @@ export interface ProspectRow {
   graduationYear: number;
   signed: boolean;
   committedTeamId: string | null;
+  prioritiesJson: string;
 }
 
 export interface RecruitInterestRow {

@@ -68,6 +68,7 @@ model Team {
   nilBudget          Int      @default(100000) // annual NIL/booster dollars available
   facilitiesRating   Int      @default(50) // 1-100
   internationalScoutingRating Int @default(30) // 1-100, overseas scouting network strength
+  academicReputation Int      @default(55) // 1-100, independent of prestige
   isPlayerControlled Boolean  @default(false)
 
   players           Player[]
@@ -186,6 +187,7 @@ model Prospect {
   countryOfOrigin  String?  // null = USA; set for international prospects and foreign-born HS recruits
   source           String
   starRating       Int      // 1-5
+  prioritiesJson   String   @default("{}") // JSON-encoded PriorityProfile — what this recruit actually cares about
 
   // True ratings (hidden ceiling of scouting accuracy is applied client-side via scoutingNoise)
   scoring          Int

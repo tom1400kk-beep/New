@@ -167,7 +167,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
-      graduationYear: p.graduationYear, signed: false, committedTeamId: null,
+      graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
   for (let i = 0; i < Math.round(teamCount * 0.6); i++) {
@@ -178,7 +178,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
-      graduationYear: p.graduationYear, signed: false, committedTeamId: null,
+      graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
   for (let i = 0; i < Math.round(teamCount * 0.8); i++) {
@@ -189,7 +189,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
-      graduationYear: p.graduationYear, signed: false, committedTeamId: null,
+      graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
 

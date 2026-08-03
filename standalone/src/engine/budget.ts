@@ -26,3 +26,10 @@ export function facilitiesForTeam(rng: () => number, prestige: number): number {
 export function internationalScoutingForTeam(rng: () => number, prestige: number): number {
   return Math.round(clamp(randNormal(rng, 35 + prestige * 0.15, 22), 5, 95));
 }
+
+// Academic reputation is deliberately its own axis, not a prestige proxy —
+// plenty of real mid-majors (Davidson, Butler-type programs) out-academic
+// blue-bloods, and vice versa.
+export function academicReputationForTeam(rng: () => number, prestige: number): number {
+  return Math.round(clamp(randNormal(rng, 55 + prestige * 0.1, 20), 10, 99));
+}

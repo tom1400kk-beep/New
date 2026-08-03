@@ -7,7 +7,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam } from "../engine/budget";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 
 export interface CreateSaveInput {
@@ -57,7 +57,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   }[] = [];
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
-    prestige: number; nilBudget: number; facilitiesRating: number; internationalScoutingRating: number;
+    prestige: number; nilBudget: number; facilitiesRating: number; internationalScoutingRating: number; academicReputation: number;
     isPlayerControlled: boolean; headCoachId: string;
   }[] = [];
   const playerRows: any[] = [];
@@ -93,11 +93,12 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
       const internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
+      const academicReputation = academicReputationForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 
       teamRows.push({
         id: teamId, saveGameId: saveGame.id, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, isPlayerControlled, headCoachId: coachId,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled, headCoachId: coachId,
       });
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled });
 
@@ -216,5 +217,6 @@ function prospectFromGenerated(saveGameId: string, p: ReturnType<typeof generate
     characterRating: p.ratings.characterRating,
     scoutingNoise: p.scoutingNoise,
     graduationYear: p.graduationYear,
+    prioritiesJson: JSON.stringify(p.priorities),
   };
 }

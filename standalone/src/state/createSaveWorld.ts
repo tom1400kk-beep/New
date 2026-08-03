@@ -5,7 +5,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam } from "../engine/budget";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow } from "./types";
 
@@ -63,11 +63,12 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
       const internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
+      const academicReputation = academicReputationForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 
       teams.push({
         id: teamId, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, isPlayerControlled, headCoachId: coachId,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled, headCoachId: coachId,
       });
       pendingTeams.push({ id: teamId, conferenceId });
 
@@ -132,6 +133,6 @@ function prospectFromGenerated(p: ReturnType<typeof generateHighSchoolProspect>)
     playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
     athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
     characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
-    signed: false, committedTeamId: null,
+    signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
   };
 }

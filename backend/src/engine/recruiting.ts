@@ -1,18 +1,6 @@
 import { clamp } from "./rng";
-
-export interface RecruitingInputs {
-  prestige: number; // 1-100
-  nilBudget: number; // dollars
-  facilitiesRating: number; // 1-100
-  recruitingSkill: number; // head coach, 1-100
-  assistantRecruitingSkill: number; // best assistant assigned to recruiting, 1-100, 0 if none
-  internationalScoutingRating: number; // 1-100, team's overseas scouting network strength
-  hometownState: string;
-  teamState: string;
-  isInternational: boolean; // true for INTERNATIONAL-source prospects
-  pointsInvested: number; // cumulative points this team has spent on this prospect
-  prospectStarRating: number;
-}
+import { PRIORITY_KEYS, sameRegion, isWarmState, type PriorityProfile } from "./priorities";
+import type { PositionType } from "../types";
 
 // Weekly recruiting points a program can allocate, driven by staff quality.
 export function weeklyRecruitingPoints(recruitingSkill: number, assistantRecruitingSkill: number): number {
@@ -27,33 +15,110 @@ function nilPullFactor(nilBudget: number): number {
   return clamp((nilBudget / ceiling) * 100, 0, 100);
 }
 
-export function computeInterestGain(inputs: RecruitingInputs): number {
-  const {
-    prestige, nilBudget, facilitiesRating, recruitingSkill, assistantRecruitingSkill,
-    internationalScoutingRating, hometownState, teamState, isInternational, pointsInvested, prospectStarRating,
-  } = inputs;
+export interface RecruitingRosterPlayer {
+  position: PositionType | string;
+  overall: number; // 0-100 composite
+  characterRating: number;
+}
 
-  const nilPull = nilPullFactor(nilBudget);
-  const homeStateBonus = !isInternational && hometownState === teamState ? 8 : 0;
-  // A program's overseas scouting network matters far more than prestige for
-  // actually landing international prospects — this is what makes some
-  // schools genuinely better at it than others, independent of blue-blood status.
-  const internationalBonus = isInternational ? internationalScoutingRating * 0.3 : 0;
+export interface RecruitingProspectInput {
+  position: PositionType | string;
+  hometownState: string;
+  countryOfOrigin: string | null;
+  characterRating: number;
+  scoring: number;
+  threePoint: number;
+  finishing: number;
+  playmaking: number;
+  rebounding: number;
+  defense: number;
+  starRating: number;
+  priorities: PriorityProfile;
+}
 
-  // Higher-rated recruits are harder to move the needle on for lower-prestige programs.
-  const difficultyPenalty = Math.max(0, prospectStarRating * 6 - prestige * 0.15);
+export interface RecruitingTeamInput {
+  state: string;
+  prestige: number;
+  nilBudget: number;
+  facilitiesRating: number;
+  academicReputation: number;
+  internationalScoutingRating: number;
+  recruitingSkill: number;
+  assistantRecruitingSkill: number;
+  developmentSkill: number;
+  offenseSkill: number;
+  defenseSkill: number;
+  hotSeatLevel: number;
+  recentWinPct: number; // 0-1; caller should fall back to prestige/100 pre-season
+  roster: RecruitingRosterPlayer[];
+}
 
-  const base =
-    pointsInvested * 0.6 +
-    prestige * 0.25 +
-    nilPull * 0.2 +
-    facilitiesRating * 0.1 +
-    recruitingSkill * 0.15 +
-    assistantRecruitingSkill * 0.1 +
-    homeStateBonus +
-    internationalBonus -
-    difficultyPenalty;
+// Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
+// this program fit that specific thing" score. This is what makes two
+// recruits with identical talent chase completely different schools.
+function computeDimensionScores(prospect: RecruitingProspectInput, team: RecruitingTeamInput): Record<string, number> {
+  const isInternational = prospect.countryOfOrigin !== null && !prospect.hometownState;
 
+  const samePosition = team.roster.filter((p) => p.position === prospect.position).sort((a, b) => b.overall - a.overall);
+  const topAtPosition = samePosition.slice(0, 2);
+  const avgDepthOverall = topAtPosition.length > 0 ? topAtPosition.reduce((s, p) => s + p.overall, 0) / topAtPosition.length : 40;
+  const playingTime = clamp(115 - avgDepthOverall, 5, 95);
+
+  const winning = clamp(team.recentWinPct * 100, 0, 100);
+  const nilMoney = nilPullFactor(team.nilBudget);
+  const development = clamp(team.developmentSkill * 0.7 + team.facilitiesRating * 0.3, 0, 100);
+
+  const avgRosterCharacter = team.roster.length > 0 ? team.roster.reduce((s, p) => s + p.characterRating, 0) / team.roster.length : 60;
+  const cultureFit = clamp(100 - Math.abs(avgRosterCharacter - prospect.characterRating), 10, 100);
+
+  const perimeterLean = (prospect.threePoint + prospect.playmaking) - (prospect.rebounding + prospect.finishing) * 0.5;
+  const schemeFit = clamp(perimeterLean >= 0 ? team.offenseSkill : team.defenseSkill, 0, 100);
+
+  const brandExposure = clamp(team.prestige, 0, 100);
+  const coachStability = clamp(100 - team.hotSeatLevel, 0, 100);
+
+  let proximityHome = 50;
+  if (!isInternational && prospect.hometownState) {
+    proximityHome = prospect.hometownState === team.state ? 100 : sameRegion(prospect.hometownState, team.state) ? 60 : 25;
+  }
+
+  const academics = clamp(team.academicReputation, 0, 100);
+
+  let lifestyle = 55;
+  if (!isInternational && prospect.hometownState) {
+    lifestyle = isWarmState(prospect.hometownState) === isWarmState(team.state) ? 75 : 45;
+  }
+
+  return {
+    PLAYING_TIME: playingTime,
+    WINNING: winning,
+    NIL_MONEY: nilMoney,
+    DEVELOPMENT: development,
+    CULTURE_FIT: cultureFit,
+    SCHEME_FIT: schemeFit,
+    BRAND_EXPOSURE: brandExposure,
+    COACH_STABILITY: coachStability,
+    PROXIMITY_HOME: proximityHome,
+    ACADEMICS: academics,
+    LIFESTYLE: lifestyle,
+  };
+}
+
+export function computeInterestGain(prospect: RecruitingProspectInput, team: RecruitingTeamInput, pointsInvested: number): number {
+  const scores = computeDimensionScores(prospect, team);
+  const fitScore = PRIORITY_KEYS.reduce((sum, key) => sum + (prospect.priorities[key] / 100) * scores[key], 0);
+
+  // International recruits lean extra on the program's overseas scouting
+  // network actually reaching them at all, on top of general fit.
+  const isInternational = prospect.countryOfOrigin !== null && !prospect.hometownState;
+  const internationalReach = isInternational ? team.internationalScoutingRating * 0.25 : 0;
+
+  // Resource gap: elite recruits are genuinely hard to land for programs
+  // without the prestige/NIL pull to back it up, regardless of fit.
+  const resourceLevel = team.prestige * 0.6 + nilPullFactor(team.nilBudget) * 0.4;
+  const difficultyPenalty = Math.max(0, prospect.starRating * 6 - resourceLevel * 0.15);
+
+  const base = pointsInvested * 0.55 + fitScore * 0.45 + internationalReach - difficultyPenalty;
   return clamp(base, 0, 100);
 }
 

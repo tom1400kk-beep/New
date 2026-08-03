@@ -3,6 +3,7 @@ import { randomInternationalFirstName, randomInternationalLastName } from "./int
 import { clamp, randInt, randNormal, weightedPick } from "./rng";
 import { weightedStateList, STATE_PROFILES } from "./regions";
 import { weightedCountryList, COUNTRY_PROFILES } from "./countries";
+import { generateProspectPriorities, type PriorityProfile } from "./priorities";
 import type { ClassYear, Division, PlayerOrigin, PositionType, ProspectSource } from "../types";
 
 // A player's name follows their country of origin when set (foreign-born HS
@@ -95,6 +96,7 @@ export interface GeneratedProspect {
   graduationYear: number;
   scoutingNoise: number;
   ratings: GeneratedRatings;
+  priorities: PriorityProfile;
 }
 
 const STAR_TIER_TALENT: Record<number, { base: number; variance: number }> = {
@@ -138,6 +140,7 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
     graduationYear,
     scoutingNoise: randInt(rng, 4, 16),
     ratings,
+    priorities: generateProspectPriorities(rng),
   };
 }
 
@@ -167,6 +170,7 @@ export function generateJucoProspect(rng: () => number, graduationYear: number):
     graduationYear,
     scoutingNoise: randInt(rng, 2, 10), // JUCO players have a track record, less scouting uncertainty
     ratings,
+    priorities: generateProspectPriorities(rng),
   };
 }
 
@@ -195,6 +199,7 @@ export function generateInternationalProspect(rng: () => number, graduationYear:
     // fewer live looks, translation/context gaps.
     scoutingNoise: randInt(rng, 10, 24),
     ratings,
+    priorities: generateProspectPriorities(rng),
   };
 }
 

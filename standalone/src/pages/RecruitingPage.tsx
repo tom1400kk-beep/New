@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import { PRIORITY_LABELS } from "../engine/priorities";
 
 function sourceLabel(source: string): string {
   if (source === "JUCO") return "JUCO";
@@ -10,6 +11,11 @@ function sourceLabel(source: string): string {
 
 function homeLabel(p: any): string {
   return p.source === "INTERNATIONAL" ? p.countryOfOrigin : p.hometownState;
+}
+
+function priorityLabel(p: any): string {
+  if (!p.topPriorities || p.topPriorities.length === 0) return "—";
+  return p.topPriorities.map((k: string) => PRIORITY_LABELS[k as keyof typeof PRIORITY_LABELS] ?? k).join(", ");
 }
 
 export default function RecruitingPage() {
@@ -51,6 +57,7 @@ export default function RecruitingPage() {
           <thead>
             <tr>
               <th>Name</th><th>Pos</th><th>Stars</th><th>Home</th><th>Source</th>
+              <th>Priorities</th>
               <th>Scoring</th><th>Defense</th><th>Character*</th><th>Interest</th><th>Points</th><th></th>
             </tr>
           </thead>
@@ -62,6 +69,7 @@ export default function RecruitingPage() {
                 <td>{"★".repeat(p.starRating)}</td>
                 <td>{homeLabel(p)}</td>
                 <td>{sourceLabel(p.source)}</td>
+                <td className="text-muted" style={{ fontFamily: "inherit", whiteSpace: "nowrap" }}>{priorityLabel(p)}</td>
                 <td>{p.scouted.scoring}</td>
                 <td>{p.scouted.defense}</td>
                 <td>{p.scouted.characterRating}</td>
@@ -76,6 +84,7 @@ export default function RecruitingPage() {
         <p className="text-muted" style={{ fontSize: "0.8rem", marginTop: 8 }}>
           * Scouted ratings carry uncertainty — true ability may differ from what your staff reports.
           International prospects carry extra uncertainty — harder to scout from overseas.
+          "Priorities" are what this recruit actually cares about when picking a school.
         </p>
       </div>
     </div>
