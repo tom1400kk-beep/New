@@ -331,11 +331,8 @@ export default function DashboardPage() {
               : "The AD turned you down. Maybe it's time to test the waters elsewhere."}
           </p>
         )}
-      </div>
 
-      <div className="card">
-        <h3>Facilities</h3>
-        <p>
+        <p style={{ marginTop: 16 }}>
           Arena capacity: <strong>{team.venueCapacity.toLocaleString()}</strong>
           {team.avgTurnoutPct != null
             ? <span className="text-muted"> · averaging {team.avgTurnoutPct}% full this season ({team.homeGamesPlayedThisSeason} home games)</span>
