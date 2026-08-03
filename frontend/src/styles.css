@@ -275,3 +275,76 @@ label {
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
 }
+
+/* ---------- Mobile: stack the sidebar into a scrollable top bar ---------- */
+@media (max-width: 720px) {
+  body {
+    font-size: 16px; /* keep inputs >=16px so mobile browsers don't auto-zoom on focus */
+  }
+
+  .app-shell {
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+    gap: 2px;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .sidebar .brand {
+    margin-bottom: 0;
+    margin-right: 6px;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+
+  .sidebar a {
+    white-space: nowrap;
+    border-left: none;
+    border-bottom: 3px solid transparent;
+    padding: 8px 10px;
+  }
+
+  .sidebar a.active {
+    border-left-color: transparent;
+    border-bottom-color: var(--accent);
+  }
+
+  .content {
+    padding: 18px 16px 48px;
+    max-width: 100%;
+    overflow-x: visible;
+  }
+
+  h1 { font-size: 1.5rem; }
+
+  .card {
+    padding: 14px 16px;
+  }
+
+  .stat-row {
+    gap: 20px 28px;
+  }
+
+  input, select {
+    width: 100%;
+  }
+
+  table {
+    font-size: 0.78rem;
+  }
+
+  th, td {
+    padding: 6px 8px;
+  }
+}
