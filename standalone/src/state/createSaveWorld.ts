@@ -78,6 +78,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         collegeState: isPlayerControlled ? playingCareer.collegeState : null,
         proPath: isPlayerControlled ? playingCareer.proPath : "NONE",
         proCountry: isPlayerControlled ? playingCareer.proCountry : null,
+        legalityReputation: 75,
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       });
 

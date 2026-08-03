@@ -108,6 +108,8 @@ model Coach {
   proPath            String   @default("NONE") // ProPath: NONE | DOMESTIC_PRO | OVERSEAS_PRO
   proCountry         String?  // set only when proPath is OVERSEAS_PRO
 
+  legalityReputation Int      @default(75) // 1-100, program off-court integrity — image-conscious schools won't hire a coach whose players keep getting arrested
+
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)
   yearsAtCurrentJob  Int      @default(0)

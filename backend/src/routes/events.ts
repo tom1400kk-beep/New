@@ -35,6 +35,12 @@ async function applyEffects(saveGameId: string, teamId: string | null, playerId:
       if (effects.hotSeatDelta && team.headCoach) {
         await prisma.coach.update({ where: { id: team.headCoach.id }, data: { hotSeatLevel: Math.round(clamp(team.headCoach.hotSeatLevel + effects.hotSeatDelta, 0, 100)) } });
       }
+      if (effects.legalityDelta && team.headCoach) {
+        await prisma.coach.update({
+          where: { id: team.headCoach.id },
+          data: { legalityReputation: Math.round(clamp(team.headCoach.legalityReputation + effects.legalityDelta, 5, 99)) },
+        });
+      }
       if (effects.chemistryDelta) {
         const roster = await prisma.player.findMany({ where: { teamId: team.id } });
         for (const p of roster) {

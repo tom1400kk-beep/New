@@ -1,5 +1,5 @@
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers } from "../engine/career";
+import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation } from "../engine/career";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -39,8 +39,9 @@ export function runOffseason(state: WorldState): OffseasonResult {
   let userTeamId: string | null = null;
   let userNewReputation = 50;
   let userNewPrestige = 50;
+  let userNewLegality = 75;
   let jobOffers: OffseasonResult["jobOffers"] = [];
-  const vacancies: { teamId: string; prestige: number }[] = [];
+  const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
 
   for (const team of state.teams) {
     const headCoach = state.coaches.find((c) => c.id === team.headCoachId);
@@ -48,20 +49,25 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const { made, wins } = tournamentWinsForTeam(state, seasonYear, team.id);
 
-    const newHotSeat = updateHotSeat(headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, headCoach.archetype);
+    const newHotSeat = updateHotSeat(
+      headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, headCoach.archetype,
+      headCoach.legalityReputation, team.academicReputation,
+    );
     const fired = shouldFire(newHotSeat, rng);
     const newReputation = updateReputation(headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, headCoach.background);
+    const newLegality = driftLegalityReputation(headCoach.legalityReputation);
 
     if (headCoach.isPlayerControlled) {
       userTeamId = team.id;
       userNewReputation = newReputation;
       userNewPrestige = newPrestige;
+      userNewLegality = newLegality;
       if (fired) userFired = true;
     }
 
     if (fired) {
-      vacancies.push({ teamId: team.id, prestige: newPrestige });
+      vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation });
       const replacementArchetype = randomArchetype(rng);
       const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
       const replacementSkills = {
@@ -77,6 +83,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         collegeState: null as string | null,
         proPath: "NONE",
         proCountry: null as string | null,
+        legalityReputation: 75,
       };
       if (headCoach.isPlayerControlled) {
         const replacement = {
@@ -87,6 +94,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         team.headCoachId = replacement.id;
         headCoach.careerWins += record.wins;
         headCoach.careerLosses += record.losses;
+        headCoach.legalityReputation = newLegality;
       } else {
         Object.assign(headCoach, {
           name: `${randomFirstName(rng)} ${randomLastName(rng)}`, isPlayerControlled: false, hotSeatLevel: 0,
@@ -95,7 +103,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       }
     } else {
       Object.assign(headCoach, {
-        hotSeatLevel: newHotSeat, reputation: newReputation,
+        hotSeatLevel: newHotSeat, reputation: newReputation, legalityReputation: newLegality,
         careerWins: headCoach.careerWins + record.wins, careerLosses: headCoach.careerLosses + record.losses,
         yearsAtCurrentJob: headCoach.yearsAtCurrentJob + 1,
       });
@@ -107,7 +115,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
   if (userTeamId) {
     const openings = vacancies.filter((v) => v.teamId !== userTeamId);
     const maxOffers = userFired ? 3 : 2;
-    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers);
+    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers, userNewLegality);
     if (offers.length > 0) {
       jobOffers = offers.map((o) => {
         const t = state.teams.find((tt) => tt.id === o.teamId)!;

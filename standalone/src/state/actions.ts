@@ -2,6 +2,7 @@ import { computeInterestGain, weeklyRecruitingPoints, type RecruitingProspectInp
 import { PRIORITY_KEYS, topPriorities, type PriorityKey, type PriorityProfile } from "../engine/priorities";
 import { clamp, randInt, mulberry32 } from "../engine/rng";
 import type { EventEffects, EventOption } from "../engine/events";
+import { meetsLegalityBar } from "../engine/career";
 import { computeStandings, winPct } from "./standings";
 import { newId, type WorldState } from "./types";
 
@@ -154,6 +155,10 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
         const coach = state.coaches.find((c) => c.id === team.headCoachId);
         if (coach) coach.hotSeatLevel = Math.round(clamp(coach.hotSeatLevel + effects.hotSeatDelta, 0, 100));
       }
+      if (effects.legalityDelta) {
+        const coach = state.coaches.find((c) => c.id === team.headCoachId);
+        if (coach) coach.legalityReputation = Math.round(clamp(coach.legalityReputation + effects.legalityDelta, 5, 99));
+      }
       if (effects.chemistryDelta) {
         for (const p of state.players) {
           if (p.teamId === team.id) p.characterRating = Math.round(clamp(p.characterRating + effects.chemistryDelta!, 5, 99));
@@ -175,11 +180,14 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
 
 export function getJobOffers(state: WorldState) {
   if (state.save.coachTeamId) return [];
+  const myCoach = state.coaches.find((c) => c.isPlayerControlled);
   return state.teams
     .filter((t) => {
       const c = state.coaches.find((cc) => cc.id === t.headCoachId);
       return c && !c.isPlayerControlled && c.hotSeatLevel === 0 && c.careerWins === 0 && c.careerLosses === 0;
     })
+    // Image-conscious programs still won't call a coach whose players keep getting arrested.
+    .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation))
     .map((t) => ({ teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division }));
 }
 

@@ -111,7 +111,12 @@ export default function DashboardPage() {
         <h1>You're Out of a Job</h1>
         <div className="card">
           <p>Your program let you go. Pick your next opportunity to keep your career going.</p>
-          {jobOffers.length === 0 && <p>No offers yet — advance to check again.</p>}
+          {jobOffers.length === 0 && (
+            <p>
+              No offers yet — advance to check again.
+              {" "}Image-conscious programs pass on coaches with a rocky off-court reputation, so a low legality rating can mean fewer calls.
+            </p>
+          )}
           {jobOffers.map((o) => (
             <div key={o.teamId} className="divider-row">
               <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}{" "}
@@ -164,6 +169,12 @@ export default function DashboardPage() {
           <div className="stat-label">Hot Seat</div>
           <div className={`stat-value ${team.headCoach.hotSeatLevel > 60 ? "text-bad" : ""}`}>
             {team.headCoach.hotSeatLevel}/100
+          </div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-label">Legality</div>
+          <div className={`stat-value ${team.headCoach.legalityReputation < 40 ? "text-bad" : team.headCoach.legalityReputation > 80 ? "text-good" : ""}`}>
+            {team.headCoach.legalityReputation}/100
           </div>
         </div>
       </div>

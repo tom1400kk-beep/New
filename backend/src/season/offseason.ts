@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers } from "../engine/career";
+import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation } from "../engine/career";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -41,28 +41,34 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   let userTeamId: string | null = null;
   let userNewReputation = 50;
   let userNewPrestige = 50;
+  let userNewLegality = 75;
   let jobOffers: { teamId: string; teamName: string; prestige: number }[] = [];
-  const vacancies: { teamId: string; prestige: number }[] = [];
+  const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
 
   for (const team of teams) {
     if (!team.headCoach) continue;
     const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const { made, wins } = await tournamentWinsForTeam(saveGameId, seasonYear, team.id);
 
-    const newHotSeat = updateHotSeat(team.headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, team.headCoach.archetype);
+    const newHotSeat = updateHotSeat(
+      team.headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, team.headCoach.archetype,
+      team.headCoach.legalityReputation, team.academicReputation,
+    );
     const fired = shouldFire(newHotSeat, rng);
     const newReputation = updateReputation(team.headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, team.headCoach.background);
+    const newLegality = driftLegalityReputation(team.headCoach.legalityReputation);
 
     if (team.headCoach.isPlayerControlled) {
       userTeamId = team.id;
       userNewReputation = newReputation;
       userNewPrestige = newPrestige;
+      userNewLegality = newLegality;
       if (fired) userFired = true;
     }
 
     if (fired) {
-      vacancies.push({ teamId: team.id, prestige: newPrestige });
+      vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation });
       const replacementArchetype = randomArchetype(rng);
       const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
       const replacementSkills = {
@@ -86,7 +92,10 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
         await prisma.team.update({ where: { id: team.id }, data: { headCoachId: replacement.id } });
         await prisma.coach.update({
           where: { id: team.headCoach.id },
-          data: { careerWins: team.headCoach.careerWins + record.wins, careerLosses: team.headCoach.careerLosses + record.losses },
+          data: {
+            careerWins: team.headCoach.careerWins + record.wins, careerLosses: team.headCoach.careerLosses + record.losses,
+            legalityReputation: newLegality,
+          },
         });
       } else {
         await prisma.coach.update({
@@ -106,6 +115,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
         data: {
           hotSeatLevel: newHotSeat,
           reputation: newReputation,
+          legalityReputation: newLegality,
           careerWins: team.headCoach.careerWins + record.wins,
           careerLosses: team.headCoach.careerLosses + record.losses,
           yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob + 1,
@@ -122,7 +132,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   if (userTeamId) {
     const openings = vacancies.filter((v) => v.teamId !== userTeamId);
     const maxOffers = userFired ? 3 : 2;
-    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers);
+    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers, userNewLegality);
     if (offers.length > 0) {
       const offerTeams = await prisma.team.findMany({ where: { id: { in: offers.map((o) => o.teamId) } } });
       jobOffers = offerTeams.map((t) => ({ teamId: t.id, teamName: t.name, prestige: t.prestige }));

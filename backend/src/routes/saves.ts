@@ -8,6 +8,7 @@ import { COACH_ARCHETYPES, type CoachArchetype } from "../engine/coachArchetypes
 import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrounds";
 import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
+import { meetsLegalityBar } from "../engine/career";
 import { EUROPEAN_COUNTRIES } from "../engine/countries";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
@@ -134,6 +135,7 @@ savesRouter.get("/saves/:id/dashboard", async (req, res) => {
 savesRouter.get("/saves/:id/job-offers", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
   if (save.coachTeamId) return res.json([]);
+  const myCoach = await prisma.coach.findFirst({ where: { saveGameId: save.id, isPlayerControlled: true } });
   const openTeams = await prisma.team.findMany({
     where: { saveGameId: save.id, headCoach: { isPlayerControlled: false } },
     include: { headCoach: true },
@@ -141,7 +143,10 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
   // Any team with no player-controlled coach and a below-average hot seat reading of 0
   // right after firing is a fresh vacancy; keep this simple and just surface all of them
   // the offseason engine already narrowed via generateJobOffers on the backend pass.
-  res.json(openTeams.filter((t) => t.headCoach?.hotSeatLevel === 0 && t.headCoach?.careerWins === 0 && t.headCoach?.careerLosses === 0)
+  // Image-conscious programs still won't call a coach whose players keep getting arrested.
+  res.json(openTeams
+    .filter((t) => t.headCoach?.hotSeatLevel === 0 && t.headCoach?.careerWins === 0 && t.headCoach?.careerLosses === 0)
+    .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation))
     .map((t) => ({ teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division })));
 });
 

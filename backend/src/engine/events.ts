@@ -29,6 +29,7 @@ export interface EventEffects {
   injuryWeeks?: number;
   removePlayer?: boolean; // player leaves team (transfer out)
   suspensionDays?: number;
+  legalityDelta?: number; // program off-court integrity reputation
 }
 
 export interface GeneratedEvent {
@@ -301,26 +302,26 @@ const TEMPLATES: Template[] = [
           {
             id: "suspend_indefinite",
             label: "Suspend indefinitely pending the investigation",
-            description: "Hold them out until the legal process resolves. Costs you the player for a while, but shows standards.",
-            effects: { suspensionDays: 21, chemistryDelta: 3, prestigeDelta: 1, hotSeatDelta: -2 },
+            description: "Hold them out until the legal process resolves. Costs you the player for a while, but shows standards and mostly protects your program's reputation.",
+            effects: { suspensionDays: 21, chemistryDelta: 3, prestigeDelta: 1, hotSeatDelta: -2, legalityDelta: -3 },
           },
           {
             id: "suspend_games",
             label: "Suspend a few games",
-            description: "A short, defined suspension while things play out — a middle-ground response.",
-            effects: { suspensionDays: 7, chemistryDelta: 1 },
+            description: "A short, defined suspension while things play out — a middle-ground response that still costs you some program reputation.",
+            effects: { suspensionDays: 7, chemistryDelta: 1, legalityDelta: -6 },
           },
           {
             id: "stand_by",
             label: "Stand by the player, no suspension",
-            description: "Keep them available. Protects your roster, but the optics are bad if it becomes a bigger story.",
-            effects: { hotSeatDelta: 5, prestigeDelta: -3, chemistryDelta: -4 },
+            description: "Keep them available. Protects your roster, but the optics are bad — this is the option that hurts your program's legality reputation most.",
+            effects: { hotSeatDelta: 5, prestigeDelta: -3, chemistryDelta: -4, legalityDelta: -14 },
           },
           {
             id: "dismiss",
             label: "Dismiss them from the team",
-            description: "Cut ties entirely. Opens a scholarship spot and sends a clear message, but you lose the player for good.",
-            effects: { removePlayer: true, chemistryDelta: 3, prestigeDelta: 2, hotSeatDelta: -3 },
+            description: "Cut ties entirely. Opens a scholarship spot, sends a clear message, and actually boosts your program's reputation for accountability — but you lose the player for good.",
+            effects: { removePlayer: true, chemistryDelta: 3, prestigeDelta: 2, hotSeatDelta: -3, legalityDelta: 3 },
           },
         ],
       };
