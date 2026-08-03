@@ -13,6 +13,7 @@ export interface HotSeatModifiers {
   academicReputation?: number;
   adPatience?: number; // AD's personal patience — damps swings independent of archetype
   adWinFocus?: number; // how much this AD weighs wins/losses vs everything else
+  campusAtmosphere?: number; // 1-100 — a coach who's built something beloved gets more benefit of the doubt
 }
 
 export function updateHotSeat(
@@ -37,6 +38,9 @@ export function updateHotSeat(
   // a patient one damps it, independent of the coach's own archetype.
   if (mods.adWinFocus !== undefined) delta *= 0.5 + mods.adWinFocus / 100;
   if (mods.adPatience !== undefined) delta *= clamp(1.3 - mods.adPatience * 0.006, 0.7, 1.3);
+  // Firing a coach who's built a beloved program is its own political cost —
+  // a legendary atmosphere buys real leash during a rough patch.
+  if (delta > 0 && mods.campusAtmosphere !== undefined) delta *= clamp(1.15 - mods.campusAtmosphere / 500, 0.85, 1.15);
   return Math.round(clamp(currentHotSeat + delta, 0, 100));
 }
 

@@ -75,6 +75,7 @@ export interface CoachRow {
   teamPerception: number;
   nationalPerception: number;
   localPerception: number;
+  campusAtmosphere: number;
   careerWins: number;
   careerLosses: number;
   yearsAtCurrentJob: number;

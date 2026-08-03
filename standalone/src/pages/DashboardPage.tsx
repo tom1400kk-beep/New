@@ -54,6 +54,15 @@ function colLabel(index: number): string {
   return "Much cheaper";
 }
 
+function atmosphereLabel(atmosphere: number): string {
+  if (atmosphere >= 90) return "Legendary";
+  if (atmosphere >= 75) return "Electric";
+  if (atmosphere >= 60) return "Buzzing";
+  if (atmosphere >= 40) return "Building";
+  if (atmosphere >= 25) return "Quiet";
+  return "Dead";
+}
+
 function offerLine(o: any): string {
   const parts: string[] = [];
   if (o.salaryDeltaPct !== null && o.salaryDeltaPct !== undefined) {
@@ -337,6 +346,11 @@ export default function DashboardPage() {
           {team.avgTurnoutPct != null
             ? <span className="text-muted"> · averaging {team.avgTurnoutPct}% full this season ({team.homeGamesPlayedThisSeason} home games)</span>
             : <span className="text-muted"> · not enough home games played yet this season to gauge demand</span>}
+        </p>
+        <p className="text-muted" style={{ marginTop: -8 }}>
+          Campus atmosphere: <strong className={team.headCoach.campusAtmosphere >= 60 ? "text-good" : team.headCoach.campusAtmosphere < 25 ? "text-bad" : ""}>
+            {atmosphereLabel(team.headCoach.campusAtmosphere)}
+          </strong> ({team.headCoach.campusAtmosphere}/100) — built through sustained success and tenure, especially at this level
         </p>
         <button onClick={handleUpgradeArena} disabled={upgradingArena || team.arenaUpgradeRequestedThisSeason}>
           {team.arenaUpgradeRequestedThisSeason ? "Already asked this season" : upgradingArena ? "Asking..." : "Ask AD to Expand Arena"}

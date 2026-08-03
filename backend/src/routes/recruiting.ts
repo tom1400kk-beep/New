@@ -134,6 +134,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     proCountry: team.headCoach?.proCountry ?? null,
     playedProDomestic: team.headCoach?.proPath === "DOMESTIC_PRO",
     coachPipelineStates: parsePipelineStates(team.headCoach?.pipelineStatesJson ?? "{}"),
+    campusAtmosphere: team.headCoach?.campusAtmosphere,
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);

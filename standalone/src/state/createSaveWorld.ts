@@ -88,7 +88,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         pipelineStatesJson: isPlayerControlled ? initialPipelineJson : "{}",
         adRelationshipsJson: "{}",
         currentSalary: isPlayerControlled ? baseSalary : 300000, raiseRequestedThisSeason: false,
-        teamPerception: 65, nationalPerception: 20, localPerception: 50,
+        teamPerception: 65, nationalPerception: 20, localPerception: 50, campusAtmosphere: 40,
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       });
 

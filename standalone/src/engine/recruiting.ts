@@ -56,6 +56,7 @@ export interface RecruitingTeamInput {
   proCountry?: string | null;
   playedProDomestic?: boolean;
   coachPipelineStates?: Record<string, number>;
+  campusAtmosphere?: number; // 1-100, program culture/environment — a buzzing program is a real recruiting draw
 }
 
 // Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
@@ -74,7 +75,10 @@ function computeDimensionScores(prospect: RecruitingProspectInput, team: Recruit
   const development = clamp(team.developmentSkill * 0.7 + team.facilitiesRating * 0.3, 0, 100);
 
   const avgRosterCharacter = team.roster.length > 0 ? team.roster.reduce((s, p) => s + p.characterRating, 0) / team.roster.length : 60;
-  const cultureFit = clamp(100 - Math.abs(avgRosterCharacter - prospect.characterRating), 10, 100);
+  const rosterCultureMatch = clamp(100 - Math.abs(avgRosterCharacter - prospect.characterRating), 10, 100);
+  // A buzzing campus atmosphere is a real part of "does this place feel right,"
+  // independent of whether the current roster's personalities happen to match.
+  const cultureFit = clamp(rosterCultureMatch * 0.7 + (team.campusAtmosphere ?? 50) * 0.3, 10, 100);
 
   const perimeterLean = (prospect.threePoint + prospect.playmaking) - (prospect.rebounding + prospect.finishing) * 0.5;
   const schemeFit = clamp(perimeterLean >= 0 ? team.offenseSkill : team.defenseSkill, 0, 100);

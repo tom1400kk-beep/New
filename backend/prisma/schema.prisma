@@ -127,6 +127,7 @@ model Coach {
   teamPerception     Int      @default(65) // 1-100, locker room trust in the coach
   nationalPerception Int      @default(20) // 1-100, national media profile
   localPerception    Int      @default(50) // 1-100, local fanbase/booster goodwill
+  campusAtmosphere   Int      @default(40) // 1-100, program culture/environment — builds slowly with sustained success and tenure, especially at lower divisions
 
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)

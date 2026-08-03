@@ -208,7 +208,7 @@ savesRouter.post("/saves/:id/accept-job", async (req, res) => {
   await prisma.coach.update({ where: { id: team.headCoach.id }, data: { isPlayerControlled: false } });
   if (priorCoach) {
     await prisma.team.update({ where: { id: teamId }, data: { headCoachId: priorCoach.id } });
-    await prisma.coach.update({ where: { id: priorCoach.id }, data: { isPlayerControlled: true, hotSeatLevel: 0, yearsAtCurrentJob: 0 } });
+    await prisma.coach.update({ where: { id: priorCoach.id }, data: { isPlayerControlled: true, hotSeatLevel: 0, yearsAtCurrentJob: 0, campusAtmosphere: 40 } });
   }
 
   await prisma.saveGame.update({ where: { id: save.id }, data: { coachTeamId: teamId, currentPhase: "PRESEASON" } });
@@ -297,7 +297,7 @@ savesRouter.post("/saves/:id/resign-and-accept", async (req, res) => {
   await prisma.coach.update({
     where: { id: myCoach.id },
     data: {
-      isPlayerControlled: true, hotSeatLevel: 0, yearsAtCurrentJob: 0, raiseRequestedThisSeason: false,
+      isPlayerControlled: true, hotSeatLevel: 0, yearsAtCurrentJob: 0, raiseRequestedThisSeason: false, campusAtmosphere: 40,
       currentSalary: negotiatedSalary, adRelationshipsJson: JSON.stringify(updatedRelationships),
     },
   });

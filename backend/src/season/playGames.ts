@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
 import { computeAttendance } from "../engine/attendance";
+import { homeCourtBonus } from "../engine/atmosphere";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
 
@@ -57,11 +58,14 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
     const awayTeam = teamById.get(g.awayTeamId);
     if (!homeTeam || !awayTeam) continue;
 
+    // A rocking home crowd is a genuine edge — the more atmosphere a program
+    // has built, the tougher its building is to play in.
+    const crowdBonus = homeCourtBonus(homeTeam.headCoach?.campusAtmosphere ?? 40);
     const home: SimTeam = {
       id: homeTeam.id,
       players: playersByTeam.get(homeTeam.id) ?? [],
-      offenseSkill: (homeTeam.headCoach?.offenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach),
-      defenseSkill: (homeTeam.headCoach?.defenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach),
+      offenseSkill: (homeTeam.headCoach?.offenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach) + crowdBonus,
+      defenseSkill: (homeTeam.headCoach?.defenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach) + crowdBonus,
     };
     const away: SimTeam = {
       id: awayTeam.id,

@@ -3,6 +3,7 @@ import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJo
 import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { driftPerception } from "../engine/media";
+import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -64,11 +65,16 @@ export function runOffseason(state: WorldState): OffseasonResult {
       academicReputation: team.academicReputation,
       adPatience: ad?.patience,
       adWinFocus: ad?.winFocus,
+      campusAtmosphere: headCoach.campusAtmosphere,
     });
     const fired = shouldFire(newHotSeat, rng, ad?.loyalty, currentRelScore);
     const newReputation = updateReputation(headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, headCoach.background);
     const newLegality = driftLegalityReputation(headCoach.legalityReputation);
+    const newAtmosphere = driftAtmosphere(headCoach.campusAtmosphere, atmosphereTarget({
+      division, prestige: team.prestige, winPct, expectedWinPct: expectedWinPct(team.prestige),
+      yearsAtCurrentJob: headCoach.yearsAtCurrentJob, madeTournament: made, tournamentWins: wins,
+    }));
     if (headCoach.isPlayerControlled) {
       headCoach.pipelineStatesJson = JSON.stringify(decayPipeline(parsePipelineStates(headCoach.pipelineStatesJson)));
       if (ad) {
@@ -114,6 +120,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         teamPerception: 65,
         nationalPerception: 20,
         localPerception: 50,
+        campusAtmosphere: 40,
       };
       if (headCoach.isPlayerControlled) {
         const replacement = {
@@ -138,6 +145,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         teamPerception: driftPerception(headCoach.teamPerception, 60, 0.05),
         nationalPerception: driftPerception(headCoach.nationalPerception, 20, 0.15),
         localPerception: driftPerception(headCoach.localPerception, 50, 0.1),
+        campusAtmosphere: newAtmosphere,
         careerWins: headCoach.careerWins + record.wins, careerLosses: headCoach.careerLosses + record.losses,
         yearsAtCurrentJob: headCoach.yearsAtCurrentJob + 1,
       });

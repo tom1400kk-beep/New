@@ -123,6 +123,7 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     proCountry: coach.proCountry,
     playedProDomestic: coach.proPath === "DOMESTIC_PRO",
     coachPipelineStates: parsePipelineStates(coach.pipelineStatesJson),
+    campusAtmosphere: coach.campusAtmosphere,
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);
@@ -268,6 +269,7 @@ export function acceptJob(state: WorldState, teamId: string) {
     priorCoach.isPlayerControlled = true;
     priorCoach.hotSeatLevel = 0;
     priorCoach.yearsAtCurrentJob = 0;
+    priorCoach.campusAtmosphere = 40;
   }
 
   state.save.coachTeamId = teamId;
@@ -348,7 +350,7 @@ export function resignAndAccept(state: WorldState, teamId: string) {
     proPath: "NONE", proCountry: null as string | null, legalityReputation: 75,
     hometownState: null as string | null, pipelineStatesJson: "{}", adRelationshipsJson: "{}",
     currentSalary: 300000, raiseRequestedThisSeason: false,
-    teamPerception: 65, nationalPerception: 20, localPerception: 50,
+    teamPerception: 65, nationalPerception: 20, localPerception: 50, campusAtmosphere: 40,
     careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
   };
   state.coaches.push(replacement);
@@ -363,6 +365,7 @@ export function resignAndAccept(state: WorldState, teamId: string) {
   myCoach.hotSeatLevel = 0;
   myCoach.yearsAtCurrentJob = 0;
   myCoach.raiseRequestedThisSeason = false;
+  myCoach.campusAtmosphere = 40;
   myCoach.currentSalary = negotiatedSalary;
   myCoach.adRelationshipsJson = JSON.stringify(updatedRelationships);
 

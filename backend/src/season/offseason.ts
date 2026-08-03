@@ -5,6 +5,7 @@ import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJo
 import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { driftPerception } from "../engine/media";
+import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -65,11 +66,16 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       academicReputation: team.academicReputation,
       adPatience: ad?.patience,
       adWinFocus: ad?.winFocus,
+      campusAtmosphere: team.headCoach.campusAtmosphere,
     });
     const fired = shouldFire(newHotSeat, rng, ad?.loyalty, currentRelScore);
     const newReputation = updateReputation(team.headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, team.headCoach.background);
     const newLegality = driftLegalityReputation(team.headCoach.legalityReputation);
+    const newAtmosphere = driftAtmosphere(team.headCoach.campusAtmosphere, atmosphereTarget({
+      division, prestige: team.prestige, winPct, expectedWinPct: expectedWinPct(team.prestige),
+      yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob, madeTournament: made, tournamentWins: wins,
+    }));
     // Pipeline decay and AD-relationship tracking are coach-scoped and only
     // matter for the player's own coach — skip the extra work for every AI
     // coach every season (their identities get discarded on firing anyway).
@@ -144,6 +150,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           teamPerception: driftPerception(team.headCoach.teamPerception, 60, 0.05),
           nationalPerception: driftPerception(team.headCoach.nationalPerception, 20, 0.15),
           localPerception: driftPerception(team.headCoach.localPerception, 50, 0.1),
+          campusAtmosphere: newAtmosphere,
           careerWins: team.headCoach.careerWins + record.wins,
           careerLosses: team.headCoach.careerLosses + record.losses,
           yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob + 1,
