@@ -1,0 +1,325 @@
+// College Basketball Coach Sim - core data model
+// SQLite for a simple, file-based, single-user-friendly backend.
+// NOTE: SQLite has no native enum support in Prisma, so "enum-like" fields are
+// plain Strings here; the allowed values are enforced as TS union types in
+// backend/src/types.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Save management ----------
+
+model SaveGame {
+  id                String   @id @default(cuid())
+  name              String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  currentDate       DateTime
+  currentSeasonYear Int
+  currentPhase      String   @default("PRESEASON") // SeasonPhase
+  coachTeamId       String?
+
+  conferences      Conference[]
+  teams            Team[]
+  coaches          Coach[]
+  assistantCoaches AssistantCoach[]
+  players          Player[]
+  prospects        Prospect[]
+  seasons          Season[]
+  games            Game[]
+  tournaments      Tournament[]
+  gameEvents       GameEvent[]
+}
+
+// ---------- League structure ----------
+// Division: "D1" | "D2" | "D3"
+
+model Conference {
+  id           String   @id @default(cuid())
+  saveGame     SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId   String
+  name         String
+  abbreviation String
+  division     String
+
+  teams        Team[]
+  tournaments  Tournament[]
+
+  @@index([saveGameId, division])
+}
+
+model Team {
+  id                 String   @id @default(cuid())
+  saveGame           SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId         String
+  name               String
+  state              String
+  division           String
+  conference         Conference @relation(fields: [conferenceId], references: [id])
+  conferenceId       String
+
+  prestige           Int      @default(50) // 1-100
+  nilBudget          Int      @default(100000) // annual NIL/booster dollars available
+  facilitiesRating   Int      @default(50) // 1-100
+  isPlayerControlled Boolean  @default(false)
+
+  players           Player[]
+  prospectInterest  RecruitInterest[]
+  headCoach         Coach?   @relation("HeadCoach", fields: [headCoachId], references: [id])
+  headCoachId       String?  @unique
+  assistants        AssistantCoach[]
+
+  homeGames         Game[]   @relation("HomeTeam")
+  awayGames         Game[]   @relation("AwayTeam")
+
+  @@index([saveGameId, division])
+  @@index([conferenceId])
+}
+
+// ---------- Coaches ----------
+
+model Coach {
+  id                 String   @id @default(cuid())
+  saveGame           SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId         String
+  name               String
+  isPlayerControlled Boolean  @default(false)
+
+  reputation         Int      @default(50) // 1-100, drives job offers
+  hotSeatLevel       Int      @default(0)  // 0-100, 100 = about to be fired
+  offenseSkill       Int      @default(50)
+  defenseSkill       Int      @default(50)
+  recruitingSkill    Int      @default(50)
+  developmentSkill   Int      @default(50)
+
+  careerWins         Int      @default(0)
+  careerLosses       Int      @default(0)
+  yearsAtCurrentJob  Int      @default(0)
+
+  team               Team?    @relation("HeadCoach")
+
+  @@index([saveGameId])
+}
+
+// AssistantRole: "RECRUITING" | "PLAYER_DEVELOPMENT" | "OFFENSE" | "DEFENSE"
+
+model AssistantCoach {
+  id            String   @id @default(cuid())
+  saveGame      SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId    String
+  team          Team?    @relation(fields: [teamId], references: [id])
+  teamId        String?
+  name          String
+  role          String
+  rating        Int      @default(50) // 1-100 in their specialty
+  contractYears Int      @default(2)
+
+  @@index([saveGameId, teamId])
+}
+
+// ---------- Players ----------
+// PositionType: "PG" | "SG" | "SF" | "PF" | "C"
+// ClassYear: "FR" | "SO" | "JR" | "SR" | "GR"
+// PlayerOrigin: "HIGH_SCHOOL" | "JUCO" | "TRANSFER_PORTAL"
+
+model Player {
+  id               String   @id @default(cuid())
+  saveGame         SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId       String
+  team             Team?    @relation(fields: [teamId], references: [id])
+  teamId           String?
+
+  firstName        String
+  lastName         String
+  position         String
+  classYear        String
+  heightInches     Int
+  hometownState    String
+  origin           String   @default("HIGH_SCHOOL")
+
+  // Core ratings, 1-100
+  scoring          Int
+  threePoint       Int
+  finishing        Int
+  playmaking       Int
+  rebounding       Int
+  defense          Int
+  athleticism      Int
+  basketballIq     Int
+  stamina          Int
+  potential        Int      // ceiling, drives development
+
+  // Off-court
+  characterRating  Int      // 1-100 locker room reputation; low = drama-prone
+  chemistryImpact  Int      @default(0) // computed modifier applied to team chemistry
+
+  eligibilityYearsLeft Int  @default(4)
+  inTransferPortal Boolean  @default(false)
+  isInjured        Boolean  @default(false)
+  injuryWeeksLeft  Int      @default(0)
+
+  gameStats        PlayerGameStat[]
+
+  @@index([saveGameId, teamId])
+}
+
+// ---------- Recruiting: HS + JUCO prospects, and portal reuses Player.inTransferPortal ----------
+// ProspectSource: "HIGH_SCHOOL" | "JUCO"
+
+model Prospect {
+  id               String   @id @default(cuid())
+  saveGame         SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId       String
+
+  firstName        String
+  lastName         String
+  position         String
+  hometownState    String
+  source           String
+  starRating       Int      // 1-5
+
+  // True ratings (hidden ceiling of scouting accuracy is applied client-side via scoutingNoise)
+  scoring          Int
+  threePoint       Int
+  finishing        Int
+  playmaking       Int
+  rebounding       Int
+  defense          Int
+  athleticism      Int
+  basketballIq     Int
+  potential        Int
+  characterRating  Int
+  scoutingNoise    Int      @default(10) // +/- uncertainty applied when displaying ratings to the user
+
+  graduationYear   Int      // season year they become available to sign
+  signed           Boolean  @default(false)
+  committedTeamId  String?
+
+  interest         RecruitInterest[]
+
+  @@index([saveGameId, signed, graduationYear])
+}
+
+model RecruitInterest {
+  id                String   @id @default(cuid())
+  prospect          Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  prospectId        String
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId            String
+
+  interestLevel     Int      @default(0) // 0-100
+  pointsInvested    Int      @default(0)
+  offered           Boolean  @default(false)
+  visitCompleted    Boolean  @default(false)
+
+  @@unique([prospectId, teamId])
+}
+
+// ---------- Seasons, games, tournaments ----------
+
+model Season {
+  id         String   @id @default(cuid())
+  saveGame   SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId String
+  year       Int
+
+  @@unique([saveGameId, year])
+}
+
+model Game {
+  id            String   @id @default(cuid())
+  saveGame      SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId    String
+  seasonYear    Int
+  date          DateTime
+
+  homeTeam      Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeamId    String
+  awayTeam      Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeamId    String
+
+  homeScore     Int?
+  awayScore     Int?
+  isPlayed      Boolean  @default(false)
+  isConference  Boolean  @default(false)
+
+  tournament    Tournament? @relation(fields: [tournamentId], references: [id])
+  tournamentId  String?
+  round         Int?     // 1 = first round, etc, for tournament games
+  bracketSlot   Int?     // position within the round, used to reconstruct bracket adjacency for the next round
+
+  playerStats   PlayerGameStat[]
+
+  @@index([saveGameId, seasonYear])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+}
+
+model PlayerGameStat {
+  id        String @id @default(cuid())
+  game      Game   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameId    String
+  player    Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId  String
+
+  minutes   Int
+  points    Int
+  rebounds  Int
+  assists   Int
+  steals    Int
+  blocks    Int
+  turnovers Int
+  fgm       Int
+  fga       Int
+  threepm   Int
+  threepa   Int
+  ftm       Int
+  fta       Int
+
+  @@index([gameId])
+  @@index([playerId])
+}
+
+// TournamentType: "CONFERENCE_TOURNAMENT" | "NCAA_TOURNAMENT" | "NIT" | "D2_NATIONAL" | "D3_NATIONAL"
+
+model Tournament {
+  id           String   @id @default(cuid())
+  saveGame     SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId   String
+  seasonYear   Int
+  type         String
+  division     String
+  conference   Conference? @relation(fields: [conferenceId], references: [id])
+  conferenceId String?
+
+  games        Game[]
+
+  @@index([saveGameId, seasonYear, type])
+}
+
+// ---------- Random events ----------
+// EventStatus: "PENDING" | "RESOLVED"
+
+model GameEvent {
+  id             String   @id @default(cuid())
+  saveGame       SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId     String
+  seasonYear     Int
+  date           DateTime
+  type           String   // e.g. "INJURY", "TRANSFER_REQUEST", "BOOSTER_DEMAND", "JOB_OFFER", "CHEMISTRY_CONFLICT"
+  title          String
+  description    String
+  teamId         String?
+  playerId       String?
+  status         String   @default("PENDING")
+  optionsJson    String   // JSON-encoded array of { id, label, description, effects }
+  chosenOptionId String?
+
+  @@index([saveGameId, status])
+}
