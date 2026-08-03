@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation } from "../engine/career";
+import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct } from "../engine/career";
 import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
+import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -33,7 +34,7 @@ async function tournamentWinsForTeam(saveGameId: string, seasonYear: number, tea
 export async function runOffseason(saveGameId: string): Promise<{ userFired: boolean; jobOffers: { teamId: string; teamName: string; prestige: number }[] }> {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: saveGameId } });
   const seasonYear = save.currentSeasonYear;
-  const teams = await prisma.team.findMany({ where: { saveGameId }, include: { headCoach: true } });
+  const teams = await prisma.team.findMany({ where: { saveGameId }, include: { headCoach: true, athleticDirector: true } });
   const division = teams[0]?.division as Division;
   const standings = await computeStandings(saveGameId, seasonYear);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
@@ -43,6 +44,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   let userNewReputation = 50;
   let userNewPrestige = 50;
   let userNewLegality = 75;
+  let userNewAdRelationshipsJson = "{}";
   let jobOffers: { teamId: string; teamName: string; prestige: number }[] = [];
   const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
 
@@ -50,19 +52,31 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     if (!team.headCoach) continue;
     const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const { made, wins } = await tournamentWinsForTeam(saveGameId, seasonYear, team.id);
+    const games = record.wins + record.losses || 1;
+    const winPct = record.wins / games;
+    const ad = team.athleticDirector;
+    const coachAdRelationships = parseAdRelationships(team.headCoach.adRelationshipsJson);
+    const currentRelScore = ad ? coachAdRelationships[ad.id] ?? 50 : 50;
 
-    const newHotSeat = updateHotSeat(
-      team.headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, team.headCoach.archetype,
-      team.headCoach.legalityReputation, team.academicReputation,
-    );
-    const fired = shouldFire(newHotSeat, rng);
+    const newHotSeat = updateHotSeat(team.headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, {
+      archetype: team.headCoach.archetype,
+      legalityReputation: team.headCoach.legalityReputation,
+      academicReputation: team.academicReputation,
+      adPatience: ad?.patience,
+      adWinFocus: ad?.winFocus,
+    });
+    const fired = shouldFire(newHotSeat, rng, ad?.loyalty, currentRelScore);
     const newReputation = updateReputation(team.headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, team.headCoach.background);
     const newLegality = driftLegalityReputation(team.headCoach.legalityReputation);
-    // Pipeline decay is coach-scoped and only matters for the player's own
-    // coach — skip the JSON parse/stringify for every AI coach every season.
+    // Pipeline decay and AD-relationship tracking are coach-scoped and only
+    // matter for the player's own coach — skip the extra work for every AI
+    // coach every season (their identities get discarded on firing anyway).
     const newPipelineJson = team.headCoach.isPlayerControlled
       ? JSON.stringify(decayPipeline(parsePipelineStates(team.headCoach.pipelineStatesJson)))
+      : undefined;
+    const newAdRelationshipsJson = team.headCoach.isPlayerControlled && ad
+      ? JSON.stringify({ ...coachAdRelationships, [ad.id]: updateAdRelationship(currentRelScore, winPct, expectedWinPct(team.prestige), fired) })
       : undefined;
 
     if (team.headCoach.isPlayerControlled) {
@@ -70,6 +84,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       userNewReputation = newReputation;
       userNewPrestige = newPrestige;
       userNewLegality = newLegality;
+      if (newAdRelationshipsJson) userNewAdRelationshipsJson = newAdRelationshipsJson;
       if (fired) userFired = true;
     }
 
@@ -100,7 +115,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           where: { id: team.headCoach.id },
           data: {
             careerWins: team.headCoach.careerWins + record.wins, careerLosses: team.headCoach.careerLosses + record.losses,
-            legalityReputation: newLegality, pipelineStatesJson: newPipelineJson,
+            legalityReputation: newLegality, pipelineStatesJson: newPipelineJson, adRelationshipsJson: newAdRelationshipsJson,
           },
         });
       } else {
@@ -123,6 +138,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           reputation: newReputation,
           legalityReputation: newLegality,
           pipelineStatesJson: newPipelineJson,
+          adRelationshipsJson: newAdRelationshipsJson,
           careerWins: team.headCoach.careerWins + record.wins,
           careerLosses: team.headCoach.careerLosses + record.losses,
           yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob + 1,
@@ -133,13 +149,53 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     await prisma.team.update({ where: { id: team.id }, data: { prestige: newPrestige } });
   }
 
-  // Job market resolves after every program's outcome is known, so offers reflect
-  // the full set of openings league-wide rather than just whichever teams were
-  // processed first.
+  // ---- Athletic director turnover: ~7-year average tenure (memoryless yearly
+  // hazard), and a departing AD sometimes moves to a different school instead
+  // of retiring — same "carousel" idea as the coaching job market. ----
+  const departingADs: { teamId: string; academicReputation: number; ad: NonNullable<(typeof teams)[number]["athleticDirector"]> }[] = [];
+  for (const team of teams) {
+    if (!team.athleticDirector) continue;
+    if (adTurnoverRoll(rng)) {
+      departingADs.push({ teamId: team.id, academicReputation: team.academicReputation, ad: team.athleticDirector });
+    } else {
+      await prisma.athleticDirector.update({ where: { id: team.athleticDirector.id }, data: { yearsAtCurrentJob: team.athleticDirector.yearsAtCurrentJob + 1 } });
+    }
+  }
+  // athleticDirectorId is unique on Team, so a departing team's slot must be
+  // cleared before anyone else can be assigned into it — otherwise a school
+  // "swapping in" an AD who hasn't yet been released by their old team trips
+  // the unique constraint.
+  for (const { teamId } of departingADs) {
+    await prisma.team.update({ where: { id: teamId }, data: { athleticDirectorId: null } });
+  }
+  const movingAdPool = [...departingADs].sort(() => rng() - 0.5).map((d) => d.ad);
+  for (const { teamId, academicReputation, ad } of departingADs) {
+    const moveIn = movingAdPool.length > 0 && rng() < 0.4 ? movingAdPool.pop() : undefined;
+    if (moveIn && moveIn.id !== ad.id) {
+      await prisma.team.update({ where: { id: teamId }, data: { athleticDirectorId: moveIn.id } });
+      await prisma.athleticDirector.update({ where: { id: moveIn.id }, data: { yearsAtCurrentJob: 0 } });
+    } else {
+      const freshTraits = generateADTraits(rng, academicReputation);
+      const fresh = await prisma.athleticDirector.create({
+        data: { id: randomUUID(), saveGameId, name: `${randomFirstName(rng)} ${randomLastName(rng)}`, ...freshTraits, yearsAtCurrentJob: 0 },
+      });
+      await prisma.team.update({ where: { id: teamId }, data: { athleticDirectorId: fresh.id } });
+    }
+  }
+
+  // Job market resolves after every program's outcome (and every AD's) is
+  // known, so offers reflect the full set of openings league-wide rather than
+  // just whichever teams were processed first.
   if (userTeamId) {
     const openings = vacancies.filter((v) => v.teamId !== userTeamId);
+    const openingTeams = await prisma.team.findMany({ where: { id: { in: openings.map((o) => o.teamId) } }, include: { athleticDirector: true } });
+    const openingsWithAd = openings.map((o) => {
+      const t = openingTeams.find((tt) => tt.id === o.teamId);
+      return { ...o, athleticDirectorId: t?.athleticDirector?.id, integrityStandard: t?.athleticDirector?.integrityStandard };
+    });
     const maxOffers = userFired ? 3 : 2;
-    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers, userNewLegality);
+    const coachAdRelationships = parseAdRelationships(userNewAdRelationshipsJson);
+    const offers = generateJobOffers(userNewReputation, userNewPrestige, openingsWithAd, rng, maxOffers, userNewLegality, coachAdRelationships);
     if (offers.length > 0) {
       const offerTeams = await prisma.team.findMany({ where: { id: { in: offers.map((o) => o.teamId) } } });
       jobOffers = offerTeams.map((t) => ({ teamId: t.id, teamName: t.name, prestige: t.prestige }));

@@ -28,6 +28,7 @@ model SaveGame {
   conferences      Conference[]
   teams            Team[]
   coaches          Coach[]
+  athleticDirectors AthleticDirector[]
   assistantCoaches AssistantCoach[]
   players          Player[]
   prospects        Prospect[]
@@ -76,6 +77,8 @@ model Team {
   headCoach         Coach?   @relation("HeadCoach", fields: [headCoachId], references: [id])
   headCoachId       String?  @unique
   assistants        AssistantCoach[]
+  athleticDirector   AthleticDirector? @relation(fields: [athleticDirectorId], references: [id])
+  athleticDirectorId String?  @unique
 
   homeGames         Game[]   @relation("HomeTeam")
   awayGames         Game[]   @relation("AwayTeam")
@@ -113,11 +116,36 @@ model Coach {
   hometownState      String?  // where the coach grew up / played HS ball
   pipelineStatesJson String   @default("{}") // Record<state, 0-100> recruiting-connection strength; persists across job changes
 
+  adRelationshipsJson String  @default("{}") // Record<athleticDirectorId, 0-100> — how ADs who've worked with this coach before remember them
+
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)
   yearsAtCurrentJob  Int      @default(0)
 
   team               Team?    @relation("HeadCoach")
+
+  @@index([saveGameId])
+}
+
+// ---------- Athletic Directors ----------
+// ADs hire/fire head coaches, have their own personal values, cycle through
+// jobs (average ~7-year tenure) sometimes moving to a different school rather
+// than retiring, and remember coaches they've worked with before.
+
+model AthleticDirector {
+  id                String   @id @default(cuid())
+  saveGame          SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId        String
+  name              String
+
+  patience          Int      @default(50) // 1-100, damps/amplifies hot-seat swings
+  winFocus          Int      @default(50) // 1-100, how much win/loss drives the hot seat vs everything else
+  integrityStandard Int      @default(50) // 1-100, personal legality bar
+  loyalty           Int      @default(50) // 1-100, how much a personal relationship protects (or dooms) a coach
+
+  yearsAtCurrentJob Int      @default(0)
+
+  team              Team?
 
   @@index([saveGameId])
 }

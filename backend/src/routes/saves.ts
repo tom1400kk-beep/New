@@ -9,6 +9,7 @@ import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrou
 import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
 import { meetsLegalityBar } from "../engine/career";
+import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { EUROPEAN_COUNTRIES } from "../engine/countries";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
@@ -111,7 +112,7 @@ savesRouter.get("/saves/:id/dashboard", async (req, res) => {
 
   const team = await prisma.team.findUniqueOrThrow({
     where: { id: save.coachTeamId },
-    include: { headCoach: true, conference: true },
+    include: { headCoach: true, conference: true, athleticDirector: true },
   });
 
   const standings = await computeStandings(save.id, save.currentSeasonYear);
@@ -136,18 +137,29 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
   if (save.coachTeamId) return res.json([]);
   const myCoach = await prisma.coach.findFirst({ where: { saveGameId: save.id, isPlayerControlled: true } });
+  const myRelationships = myCoach ? parseAdRelationships(myCoach.adRelationshipsJson) : {};
   const openTeams = await prisma.team.findMany({
     where: { saveGameId: save.id, headCoach: { isPlayerControlled: false } },
-    include: { headCoach: true },
+    include: { headCoach: true, athleticDirector: true },
   });
   // Any team with no player-controlled coach and a below-average hot seat reading of 0
   // right after firing is a fresh vacancy; keep this simple and just surface all of them
   // the offseason engine already narrowed via generateJobOffers on the backend pass.
-  // Image-conscious programs still won't call a coach whose players keep getting arrested.
+  // Image-conscious programs (and this specific AD's own standards) still won't call a
+  // coach whose players keep getting arrested — and an AD who remembers this coach
+  // badly from a previous job together won't hire them again at all.
   res.json(openTeams
     .filter((t) => t.headCoach?.hotSeatLevel === 0 && t.headCoach?.careerWins === 0 && t.headCoach?.careerLosses === 0)
-    .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation))
-    .map((t) => ({ teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division })));
+    .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation, t.athleticDirector?.integrityStandard))
+    .filter((t) => !t.athleticDirector || adRelationshipScore(myRelationships, t.athleticDirector.id) > 30)
+    .map((t) => {
+      const relScore = t.athleticDirector ? adRelationshipScore(myRelationships, t.athleticDirector.id) : null;
+      return {
+        teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division,
+        athleticDirectorName: t.athleticDirector?.name ?? null,
+        adRemembersYou: relScore !== null && relScore >= 70,
+      };
+    }));
 });
 
 savesRouter.post("/saves/:id/accept-job", async (req, res) => {

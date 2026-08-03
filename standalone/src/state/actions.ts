@@ -4,6 +4,7 @@ import { clamp, randInt, mulberry32 } from "../engine/rng";
 import type { EventEffects, EventOption } from "../engine/events";
 import { meetsLegalityBar } from "../engine/career";
 import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
+import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { computeStandings, winPct } from "./standings";
 import { newId, type WorldState } from "./types";
 
@@ -195,14 +196,23 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
 export function getJobOffers(state: WorldState) {
   if (state.save.coachTeamId) return [];
   const myCoach = state.coaches.find((c) => c.isPlayerControlled);
+  const myRelationships = myCoach ? parseAdRelationships(myCoach.adRelationshipsJson) : {};
   return state.teams
     .filter((t) => {
       const c = state.coaches.find((cc) => cc.id === t.headCoachId);
       return c && !c.isPlayerControlled && c.hotSeatLevel === 0 && c.careerWins === 0 && c.careerLosses === 0;
     })
-    // Image-conscious programs still won't call a coach whose players keep getting arrested.
-    .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation))
-    .map((t) => ({ teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division }));
+    .map((t) => ({ team: t, ad: state.athleticDirectors.find((a) => a.id === t.athleticDirectorId) }))
+    // Image-conscious programs (and this specific AD's own standards) still won't call a
+    // coach whose players keep getting arrested — and an AD who remembers this coach
+    // badly from a previous job together won't hire them again at all.
+    .filter(({ team, ad }) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, team.academicReputation, ad?.integrityStandard))
+    .filter(({ ad }) => !ad || adRelationshipScore(myRelationships, ad.id) > 30)
+    .map(({ team, ad }) => ({
+      teamId: team.id, teamName: team.name, prestige: team.prestige, division: team.division,
+      athleticDirectorName: ad?.name ?? null,
+      adRemembersYou: ad ? adRelationshipScore(myRelationships, ad.id) >= 70 : false,
+    }));
 }
 
 export function acceptJob(state: WorldState, teamId: string) {

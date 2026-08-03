@@ -8,6 +8,7 @@ export function getDashboard(state: WorldState) {
   const team = state.teams.find((t) => t.id === save.coachTeamId)!;
   const headCoach = state.coaches.find((c) => c.id === team.headCoachId)!;
   const conference = state.conferences.find((c) => c.id === team.conferenceId)!;
+  const athleticDirector = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId) ?? null;
 
   const standings = computeStandings(state, save.currentSeasonYear);
   const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
@@ -26,7 +27,7 @@ export function getDashboard(state: WorldState) {
 
   const pendingEvents = state.events.filter((e) => e.status === "PENDING");
 
-  return { save, team: { ...team, headCoach, conference }, record, nextGame: nextGameOut, pendingEvents };
+  return { save, team: { ...team, headCoach, conference, athleticDirector }, record, nextGame: nextGameOut, pendingEvents };
 }
 
 export function getRoster(state: WorldState) {

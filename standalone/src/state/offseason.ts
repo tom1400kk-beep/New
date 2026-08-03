@@ -1,6 +1,7 @@
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation } from "../engine/career";
+import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct } from "../engine/career";
 import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
+import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -41,6 +42,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
   let userNewReputation = 50;
   let userNewPrestige = 50;
   let userNewLegality = 75;
+  let userNewAdRelationshipsJson = "{}";
   let jobOffers: OffseasonResult["jobOffers"] = [];
   const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
 
@@ -49,17 +51,31 @@ export function runOffseason(state: WorldState): OffseasonResult {
     if (!headCoach) continue;
     const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const { made, wins } = tournamentWinsForTeam(state, seasonYear, team.id);
+    const games = record.wins + record.losses || 1;
+    const winPct = record.wins / games;
+    const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+    const coachAdRelationships = parseAdRelationships(headCoach.adRelationshipsJson);
+    const currentRelScore = ad ? coachAdRelationships[ad.id] ?? 50 : 50;
 
-    const newHotSeat = updateHotSeat(
-      headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, headCoach.archetype,
-      headCoach.legalityReputation, team.academicReputation,
-    );
-    const fired = shouldFire(newHotSeat, rng);
+    const newHotSeat = updateHotSeat(headCoach.hotSeatLevel, record.wins, record.losses, team.prestige, {
+      archetype: headCoach.archetype,
+      legalityReputation: headCoach.legalityReputation,
+      academicReputation: team.academicReputation,
+      adPatience: ad?.patience,
+      adWinFocus: ad?.winFocus,
+    });
+    const fired = shouldFire(newHotSeat, rng, ad?.loyalty, currentRelScore);
     const newReputation = updateReputation(headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, headCoach.background);
     const newLegality = driftLegalityReputation(headCoach.legalityReputation);
     if (headCoach.isPlayerControlled) {
       headCoach.pipelineStatesJson = JSON.stringify(decayPipeline(parsePipelineStates(headCoach.pipelineStatesJson)));
+      if (ad) {
+        headCoach.adRelationshipsJson = JSON.stringify({
+          ...coachAdRelationships,
+          [ad.id]: updateAdRelationship(currentRelScore, winPct, expectedWinPct(team.prestige), fired),
+        });
+      }
     }
 
     if (headCoach.isPlayerControlled) {
@@ -67,6 +83,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       userNewReputation = newReputation;
       userNewPrestige = newPrestige;
       userNewLegality = newLegality;
+      userNewAdRelationshipsJson = headCoach.adRelationshipsJson;
       if (fired) userFired = true;
     }
 
@@ -90,6 +107,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         legalityReputation: 75,
         hometownState: null as string | null,
         pipelineStatesJson: "{}",
+        adRelationshipsJson: "{}",
       };
       if (headCoach.isPlayerControlled) {
         const replacement = {
@@ -118,10 +136,46 @@ export function runOffseason(state: WorldState): OffseasonResult {
     team.prestige = newPrestige;
   }
 
+  // Athletic director turnover: ~7-year average tenure (memoryless yearly
+  // hazard), and a departing AD sometimes moves to a different school instead
+  // of retiring — same "carousel" idea as the coaching job market.
+  const departingADs: { team: WorldState["teams"][number]; ad: WorldState["athleticDirectors"][number] }[] = [];
+  for (const team of state.teams) {
+    const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+    if (!ad) continue;
+    if (adTurnoverRoll(rng)) {
+      departingADs.push({ team, ad });
+    } else {
+      ad.yearsAtCurrentJob += 1;
+    }
+  }
+  const movingAdPool = [...departingADs].sort(() => rng() - 0.5).map((d) => d.ad);
+  for (const { team, ad } of departingADs) {
+    const moveIn = movingAdPool.length > 0 && rng() < 0.4 ? movingAdPool.pop() : undefined;
+    if (moveIn && moveIn.id !== ad.id) {
+      team.athleticDirectorId = moveIn.id;
+      moveIn.yearsAtCurrentJob = 0;
+    } else {
+      const fresh = {
+        id: newId(), name: `${randomFirstName(rng)} ${randomLastName(rng)}`,
+        ...generateADTraits(rng, team.academicReputation), yearsAtCurrentJob: 0,
+      };
+      state.athleticDirectors.push(fresh);
+      team.athleticDirectorId = fresh.id;
+    }
+  }
+
   if (userTeamId) {
-    const openings = vacancies.filter((v) => v.teamId !== userTeamId);
+    const openings = vacancies
+      .filter((v) => v.teamId !== userTeamId)
+      .map((v) => {
+        const t = state.teams.find((tt) => tt.id === v.teamId);
+        const ad = t ? state.athleticDirectors.find((a) => a.id === t.athleticDirectorId) : undefined;
+        return { ...v, athleticDirectorId: ad?.id, integrityStandard: ad?.integrityStandard };
+      });
     const maxOffers = userFired ? 3 : 2;
-    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers, userNewLegality);
+    const coachAdRelationships = parseAdRelationships(userNewAdRelationshipsJson);
+    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers, userNewLegality, coachAdRelationships);
     if (offers.length > 0) {
       jobOffers = offers.map((o) => {
         const t = state.teams.find((tt) => tt.id === o.teamId)!;

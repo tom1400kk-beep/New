@@ -35,6 +35,17 @@ const BACKGROUND_LABELS: Record<string, string> = {
   INTERNATIONAL_SCOUT: "International Scouting Background",
 };
 
+function adStyleLine(ad: any): string {
+  if (!ad) return "";
+  const traits: (string | null)[] = [
+    ad.winFocus >= 65 ? "win-focused" : ad.winFocus <= 35 ? "patient with results" : null,
+    ad.patience >= 65 ? "high patience" : ad.patience <= 35 ? "quick trigger" : null,
+    ad.integrityStandard >= 65 ? "strict on conduct" : null,
+    ad.loyalty >= 65 ? "loyal" : null,
+  ];
+  return traits.filter(Boolean).join(", ");
+}
+
 function playingCareerLine(coach: any): string | null {
   const parts: string[] = [];
   if (coach.hometownState) parts.push(`From ${coach.hometownState}`);
@@ -123,7 +134,10 @@ export default function DashboardPage() {
           )}
           {jobOffers.map((o) => (
             <div key={o.teamId} className="divider-row">
-              <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}{" "}
+              <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}
+              {o.athleticDirectorName && <span className="text-muted"> · AD: {o.athleticDirectorName}</span>}
+              {o.adRemembersYou && <span className="text-good"> — remembers you well from a previous job together</span>}
+              {" "}
               <button onClick={() => acceptJob(o.teamId)}>Accept</button>
             </div>
           ))}
@@ -150,6 +164,12 @@ export default function DashboardPage() {
       </p>
       {playingCareerLine(team.headCoach) && (
         <p className="text-muted" style={{ marginTop: -8 }}>{playingCareerLine(team.headCoach)}</p>
+      )}
+      {team.athleticDirector && (
+        <p className="text-muted" style={{ marginTop: -8 }}>
+          Athletic Director: {team.athleticDirector.name}
+          {adStyleLine(team.athleticDirector) ? ` (${adStyleLine(team.athleticDirector)})` : ""}
+        </p>
       )}
 
       <div className="card stat-row">

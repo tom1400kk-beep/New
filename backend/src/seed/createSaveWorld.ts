@@ -4,7 +4,7 @@ import type { Division } from "../types";
 import { DIVISION_RULES } from "../types";
 import { loadLeagueData, prestigeTierToScore } from "./leagueData";
 import { toStateAbbr } from "./stateAbbr";
-import { mulberry32, clamp, randNormal } from "../engine/rng";
+import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
@@ -13,6 +13,7 @@ import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype 
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { seedPipeline } from "../engine/pipeline";
+import { generateADTraits } from "../engine/athleticDirector";
 
 export interface CreateSaveInput {
   saveName: string;
@@ -76,7 +77,11 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
     prestige: number; nilBudget: number; facilitiesRating: number; internationalScoutingRating: number; academicReputation: number;
-    isPlayerControlled: boolean; headCoachId: string;
+    isPlayerControlled: boolean; headCoachId: string; athleticDirectorId: string;
+  }[] = [];
+  const adRows: {
+    id: string; saveGameId: string; name: string;
+    patience: number; winFocus: number; integrityStandard: number; loyalty: number; yearsAtCurrentJob: number;
   }[] = [];
   const playerRows: any[] = [];
   const pendingTeams: PendingTeam[] = [];
@@ -131,9 +136,19 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       const academicReputation = academicReputationForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 
+      const adId = randomUUID();
+      const adTraits = generateADTraits(rng, academicReputation);
+      adRows.push({
+        id: adId, saveGameId: saveGame.id, name: `${randomFirstName(rng)} ${randomLastName(rng)}`,
+        ...adTraits,
+        // Stagger tenure clocks so the whole league isn't in lockstep from day one.
+        yearsAtCurrentJob: randInt(rng, 0, 6),
+      });
+
       teamRows.push({
         id: teamId, saveGameId: saveGame.id, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled, headCoachId: coachId,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled,
+        headCoachId: coachId, athleticDirectorId: adId,
       });
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled });
 
@@ -176,6 +191,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
   await prisma.conference.createMany({ data: conferenceRows });
   await prisma.coach.createMany({ data: coachRows });
+  await prisma.athleticDirector.createMany({ data: adRows });
   await prisma.team.createMany({ data: teamRows });
 
   // chunk player inserts to stay well under sqlite parameter limits

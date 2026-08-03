@@ -33,6 +33,17 @@ export interface TeamRow {
   academicReputation: number;
   isPlayerControlled: boolean;
   headCoachId: string;
+  athleticDirectorId: string;
+}
+
+export interface AthleticDirectorRow {
+  id: string;
+  name: string;
+  patience: number;
+  winFocus: number;
+  integrityStandard: number;
+  loyalty: number;
+  yearsAtCurrentJob: number;
 }
 
 export interface CoachRow {
@@ -55,6 +66,7 @@ export interface CoachRow {
   legalityReputation: number;
   hometownState: string | null;
   pipelineStatesJson: string;
+  adRelationshipsJson: string;
   careerWins: number;
   careerLosses: number;
   yearsAtCurrentJob: number;
@@ -204,6 +216,7 @@ export interface WorldState {
   conferences: ConferenceRow[];
   teams: TeamRow[];
   coaches: CoachRow[];
+  athleticDirectors: AthleticDirectorRow[];
   assistants: AssistantCoachRow[];
   players: PlayerRow[];
   prospects: ProspectRow[];

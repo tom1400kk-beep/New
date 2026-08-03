@@ -2,7 +2,7 @@ import type { Division } from "../types";
 import { DIVISION_RULES } from "../types";
 import { loadLeagueData, prestigeTierToScore } from "./leagueData";
 import { toStateAbbr } from "./stateAbbr";
-import { mulberry32, clamp, randNormal } from "../engine/rng";
+import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
@@ -11,7 +11,8 @@ import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype 
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { seedPipeline } from "../engine/pipeline";
-import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow } from "./types";
+import { generateADTraits } from "../engine/athleticDirector";
+import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow, type AthleticDirectorRow } from "./types";
 
 export interface CreateSaveInput {
   saveName: string;
@@ -41,6 +42,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 
   const conferences: ConferenceRow[] = [];
   const coaches: CoachRow[] = [];
+  const athleticDirectors: AthleticDirectorRow[] = [];
   const teams: TeamRow[] = [];
   const players: PlayerRow[] = [];
   const prospects: ProspectRow[] = [];
@@ -83,6 +85,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         legalityReputation: 75,
         hometownState: isPlayerControlled ? playingCareer.hometownState : null,
         pipelineStatesJson: isPlayerControlled ? initialPipelineJson : "{}",
+        adRelationshipsJson: "{}",
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       });
 
@@ -98,9 +101,18 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       const academicReputation = academicReputationForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 
+      const adId = newId();
+      athleticDirectors.push({
+        id: adId, name: `${randomFirstName(rng)} ${randomLastName(rng)}`,
+        ...generateADTraits(rng, academicReputation),
+        // Stagger tenure clocks so the whole league isn't in lockstep from day one.
+        yearsAtCurrentJob: randInt(rng, 0, 6),
+      });
+
       teams.push({
         id: teamId, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled, headCoachId: coachId,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled,
+        headCoachId: coachId, athleticDirectorId: adId,
       });
       pendingTeams.push({ id: teamId, conferenceId });
 
@@ -154,7 +166,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       id: saveId, name: saveName, createdAt: new Date(), updatedAt: new Date(),
       currentDate, currentSeasonYear: seasonYear, currentPhase: "PRESEASON", coachTeamId: chosenTeamId,
     },
-    conferences, teams, coaches, assistants: [], players, prospects, interests: [],
+    conferences, teams, coaches, athleticDirectors, assistants: [], players, prospects, interests: [],
     seasons: [{ id: newId(), year: seasonYear }], games, stats: [], tournaments: [], events: [],
   };
 }
