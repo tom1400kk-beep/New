@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "organization": "NJCAA (National Junior College Athletic Association)",
+    "sport": "Men's Basketball",
+    "compiledDate": "2026-08-03",
+    "confidence": "Structure (divisions, region/district count, scholarship rules) confirmed via live web search snippets. Example notable programs per region are drawn from trained knowledge of well-known/historically strong JUCO basketball programs and were NOT individually re-verified via a fetchable authoritative source, since full page fetches were blocked in this environment. This is intended only to flavor procedurally generated JUCO transfer players by region, not to model every real JUCO team -- treat exact current conference/region assignment of any single listed school as approximate.",
+    "purposeNote": "For a college basketball sim, JUCO transfers are a recruiting pipeline (2-year players who transfer up to NCAA D1/D2/D3 after 1-2 seasons). This file models the geographic/divisional skeleton so the game can procedurally generate realistic JUCO prospects tagged by region and division rather than simulating all ~500 real NJCAA member schools."
+  },
+  "divisions": [
+    {
+      "division": "NJCAA Division I",
+      "scholarshipModel": "Full athletic scholarships permitted: tuition, fees, room and board, course-required books, up to $250/year in required supplies, and one round-trip transportation allowance per year.",
+      "competitiveNote": "Highest level of JUCO basketball; the primary pipeline feeding high-major and mid-major D1 programs. Roughly 220+ member programs nationally.",
+      "prestigeNote": "Historically dominant national-power JUCO programs (for flavoring elite JUCO prospects) include: Western Texas College, Hutchinson Community College (KS), Independence Community College (KS, subject of Netflix's 'Last Chance U'), Northeast Mississippi CC, Coffeyville CC (KS), Trinity Valley CC (TX), Chipola College (FL), Salt Lake CC (UT), Midland College (TX), South Plains College (TX), Vincennes University (IN), Eastern Florida State College (FL), Northwest Florida State College."
+    },
+    {
+      "division": "NJCAA Division II",
+      "scholarshipModel": "Partial athletic scholarships permitted: tuition, fees, course-required books, and up to $250/year in required supplies (no room, board, or transportation).",
+      "competitiveNote": "Mid-level competitive tier; often chosen by schools in states/conferences that cap scholarship offerings.",
+      "prestigeNote": "Notable/traditionally competitive programs include: Roane State CC (TN), Southwestern Christian College (TX), Louisburg College (NC), Lincoln Trail College (IL), Southeastern CC (IA)."
+    },
+    {
+      "division": "NJCAA Division III",
+      "scholarshipModel": "No athletic scholarships. Non-scholarship division formed in 1990; typically smaller enrollment or need-based-aid-only community/junior colleges.",
+      "competitiveNote": "Smallest and lowest-scholarship tier; national championship field is 8 teams over a 3-day tournament.",
+      "prestigeNote": "Notable programs include: Genesee CC (NY), Monroe College (NY, though Monroe has fielded very strong D1-level teams historically), Herkimer College (NY), Massasoit CC (MA), Mohawk Valley CC (NY) -- Northeast schools are heavily represented in D3 JUCO ball."
+    }
+  ],
+  "regionStructure": {
+    "totalRegions": 24,
+    "totalDistricts": 16,
+    "note": "The NJCAA divides its national membership into 24 geographic Regions (numbered Region 1 through Region 24), which are further grouped into 16 Districts for national-tournament qualification purposes. The 16 District champions receive automatic national-tournament berths, supplemented by at-large bids (format in place since 2017). Region boundaries are set by NJCAA bylaws and generally follow state or multi-state lines; some large states (e.g. Texas, California, Kansas) are their own single-state regions given their high concentration of JUCO programs, while smaller/less JUCO-dense states are grouped together.",
+    "regions": [
+      { "region": 1, "areaDescription": "Northeast (NY, NJ, PA, New England)", "exampleNotablePrograms": ["Monroe College (NY)", "Genesee Community College (NY)", "Mohawk Valley CC (NY)", "Herkimer College (NY)"] },
+      { "region": 2, "areaDescription": "Mid-Atlantic (MD, VA, WV, DC area)", "exampleNotablePrograms": ["Garrett College (MD)", "Southside Virginia CC (VA)"] },
+      { "region": 3, "areaDescription": "North Carolina / South Atlantic", "exampleNotablePrograms": ["Louisburg College (NC)", "Wake Tech CC (NC)"] },
+      { "region": 4, "areaDescription": "Florida", "exampleNotablePrograms": ["Chipola College", "Northwest Florida State College", "Eastern Florida State College", "Florida SouthWestern State College", "College of Central Florida"] },
+      { "region": 5, "areaDescription": "Southeast / Mississippi-Alabama", "exampleNotablePrograms": ["Northeast Mississippi CC", "East Mississippi CC (subject of Netflix's 'Last Chance U')", "Meridian CC (MS)", "Jones College (MS)"] },
+      { "region": 6, "areaDescription": "Iowa", "exampleNotablePrograms": ["Indian Hills CC (IA)", "Southeastern Community College (IA)", "Iowa Western CC"] },
+      { "region": 7, "areaDescription": "Missouri / Southern Plains border", "exampleNotablePrograms": ["Three Rivers College (MO)", "Moberly Area CC (MO)"] },
+      { "region": 8, "areaDescription": "Kansas", "exampleNotablePrograms": ["Hutchinson Community College", "Coffeyville CC", "Independence CC", "Barton County CC", "Cowley College"] },
+      { "region": 9, "areaDescription": "Wyoming / Mountain West", "exampleNotablePrograms": ["Casper College (WY)", "Northwest College (WY)"] },
+      { "region": 10, "areaDescription": "Colorado", "exampleNotablePrograms": ["Otero College (CO)", "Trinidad State College (CO)"] },
+      { "region": 11, "areaDescription": "Wisconsin", "exampleNotablePrograms": ["College of the Menominee Nation area programs", "smaller regional JUCOs"] },
+      { "region": 12, "areaDescription": "Minnesota", "exampleNotablePrograms": ["Rainy River CC (MN)", "Vermilion CC (MN)"] },
+      { "region": 13, "areaDescription": "Illinois", "exampleNotablePrograms": ["Lincoln Trail College (IL)", "John A. Logan College (IL)", "Kaskaskia College (IL)"] },
+      { "region": 14, "areaDescription": "Georgia / Southern border", "exampleNotablePrograms": ["Georgia Highlands College", "South Georgia Technical College"] },
+      { "region": 15, "areaDescription": "Kentucky/Tennessee area", "exampleNotablePrograms": ["Roane State CC (TN)", "Cleveland State CC (TN)"] },
+      { "region": 16, "areaDescription": "Nebraska", "exampleNotablePrograms": ["Western Nebraska CC", "Northeast Community College (NE)"] },
+      { "region": 17, "areaDescription": "Arizona", "exampleNotablePrograms": ["Central Arizona College", "South Mountain CC (AZ)", "Pima CC (AZ)"] },
+      { "region": 18, "areaDescription": "Texas", "exampleNotablePrograms": ["Western Texas College", "Trinity Valley CC", "South Plains College", "Panola College", "Odessa College"] },
+      { "region": 19, "areaDescription": "Oklahoma", "exampleNotablePrograms": ["Redlands CC (OK)", "Northern Oklahoma College", "Connors State College (OK)"] },
+      { "region": 20, "areaDescription": "Mississippi (northern) / Ark-La border", "exampleNotablePrograms": ["Southwest Mississippi CC"] },
+      { "region": 21, "areaDescription": "Indiana", "exampleNotablePrograms": ["Vincennes University (IN)", "Ancilla College area programs"] },
+      { "region": 22, "areaDescription": "Michigan", "exampleNotablePrograms": ["Lake Michigan College", "Delta College (MI)"] },
+      { "region": 23, "areaDescription": "Pacific Northwest / Washington-Oregon", "exampleNotablePrograms": ["community college athletic programs affiliated with NJCAA in WA/OR pockets (most Pacific Northwest CCs play NWAC instead of NJCAA)"] },
+      { "region": 24, "areaDescription": "California / West Coast", "exampleNotablePrograms": ["most California community colleges play under the CCCAA (California Community College Athletic Association) rather than NJCAA; NJCAA Region 24 and West Coast representation is comparatively sparse"] }
+    ],
+    "structuralCaveat": "Exact region-to-state mapping shifts periodically as schools join/leave the NJCAA (notably, most Washington/Oregon community colleges compete under the separate NWAC, and most California community colleges compete under the separate CCCAA, rather than NJCAA -- meaning NJCAA Regions 23-24 are thinner than their numbering might suggest). Treat the above region-to-area assignments as a reasonable game-design approximation rather than a verified official NJCAA regional map."
+  },
+  "gameDesignGuidance": {
+    "recommendation": "For procedural JUCO transfer generation, tag each generated JUCO prospect with: (1) a Division (I/II/III) that roughly determines talent ceiling and scholarship-worthiness, (2) one of the 24 Regions purely as flavor/geography (feeds into a prospect's home-region recruiting narrative and which 4-year programs would have 'home-state advantage' recruiting them), and (3) optionally a fictional or lightly-fictionalized JUCO school name inspired by the real notable programs listed per region above, rather than simulating full JUCO rosters/seasons.",
+    "talentDistributionSuggestion": "NJCAA D1 JUCO transfers should skew toward feeding D1/D2 rosters (occasionally a real difference-maker who becomes a D1 star), D2 JUCO transfers should skew toward feeding D2/D3, and D3 JUCO transfers should mostly feed D3/low-D2 rosters, mirroring real-world transfer flow."
+  }
+}

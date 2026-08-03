@@ -1,0 +1,547 @@
+{
+  "asOf": "2026-27 season (current/upcoming realignment as of August 2026)",
+  "notes": "Conference membership reflects the fully-realigned structure taking effect for the 2026-27 season (Pac-12 relaunch with 9 members, new Mountain West, WCC post-Gonzaga, UAC formerly WAC, etc.), since the 2025-26 season already concluded by the current date and 2025-26 was a one-year transitional/grace-period arrangement for several schools (e.g., Oregon State/Washington State played 2025-26 basketball in the WCC as part of the Pac-12's rebuilding grace period; Gonzaga, Boise State, Colorado State, Fresno State, San Diego State, Texas State, Utah State did not join Pac-12 for basketball until 2026-27). Prestige tiers are subjective best-effort judgments per the requested 1-5 scale.",
+  "conferences": [
+    {
+      "name": "Atlantic Coast Conference",
+      "abbreviation": "ACC",
+      "members": [
+        { "school": "Boston College", "state": "Massachusetts", "prestigeTier": 2 },
+        { "school": "California", "state": "California", "prestigeTier": 3 },
+        { "school": "Clemson", "state": "South Carolina", "prestigeTier": 3 },
+        { "school": "Duke", "state": "North Carolina", "prestigeTier": 5 },
+        { "school": "Florida State", "state": "Florida", "prestigeTier": 2 },
+        { "school": "Georgia Tech", "state": "Georgia", "prestigeTier": 2 },
+        { "school": "Louisville", "state": "Kentucky", "prestigeTier": 5 },
+        { "school": "Miami (FL)", "state": "Florida", "prestigeTier": 3 },
+        { "school": "NC State", "state": "North Carolina", "prestigeTier": 3 },
+        { "school": "North Carolina", "state": "North Carolina", "prestigeTier": 5 },
+        { "school": "Notre Dame", "state": "Indiana", "prestigeTier": 3 },
+        { "school": "Pittsburgh", "state": "Pennsylvania", "prestigeTier": 3 },
+        { "school": "SMU", "state": "Texas", "prestigeTier": 2 },
+        { "school": "Stanford", "state": "California", "prestigeTier": 3 },
+        { "school": "Syracuse", "state": "New York", "prestigeTier": 4 },
+        { "school": "Virginia", "state": "Virginia", "prestigeTier": 4 },
+        { "school": "Virginia Tech", "state": "Virginia", "prestigeTier": 3 },
+        { "school": "Wake Forest", "state": "North Carolina", "prestigeTier": 3 }
+      ]
+    },
+    {
+      "name": "Big Ten Conference",
+      "abbreviation": "B1G",
+      "members": [
+        { "school": "Illinois", "state": "Illinois", "prestigeTier": 4 },
+        { "school": "Indiana", "state": "Indiana", "prestigeTier": 5 },
+        { "school": "Iowa", "state": "Iowa", "prestigeTier": 3 },
+        { "school": "Maryland", "state": "Maryland", "prestigeTier": 4 },
+        { "school": "Michigan", "state": "Michigan", "prestigeTier": 4 },
+        { "school": "Michigan State", "state": "Michigan", "prestigeTier": 5 },
+        { "school": "Minnesota", "state": "Minnesota", "prestigeTier": 2 },
+        { "school": "Nebraska", "state": "Nebraska", "prestigeTier": 2 },
+        { "school": "Northwestern", "state": "Illinois", "prestigeTier": 2 },
+        { "school": "Ohio State", "state": "Ohio", "prestigeTier": 4 },
+        { "school": "Oregon", "state": "Oregon", "prestigeTier": 3 },
+        { "school": "Penn State", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Purdue", "state": "Indiana", "prestigeTier": 4 },
+        { "school": "Rutgers", "state": "New Jersey", "prestigeTier": 2 },
+        { "school": "UCLA", "state": "California", "prestigeTier": 5 },
+        { "school": "USC", "state": "California", "prestigeTier": 3 },
+        { "school": "Washington", "state": "Washington", "prestigeTier": 2 },
+        { "school": "Wisconsin", "state": "Wisconsin", "prestigeTier": 4 }
+      ]
+    },
+    {
+      "name": "Big 12 Conference",
+      "abbreviation": "Big 12",
+      "members": [
+        { "school": "Arizona", "state": "Arizona", "prestigeTier": 4 },
+        { "school": "Arizona State", "state": "Arizona", "prestigeTier": 2 },
+        { "school": "Baylor", "state": "Texas", "prestigeTier": 4 },
+        { "school": "BYU", "state": "Utah", "prestigeTier": 3 },
+        { "school": "UCF", "state": "Florida", "prestigeTier": 2 },
+        { "school": "Cincinnati", "state": "Ohio", "prestigeTier": 3 },
+        { "school": "Colorado", "state": "Colorado", "prestigeTier": 3 },
+        { "school": "Houston", "state": "Texas", "prestigeTier": 4 },
+        { "school": "Iowa State", "state": "Iowa", "prestigeTier": 4 },
+        { "school": "Kansas", "state": "Kansas", "prestigeTier": 5 },
+        { "school": "Kansas State", "state": "Kansas", "prestigeTier": 3 },
+        { "school": "Oklahoma State", "state": "Oklahoma", "prestigeTier": 3 },
+        { "school": "TCU", "state": "Texas", "prestigeTier": 3 },
+        { "school": "Texas Tech", "state": "Texas", "prestigeTier": 4 },
+        { "school": "Utah", "state": "Utah", "prestigeTier": 3 },
+        { "school": "West Virginia", "state": "West Virginia", "prestigeTier": 3 }
+      ]
+    },
+    {
+      "name": "Southeastern Conference",
+      "abbreviation": "SEC",
+      "members": [
+        { "school": "Alabama", "state": "Alabama", "prestigeTier": 4 },
+        { "school": "Arkansas", "state": "Arkansas", "prestigeTier": 4 },
+        { "school": "Auburn", "state": "Alabama", "prestigeTier": 4 },
+        { "school": "Florida", "state": "Florida", "prestigeTier": 4 },
+        { "school": "Georgia", "state": "Georgia", "prestigeTier": 2 },
+        { "school": "Kentucky", "state": "Kentucky", "prestigeTier": 5 },
+        { "school": "LSU", "state": "Louisiana", "prestigeTier": 3 },
+        { "school": "Ole Miss", "state": "Mississippi", "prestigeTier": 2 },
+        { "school": "Mississippi State", "state": "Mississippi", "prestigeTier": 3 },
+        { "school": "Missouri", "state": "Missouri", "prestigeTier": 2 },
+        { "school": "Oklahoma", "state": "Oklahoma", "prestigeTier": 3 },
+        { "school": "South Carolina", "state": "South Carolina", "prestigeTier": 2 },
+        { "school": "Tennessee", "state": "Tennessee", "prestigeTier": 4 },
+        { "school": "Texas", "state": "Texas", "prestigeTier": 4 },
+        { "school": "Texas A&M", "state": "Texas", "prestigeTier": 3 },
+        { "school": "Vanderbilt", "state": "Tennessee", "prestigeTier": 3 }
+      ]
+    },
+    {
+      "name": "Big East Conference",
+      "abbreviation": "Big East",
+      "members": [
+        { "school": "Butler", "state": "Indiana", "prestigeTier": 3 },
+        { "school": "Creighton", "state": "Nebraska", "prestigeTier": 4 },
+        { "school": "DePaul", "state": "Illinois", "prestigeTier": 1 },
+        { "school": "Georgetown", "state": "Washington DC", "prestigeTier": 3 },
+        { "school": "Marquette", "state": "Wisconsin", "prestigeTier": 4 },
+        { "school": "Providence", "state": "Rhode Island", "prestigeTier": 3 },
+        { "school": "Seton Hall", "state": "New Jersey", "prestigeTier": 3 },
+        { "school": "St. John's", "state": "New York", "prestigeTier": 3 },
+        { "school": "UConn", "state": "Connecticut", "prestigeTier": 5 },
+        { "school": "Villanova", "state": "Pennsylvania", "prestigeTier": 5 },
+        { "school": "Xavier", "state": "Ohio", "prestigeTier": 4 }
+      ]
+    },
+    {
+      "name": "American Athletic Conference",
+      "abbreviation": "AAC",
+      "members": [
+        { "school": "Charlotte", "state": "North Carolina", "prestigeTier": 2 },
+        { "school": "East Carolina", "state": "North Carolina", "prestigeTier": 2 },
+        { "school": "Florida Atlantic", "state": "Florida", "prestigeTier": 3 },
+        { "school": "Memphis", "state": "Tennessee", "prestigeTier": 4 },
+        { "school": "North Texas", "state": "Texas", "prestigeTier": 2 },
+        { "school": "Rice", "state": "Texas", "prestigeTier": 2 },
+        { "school": "South Florida", "state": "Florida", "prestigeTier": 2 },
+        { "school": "Temple", "state": "Pennsylvania", "prestigeTier": 3 },
+        { "school": "Tulane", "state": "Louisiana", "prestigeTier": 2 },
+        { "school": "Tulsa", "state": "Oklahoma", "prestigeTier": 2 },
+        { "school": "UAB", "state": "Alabama", "prestigeTier": 3 },
+        { "school": "UTSA", "state": "Texas", "prestigeTier": 2 },
+        { "school": "Wichita State", "state": "Kansas", "prestigeTier": 3 }
+      ]
+    },
+    {
+      "name": "Atlantic 10 Conference",
+      "abbreviation": "A-10",
+      "members": [
+        { "school": "Davidson", "state": "North Carolina", "prestigeTier": 3 },
+        { "school": "Dayton", "state": "Ohio", "prestigeTier": 4 },
+        { "school": "Duquesne", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Fordham", "state": "New York", "prestigeTier": 2 },
+        { "school": "George Mason", "state": "Virginia", "prestigeTier": 2 },
+        { "school": "George Washington", "state": "Washington DC", "prestigeTier": 2 },
+        { "school": "La Salle", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Loyola Chicago", "state": "Illinois", "prestigeTier": 3 },
+        { "school": "Rhode Island", "state": "Rhode Island", "prestigeTier": 2 },
+        { "school": "Richmond", "state": "Virginia", "prestigeTier": 3 },
+        { "school": "Saint Joseph's", "state": "Pennsylvania", "prestigeTier": 3 },
+        { "school": "Saint Louis", "state": "Missouri", "prestigeTier": 3 },
+        { "school": "St. Bonaventure", "state": "New York", "prestigeTier": 2 },
+        { "school": "VCU", "state": "Virginia", "prestigeTier": 3 }
+      ]
+    },
+    {
+      "name": "Mountain West Conference",
+      "abbreviation": "MW",
+      "members": [
+        { "school": "Air Force", "state": "Colorado", "prestigeTier": 1 },
+        { "school": "Hawaii", "state": "Hawaii", "prestigeTier": 2 },
+        { "school": "New Mexico", "state": "New Mexico", "prestigeTier": 3 },
+        { "school": "Nevada", "state": "Nevada", "prestigeTier": 3 },
+        { "school": "San Jose State", "state": "California", "prestigeTier": 1 },
+        { "school": "UNLV", "state": "Nevada", "prestigeTier": 3 },
+        { "school": "UTEP", "state": "Texas", "prestigeTier": 2 },
+        { "school": "Wyoming", "state": "Wyoming", "prestigeTier": 1 },
+        { "school": "Grand Canyon", "state": "Arizona", "prestigeTier": 2 },
+        { "school": "UC Davis", "state": "California", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "Pac-12 Conference",
+      "abbreviation": "Pac-12",
+      "members": [
+        { "school": "Boise State", "state": "Idaho", "prestigeTier": 3 },
+        { "school": "Colorado State", "state": "Colorado", "prestigeTier": 3 },
+        { "school": "Fresno State", "state": "California", "prestigeTier": 2 },
+        { "school": "Gonzaga", "state": "Washington", "prestigeTier": 4 },
+        { "school": "Oregon State", "state": "Oregon", "prestigeTier": 2 },
+        { "school": "San Diego State", "state": "California", "prestigeTier": 3 },
+        { "school": "Texas State", "state": "Texas", "prestigeTier": 1 },
+        { "school": "Utah State", "state": "Utah", "prestigeTier": 2 },
+        { "school": "Washington State", "state": "Washington", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "West Coast Conference",
+      "abbreviation": "WCC",
+      "members": [
+        { "school": "Denver", "state": "Colorado", "prestigeTier": 1 },
+        { "school": "Loyola Marymount", "state": "California", "prestigeTier": 2 },
+        { "school": "Pacific", "state": "California", "prestigeTier": 1 },
+        { "school": "Pepperdine", "state": "California", "prestigeTier": 2 },
+        { "school": "Portland", "state": "Oregon", "prestigeTier": 1 },
+        { "school": "Saint Mary's", "state": "California", "prestigeTier": 4 },
+        { "school": "San Diego", "state": "California", "prestigeTier": 2 },
+        { "school": "San Francisco", "state": "California", "prestigeTier": 2 },
+        { "school": "Santa Clara", "state": "California", "prestigeTier": 2 },
+        { "school": "Seattle", "state": "Washington", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Missouri Valley Conference",
+      "abbreviation": "MVC",
+      "members": [
+        { "school": "Belmont", "state": "Tennessee", "prestigeTier": 3 },
+        { "school": "Bradley", "state": "Illinois", "prestigeTier": 2 },
+        { "school": "Drake", "state": "Iowa", "prestigeTier": 2 },
+        { "school": "Evansville", "state": "Indiana", "prestigeTier": 1 },
+        { "school": "Illinois State", "state": "Illinois", "prestigeTier": 2 },
+        { "school": "Indiana State", "state": "Indiana", "prestigeTier": 3 },
+        { "school": "Murray State", "state": "Kentucky", "prestigeTier": 3 },
+        { "school": "Northern Iowa", "state": "Iowa", "prestigeTier": 3 },
+        { "school": "Southern Illinois", "state": "Illinois", "prestigeTier": 2 },
+        { "school": "UIC", "state": "Illinois", "prestigeTier": 1 },
+        { "school": "Valparaiso", "state": "Indiana", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "Conference USA",
+      "abbreviation": "C-USA",
+      "members": [
+        { "school": "Liberty", "state": "Virginia", "prestigeTier": 2 },
+        { "school": "Western Kentucky", "state": "Kentucky", "prestigeTier": 3 },
+        { "school": "Middle Tennessee", "state": "Tennessee", "prestigeTier": 2 },
+        { "school": "Kennesaw State", "state": "Georgia", "prestigeTier": 1 },
+        { "school": "Jacksonville State", "state": "Alabama", "prestigeTier": 2 },
+        { "school": "FIU", "state": "Florida", "prestigeTier": 1 },
+        { "school": "Sam Houston", "state": "Texas", "prestigeTier": 2 },
+        { "school": "New Mexico State", "state": "New Mexico", "prestigeTier": 2 },
+        { "school": "Delaware", "state": "Delaware", "prestigeTier": 2 },
+        { "school": "Missouri State", "state": "Missouri", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "Sun Belt Conference",
+      "abbreviation": "SBC",
+      "members": [
+        { "school": "Appalachian State", "state": "North Carolina", "prestigeTier": 1 },
+        { "school": "Arkansas State", "state": "Arkansas", "prestigeTier": 1 },
+        { "school": "Coastal Carolina", "state": "South Carolina", "prestigeTier": 1 },
+        { "school": "Georgia Southern", "state": "Georgia", "prestigeTier": 1 },
+        { "school": "Georgia State", "state": "Georgia", "prestigeTier": 2 },
+        { "school": "James Madison", "state": "Virginia", "prestigeTier": 2 },
+        { "school": "Louisiana", "state": "Louisiana", "prestigeTier": 3 },
+        { "school": "Louisiana Tech", "state": "Louisiana", "prestigeTier": 2 },
+        { "school": "Marshall", "state": "West Virginia", "prestigeTier": 2 },
+        { "school": "Old Dominion", "state": "Virginia", "prestigeTier": 3 },
+        { "school": "South Alabama", "state": "Alabama", "prestigeTier": 2 },
+        { "school": "Southern Miss", "state": "Mississippi", "prestigeTier": 2 },
+        { "school": "Troy", "state": "Alabama", "prestigeTier": 2 },
+        { "school": "Louisiana-Monroe", "state": "Louisiana", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "America East Conference",
+      "abbreviation": "AEC",
+      "members": [
+        { "school": "Albany", "state": "New York", "prestigeTier": 2 },
+        { "school": "Binghamton", "state": "New York", "prestigeTier": 1 },
+        { "school": "Bryant", "state": "Rhode Island", "prestigeTier": 1 },
+        { "school": "UMBC", "state": "Maryland", "prestigeTier": 2 },
+        { "school": "UMass Lowell", "state": "Massachusetts", "prestigeTier": 1 },
+        { "school": "New Hampshire", "state": "New Hampshire", "prestigeTier": 1 },
+        { "school": "NJIT", "state": "New Jersey", "prestigeTier": 1 },
+        { "school": "Maine", "state": "Maine", "prestigeTier": 1 },
+        { "school": "Vermont", "state": "Vermont", "prestigeTier": 3 }
+      ]
+    },
+    {
+      "name": "Atlantic Sun Conference",
+      "abbreviation": "ASUN",
+      "members": [
+        { "school": "Bellarmine", "state": "Kentucky", "prestigeTier": 1 },
+        { "school": "Florida Gulf Coast", "state": "Florida", "prestigeTier": 2 },
+        { "school": "Jacksonville", "state": "Florida", "prestigeTier": 1 },
+        { "school": "Lipscomb", "state": "Tennessee", "prestigeTier": 2 },
+        { "school": "North Florida", "state": "Florida", "prestigeTier": 1 },
+        { "school": "Queens", "state": "North Carolina", "prestigeTier": 1 },
+        { "school": "Stetson", "state": "Florida", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "United Athletic Conference",
+      "abbreviation": "UAC",
+      "members": [
+        { "school": "Abilene Christian", "state": "Texas", "prestigeTier": 2 },
+        { "school": "Little Rock", "state": "Arkansas", "prestigeTier": 1 },
+        { "school": "Austin Peay", "state": "Tennessee", "prestigeTier": 2 },
+        { "school": "Central Arkansas", "state": "Arkansas", "prestigeTier": 1 },
+        { "school": "Eastern Kentucky", "state": "Kentucky", "prestigeTier": 1 },
+        { "school": "North Alabama", "state": "Alabama", "prestigeTier": 1 },
+        { "school": "Tarleton State", "state": "Texas", "prestigeTier": 1 },
+        { "school": "UT Arlington", "state": "Texas", "prestigeTier": 1 },
+        { "school": "West Georgia", "state": "Georgia", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Big Sky Conference",
+      "abbreviation": "Big Sky",
+      "members": [
+        { "school": "Montana", "state": "Montana", "prestigeTier": 2 },
+        { "school": "Montana State", "state": "Montana", "prestigeTier": 1 },
+        { "school": "Eastern Washington", "state": "Washington", "prestigeTier": 2 },
+        { "school": "Idaho", "state": "Idaho", "prestigeTier": 1 },
+        { "school": "Idaho State", "state": "Idaho", "prestigeTier": 1 },
+        { "school": "Northern Arizona", "state": "Arizona", "prestigeTier": 1 },
+        { "school": "Northern Colorado", "state": "Colorado", "prestigeTier": 1 },
+        { "school": "Portland State", "state": "Oregon", "prestigeTier": 1 },
+        { "school": "Weber State", "state": "Utah", "prestigeTier": 2 },
+        { "school": "Southern Utah", "state": "Utah", "prestigeTier": 1 },
+        { "school": "Utah Tech", "state": "Utah", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Big West Conference",
+      "abbreviation": "Big West",
+      "members": [
+        { "school": "Cal Poly", "state": "California", "prestigeTier": 1 },
+        { "school": "CSU Bakersfield", "state": "California", "prestigeTier": 2 },
+        { "school": "Cal State Fullerton", "state": "California", "prestigeTier": 2 },
+        { "school": "Cal State Northridge", "state": "California", "prestigeTier": 1 },
+        { "school": "Long Beach State", "state": "California", "prestigeTier": 2 },
+        { "school": "UC Irvine", "state": "California", "prestigeTier": 2 },
+        { "school": "UC Riverside", "state": "California", "prestigeTier": 1 },
+        { "school": "UC San Diego", "state": "California", "prestigeTier": 2 },
+        { "school": "UC Santa Barbara", "state": "California", "prestigeTier": 2 },
+        { "school": "California Baptist", "state": "California", "prestigeTier": 1 },
+        { "school": "Sacramento State", "state": "California", "prestigeTier": 1 },
+        { "school": "Utah Valley", "state": "Utah", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "Coastal Athletic Association",
+      "abbreviation": "CAA",
+      "members": [
+        { "school": "Campbell", "state": "North Carolina", "prestigeTier": 1 },
+        { "school": "Charleston", "state": "South Carolina", "prestigeTier": 2 },
+        { "school": "Drexel", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Elon", "state": "North Carolina", "prestigeTier": 1 },
+        { "school": "Hampton", "state": "Virginia", "prestigeTier": 2 },
+        { "school": "Hofstra", "state": "New York", "prestigeTier": 2 },
+        { "school": "Monmouth", "state": "New Jersey", "prestigeTier": 1 },
+        { "school": "North Carolina A&T", "state": "North Carolina", "prestigeTier": 1 },
+        { "school": "Northeastern", "state": "Massachusetts", "prestigeTier": 2 },
+        { "school": "Stony Brook", "state": "New York", "prestigeTier": 2 },
+        { "school": "Towson", "state": "Maryland", "prestigeTier": 1 },
+        { "school": "UNC Wilmington", "state": "North Carolina", "prestigeTier": 2 },
+        { "school": "William & Mary", "state": "Virginia", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Horizon League",
+      "abbreviation": "Horizon",
+      "members": [
+        { "school": "Cleveland State", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "Detroit Mercy", "state": "Michigan", "prestigeTier": 1 },
+        { "school": "Green Bay", "state": "Wisconsin", "prestigeTier": 2 },
+        { "school": "IU Indy", "state": "Indiana", "prestigeTier": 1 },
+        { "school": "Milwaukee", "state": "Wisconsin", "prestigeTier": 2 },
+        { "school": "Northern Kentucky", "state": "Kentucky", "prestigeTier": 2 },
+        { "school": "Oakland", "state": "Michigan", "prestigeTier": 2 },
+        { "school": "Purdue Fort Wayne", "state": "Indiana", "prestigeTier": 1 },
+        { "school": "Robert Morris", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Wright State", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "Youngstown State", "state": "Ohio", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Ivy League",
+      "abbreviation": "Ivy",
+      "members": [
+        { "school": "Brown", "state": "Rhode Island", "prestigeTier": 2 },
+        { "school": "Columbia", "state": "New York", "prestigeTier": 1 },
+        { "school": "Cornell", "state": "New York", "prestigeTier": 2 },
+        { "school": "Dartmouth", "state": "New Hampshire", "prestigeTier": 1 },
+        { "school": "Harvard", "state": "Massachusetts", "prestigeTier": 2 },
+        { "school": "Penn", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Princeton", "state": "New Jersey", "prestigeTier": 3 },
+        { "school": "Yale", "state": "Connecticut", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "Metro Atlantic Athletic Conference",
+      "abbreviation": "MAAC",
+      "members": [
+        { "school": "Canisius", "state": "New York", "prestigeTier": 1 },
+        { "school": "Fairfield", "state": "Connecticut", "prestigeTier": 1 },
+        { "school": "Iona", "state": "New York", "prestigeTier": 2 },
+        { "school": "Manhattan", "state": "New York", "prestigeTier": 1 },
+        { "school": "Marist", "state": "New York", "prestigeTier": 1 },
+        { "school": "Merrimack", "state": "Massachusetts", "prestigeTier": 1 },
+        { "school": "Mount St. Mary's", "state": "Maryland", "prestigeTier": 1 },
+        { "school": "Niagara", "state": "New York", "prestigeTier": 1 },
+        { "school": "Quinnipiac", "state": "Connecticut", "prestigeTier": 1 },
+        { "school": "Rider", "state": "New Jersey", "prestigeTier": 1 },
+        { "school": "Saint Peter's", "state": "New Jersey", "prestigeTier": 2 },
+        { "school": "Siena", "state": "New York", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "Mid-American Conference",
+      "abbreviation": "MAC",
+      "members": [
+        { "school": "Akron", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "Ball State", "state": "Indiana", "prestigeTier": 2 },
+        { "school": "Bowling Green", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "Buffalo", "state": "New York", "prestigeTier": 2 },
+        { "school": "Central Michigan", "state": "Michigan", "prestigeTier": 2 },
+        { "school": "Eastern Michigan", "state": "Michigan", "prestigeTier": 1 },
+        { "school": "Kent State", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "Miami (OH)", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "Northern Illinois", "state": "Illinois", "prestigeTier": 1 },
+        { "school": "Ohio", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "Toledo", "state": "Ohio", "prestigeTier": 2 },
+        { "school": "UMass", "state": "Massachusetts", "prestigeTier": 2 },
+        { "school": "Western Michigan", "state": "Michigan", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Mid-Eastern Athletic Conference",
+      "abbreviation": "MEAC",
+      "members": [
+        { "school": "Coppin State", "state": "Maryland", "prestigeTier": 1 },
+        { "school": "Delaware State", "state": "Delaware", "prestigeTier": 1 },
+        { "school": "Howard", "state": "Washington DC", "prestigeTier": 2 },
+        { "school": "Maryland-Eastern Shore", "state": "Maryland", "prestigeTier": 1 },
+        { "school": "Morgan State", "state": "Maryland", "prestigeTier": 2 },
+        { "school": "Norfolk State", "state": "Virginia", "prestigeTier": 2 },
+        { "school": "North Carolina Central", "state": "North Carolina", "prestigeTier": 2 },
+        { "school": "South Carolina State", "state": "South Carolina", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Northeast Conference",
+      "abbreviation": "NEC",
+      "members": [
+        { "school": "Fairleigh Dickinson", "state": "New Jersey", "prestigeTier": 2 },
+        { "school": "Long Island University", "state": "New York", "prestigeTier": 2 },
+        { "school": "Saint Francis (PA)", "state": "Pennsylvania", "prestigeTier": 1 },
+        { "school": "Wagner", "state": "New York", "prestigeTier": 1 },
+        { "school": "Central Connecticut", "state": "Connecticut", "prestigeTier": 1 },
+        { "school": "Stonehill", "state": "Massachusetts", "prestigeTier": 1 },
+        { "school": "Le Moyne", "state": "New York", "prestigeTier": 1 },
+        { "school": "Chicago State", "state": "Illinois", "prestigeTier": 1 },
+        { "school": "Mercyhurst", "state": "Pennsylvania", "prestigeTier": 1 },
+        { "school": "New Haven", "state": "Connecticut", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Ohio Valley Conference",
+      "abbreviation": "OVC",
+      "members": [
+        { "school": "Eastern Illinois", "state": "Illinois", "prestigeTier": 1 },
+        { "school": "Lindenwood", "state": "Missouri", "prestigeTier": 1 },
+        { "school": "Morehead State", "state": "Kentucky", "prestigeTier": 2 },
+        { "school": "Southeast Missouri State", "state": "Missouri", "prestigeTier": 1 },
+        { "school": "SIU Edwardsville", "state": "Illinois", "prestigeTier": 1 },
+        { "school": "Southern Indiana", "state": "Indiana", "prestigeTier": 1 },
+        { "school": "Tennessee State", "state": "Tennessee", "prestigeTier": 2 },
+        { "school": "UT Martin", "state": "Tennessee", "prestigeTier": 1 },
+        { "school": "Western Illinois", "state": "Illinois", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Patriot League",
+      "abbreviation": "Patriot",
+      "members": [
+        { "school": "American", "state": "Washington DC", "prestigeTier": 1 },
+        { "school": "Army", "state": "New York", "prestigeTier": 1 },
+        { "school": "Boston University", "state": "Massachusetts", "prestigeTier": 2 },
+        { "school": "Bucknell", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Colgate", "state": "New York", "prestigeTier": 2 },
+        { "school": "Holy Cross", "state": "Massachusetts", "prestigeTier": 2 },
+        { "school": "Lafayette", "state": "Pennsylvania", "prestigeTier": 1 },
+        { "school": "Lehigh", "state": "Pennsylvania", "prestigeTier": 2 },
+        { "school": "Loyola Maryland", "state": "Maryland", "prestigeTier": 1 },
+        { "school": "Navy", "state": "Maryland", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Southern Conference",
+      "abbreviation": "SoCon",
+      "members": [
+        { "school": "Chattanooga", "state": "Tennessee", "prestigeTier": 2 },
+        { "school": "The Citadel", "state": "South Carolina", "prestigeTier": 1 },
+        { "school": "East Tennessee State", "state": "Tennessee", "prestigeTier": 2 },
+        { "school": "Furman", "state": "South Carolina", "prestigeTier": 2 },
+        { "school": "Mercer", "state": "Georgia", "prestigeTier": 2 },
+        { "school": "UNC Greensboro", "state": "North Carolina", "prestigeTier": 2 },
+        { "school": "Samford", "state": "Alabama", "prestigeTier": 2 },
+        { "school": "VMI", "state": "Virginia", "prestigeTier": 1 },
+        { "school": "Western Carolina", "state": "North Carolina", "prestigeTier": 1 },
+        { "school": "Wofford", "state": "South Carolina", "prestigeTier": 2 },
+        { "school": "Tennessee Tech", "state": "Tennessee", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Southland Conference",
+      "abbreviation": "Southland",
+      "members": [
+        { "school": "Houston Christian", "state": "Texas", "prestigeTier": 1 },
+        { "school": "Incarnate Word", "state": "Texas", "prestigeTier": 1 },
+        { "school": "Lamar", "state": "Texas", "prestigeTier": 2 },
+        { "school": "McNeese", "state": "Louisiana", "prestigeTier": 2 },
+        { "school": "New Orleans", "state": "Louisiana", "prestigeTier": 1 },
+        { "school": "Nicholls", "state": "Louisiana", "prestigeTier": 1 },
+        { "school": "Northwestern State", "state": "Louisiana", "prestigeTier": 1 },
+        { "school": "East Texas A&M", "state": "Texas", "prestigeTier": 1 },
+        { "school": "Southeastern Louisiana", "state": "Louisiana", "prestigeTier": 1 },
+        { "school": "Stephen F. Austin", "state": "Texas", "prestigeTier": 2 },
+        { "school": "Texas A&M-Corpus Christi", "state": "Texas", "prestigeTier": 2 },
+        { "school": "UT Rio Grande Valley", "state": "Texas", "prestigeTier": 1 }
+      ]
+    },
+    {
+      "name": "Southwestern Athletic Conference",
+      "abbreviation": "SWAC",
+      "members": [
+        { "school": "Alabama A&M", "state": "Alabama", "prestigeTier": 1 },
+        { "school": "Alabama State", "state": "Alabama", "prestigeTier": 2 },
+        { "school": "Alcorn State", "state": "Mississippi", "prestigeTier": 1 },
+        { "school": "Arkansas-Pine Bluff", "state": "Arkansas", "prestigeTier": 1 },
+        { "school": "Bethune-Cookman", "state": "Florida", "prestigeTier": 2 },
+        { "school": "Florida A&M", "state": "Florida", "prestigeTier": 1 },
+        { "school": "Grambling State", "state": "Louisiana", "prestigeTier": 2 },
+        { "school": "Jackson State", "state": "Mississippi", "prestigeTier": 2 },
+        { "school": "Mississippi Valley State", "state": "Mississippi", "prestigeTier": 1 },
+        { "school": "Prairie View A&M", "state": "Texas", "prestigeTier": 2 },
+        { "school": "Southern", "state": "Louisiana", "prestigeTier": 2 },
+        { "school": "Texas Southern", "state": "Texas", "prestigeTier": 2 }
+      ]
+    },
+    {
+      "name": "Summit League",
+      "abbreviation": "Summit",
+      "members": [
+        { "school": "North Dakota State", "state": "North Dakota", "prestigeTier": 2 },
+        { "school": "North Dakota", "state": "North Dakota", "prestigeTier": 1 },
+        { "school": "South Dakota State", "state": "South Dakota", "prestigeTier": 2 },
+        { "school": "South Dakota", "state": "South Dakota", "prestigeTier": 2 },
+        { "school": "Kansas City", "state": "Missouri", "prestigeTier": 1 },
+        { "school": "Omaha", "state": "Nebraska", "prestigeTier": 1 },
+        { "school": "Oral Roberts", "state": "Oklahoma", "prestigeTier": 2 },
+        { "school": "St. Thomas (MN)", "state": "Minnesota", "prestigeTier": 1 }
+      ]
+    }
+  ]
+}

@@ -4,13 +4,16 @@
   "version": "0.1.0",
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "standalone"
   ],
   "scripts": {
     "dev:backend": "npm run dev --workspace backend",
     "dev:frontend": "npm run dev --workspace frontend",
+    "dev:standalone": "npm run dev --workspace standalone",
     "build:backend": "npm run build --workspace backend",
     "build:frontend": "npm run build --workspace frontend",
+    "build:standalone": "npm run build --workspace standalone",
     "seed": "npm run seed --workspace backend"
   }
 }
