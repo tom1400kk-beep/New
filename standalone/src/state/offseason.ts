@@ -316,7 +316,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
   for (const g of schedule) {
     state.games.push({
       id: newId(), seasonYear: nextSeasonYear, date: g.date, homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId,
-      homeScore: null, awayScore: null, isPlayed: false, isConference: g.isConference,
+      homeScore: null, awayScore: null, attendance: null, isPlayed: false, isConference: g.isConference,
       tournamentId: null, round: null, bracketSlot: null,
     });
   }

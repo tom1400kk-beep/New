@@ -33,6 +33,19 @@ export function salaryForTeam(rng: () => number, prestige: number, division: Div
   return Math.round(clamp(curve * noise + 150_000, 150_000, 9_000_000));
 }
 
+// Home arena seating capacity — scales with prestige/division the same way
+// real college venues do: blue-blood D1 programs fill 15-20K arenas, mid-major
+// D1 gyms seat a few thousand, and D2/D3 venues are much smaller campus gyms.
+export function venueCapacityForTeam(rng: () => number, prestige: number, division: Division): number {
+  if (division === "D3") {
+    return Math.round(clamp(randNormal(rng, 400 + prestige * 6, 150), 250, 2200));
+  }
+  if (division === "D2") {
+    return Math.round(clamp(randNormal(rng, 800 + prestige * 14, 300), 500, 4000));
+  }
+  return Math.round(clamp(randNormal(rng, 2200 + prestige * prestige * 1.8, 1200), 2000, 22000));
+}
+
 export function facilitiesForTeam(rng: () => number, prestige: number): number {
   return Math.round(clamp(randNormal(rng, prestige, 10), 10, 99));
 }

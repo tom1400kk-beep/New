@@ -233,6 +233,9 @@ export default function DashboardPage() {
           {adStyleLine(team.athleticDirector) ? ` (${adStyleLine(team.athleticDirector)})` : ""}
         </p>
       )}
+      <p className="text-muted" style={{ marginTop: -8 }}>
+        Arena capacity: {team.venueCapacity.toLocaleString()}
+      </p>
 
       <div className="card stat-row">
         <div className="stat-tile">

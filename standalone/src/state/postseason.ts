@@ -21,7 +21,7 @@ function createBracketGames(
     if (!m.teamA || !m.teamB) continue;
     state.games.push({
       id: newId(), seasonYear, date, homeTeamId: m.teamA, awayTeamId: m.teamB,
-      homeScore: null, awayScore: null, isPlayed: false, isConference: false,
+      homeScore: null, awayScore: null, attendance: null, isPlayed: false, isConference: false,
       tournamentId, round, bracketSlot: m.slot,
     });
   }

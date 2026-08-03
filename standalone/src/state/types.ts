@@ -32,6 +32,7 @@ export interface TeamRow {
   internationalScoutingRating: number;
   academicReputation: number;
   baseSalary: number;
+  venueCapacity: number;
   isPlayerControlled: boolean;
   headCoachId: string;
   athleticDirectorId: string;
@@ -169,6 +170,7 @@ export interface GameRow {
   awayTeamId: string;
   homeScore: number | null;
   awayScore: number | null;
+  attendance: number | null;
   isPlayed: boolean;
   isConference: boolean;
   tournamentId: string | null;

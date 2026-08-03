@@ -71,6 +71,7 @@ model Team {
   internationalScoutingRating Int @default(30) // 1-100, overseas scouting network strength
   academicReputation Int      @default(55) // 1-100, independent of prestige
   baseSalary         Int      @default(300000) // annual head coach salary this program pays, in dollars
+  venueCapacity      Int      @default(5000) // home arena seating capacity
   isPlayerControlled Boolean  @default(false)
 
   players           Player[]
@@ -306,6 +307,7 @@ model Game {
   awayScore     Int?
   isPlayed      Boolean  @default(false)
   isConference  Boolean  @default(false)
+  attendance    Int?     // home-crowd size, set once the game is played
 
   tournament    Tournament? @relation(fields: [tournamentId], references: [id])
   tournamentId  String?

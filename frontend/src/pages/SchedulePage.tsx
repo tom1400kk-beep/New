@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 
+function fmtAttendance(n: number) {
+  return n.toLocaleString();
+}
+
 export default function SchedulePage() {
   const { activeSaveId } = useSave();
   const [games, setGames] = useState<any[]>([]);
@@ -16,7 +20,7 @@ export default function SchedulePage() {
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead>
-            <tr><th>Date</th><th>Matchup</th><th>Result</th><th>Type</th></tr>
+            <tr><th>Date</th><th>Matchup</th><th>Result</th><th>Attendance</th><th>Type</th></tr>
           </thead>
           <tbody>
             {games.map((g) => (
@@ -26,6 +30,7 @@ export default function SchedulePage() {
                 <td>
                   {g.isPlayed ? `${g.homeScore} - ${g.awayScore}` : "—"}
                 </td>
+                <td className="text-muted">{g.isPlayed && g.attendance != null ? fmtAttendance(g.attendance) : "—"}</td>
                 <td>{g.tournament ? g.tournament.type.replace(/_/g, " ") : g.isConference ? "Conference" : "Non-Conf"}</td>
               </tr>
             ))}

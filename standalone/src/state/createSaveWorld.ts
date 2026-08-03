@@ -5,7 +5,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam } from "../engine/budget";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
@@ -102,6 +102,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 12, 5, 99));
       }
       const academicReputation = academicReputationForTeam(rng, prestige);
+      const venueCapacity = venueCapacityForTeam(rng, prestige, division);
       const state = toStateAbbr(member.state);
 
       const adId = newId();
@@ -114,7 +115,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 
       teams.push({
         id: teamId, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, isPlayerControlled,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
       pendingTeams.push({ id: teamId, conferenceId });
@@ -160,7 +161,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   const schedule = generateSeasonSchedule(scheduleTeams, division, seasonYear, rng);
   const games: GameRow[] = schedule.map((g) => ({
     id: newId(), seasonYear, date: g.date, homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId,
-    homeScore: null, awayScore: null, isPlayed: false, isConference: g.isConference,
+    homeScore: null, awayScore: null, attendance: null, isPlayed: false, isConference: g.isConference,
     tournamentId: null, round: null, bracketSlot: null,
   }));
 

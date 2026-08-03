@@ -1,4 +1,7 @@
 import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
+import { computeAttendance } from "../engine/attendance";
+import { mulberry32 } from "../engine/rng";
+import type { Division } from "../types";
 import { newId, type WorldState } from "./types";
 
 export function playGames(state: WorldState, gameIds: string[]): void {
@@ -26,6 +29,8 @@ export function playGames(state: WorldState, gameIds: string[]): void {
     return coach?.background === "ANALYTICS_COORDINATOR" ? 3 : 0;
   }
 
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+
   for (const g of games) {
     const homeTeam = teamById.get(g.homeTeamId);
     const awayTeam = teamById.get(g.awayTeamId);
@@ -48,6 +53,16 @@ export function playGames(state: WorldState, gameIds: string[]): void {
     g.homeScore = result.homeScore;
     g.awayScore = result.awayScore;
     g.isPlayed = true;
+    g.attendance = computeAttendance(rng, {
+      capacity: homeTeam.venueCapacity,
+      division: homeTeam.division as Division,
+      homePrestige: homeTeam.prestige,
+      awayPrestige: awayTeam.prestige,
+      localPerception: homeCoach?.localPerception ?? 50,
+      nationalPerception: homeCoach?.nationalPerception ?? 20,
+      isConference: g.isConference,
+      isTournament: g.tournamentId !== null,
+    });
 
     for (const b of result.homeBox) state.stats.push({ id: newId(), gameId: g.id, ...b });
     for (const b of result.awayBox) state.stats.push({ id: newId(), gameId: g.id, ...b });

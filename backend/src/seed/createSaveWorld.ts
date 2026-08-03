@@ -7,7 +7,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam } from "../engine/budget";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
@@ -78,7 +78,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
     prestige: number; nilBudget: number; facilitiesRating: number; internationalScoutingRating: number; academicReputation: number;
-    baseSalary: number; isPlayerControlled: boolean; headCoachId: string; athleticDirectorId: string;
+    baseSalary: number; venueCapacity: number; isPlayerControlled: boolean; headCoachId: string; athleticDirectorId: string;
   }[] = [];
   const adRows: {
     id: string; saveGameId: string; name: string;
@@ -137,6 +137,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
         internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 12, 5, 99));
       }
       const academicReputation = academicReputationForTeam(rng, prestige);
+      const venueCapacity = venueCapacityForTeam(rng, prestige, division);
       const state = toStateAbbr(member.state);
 
       const adId = randomUUID();
@@ -150,7 +151,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
       teamRows.push({
         id: teamId, saveGameId: saveGame.id, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, isPlayerControlled,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled });

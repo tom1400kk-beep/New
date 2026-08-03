@@ -1,13 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
+import { computeAttendance } from "../engine/attendance";
+import { mulberry32 } from "../engine/rng";
+import type { Division } from "../types";
 
 export async function playGames(saveGameId: string, gameIds: string[]): Promise<void> {
   if (gameIds.length === 0) return;
 
   const games = await prisma.game.findMany({
     where: { id: { in: gameIds } },
-    select: { id: true, homeTeamId: true, awayTeamId: true },
+    select: { id: true, homeTeamId: true, awayTeamId: true, isConference: true, tournamentId: true },
   });
 
   const teamIds = [...new Set(games.flatMap((g) => [g.homeTeamId, g.awayTeamId]))];
@@ -46,7 +49,8 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
   }
 
   const statRows: any[] = [];
-  const gameUpdates: { id: string; homeScore: number; awayScore: number }[] = [];
+  const gameUpdates: { id: string; homeScore: number; awayScore: number; attendance: number }[] = [];
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
   for (const g of games) {
     const homeTeam = teamById.get(g.homeTeamId);
@@ -67,7 +71,17 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
     };
 
     const result = simulateGame(home, away);
-    gameUpdates.push({ id: g.id, homeScore: result.homeScore, awayScore: result.awayScore });
+    const attendance = computeAttendance(rng, {
+      capacity: homeTeam.venueCapacity,
+      division: homeTeam.division as Division,
+      homePrestige: homeTeam.prestige,
+      awayPrestige: awayTeam.prestige,
+      localPerception: homeTeam.headCoach?.localPerception ?? 50,
+      nationalPerception: homeTeam.headCoach?.nationalPerception ?? 20,
+      isConference: g.isConference,
+      isTournament: g.tournamentId !== null,
+    });
+    gameUpdates.push({ id: g.id, homeScore: result.homeScore, awayScore: result.awayScore, attendance });
 
     for (const b of result.homeBox) statRows.push({ id: randomUUID(), gameId: g.id, ...b });
     for (const b of result.awayBox) statRows.push({ id: randomUUID(), gameId: g.id, ...b });
@@ -75,7 +89,7 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
 
   await prisma.$transaction(
     gameUpdates.map((u) =>
-      prisma.game.update({ where: { id: u.id }, data: { homeScore: u.homeScore, awayScore: u.awayScore, isPlayed: true } }),
+      prisma.game.update({ where: { id: u.id }, data: { homeScore: u.homeScore, awayScore: u.awayScore, attendance: u.attendance, isPlayed: true } }),
     ),
   );
 
