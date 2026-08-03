@@ -6,8 +6,8 @@ import { loadLeagueData, prestigeTierToScore } from "./leagueData";
 import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
-import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam } from "../engine/budget";
+import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 
 export interface CreateSaveInput {
@@ -57,7 +57,8 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   }[] = [];
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
-    prestige: number; nilBudget: number; facilitiesRating: number; isPlayerControlled: boolean; headCoachId: string;
+    prestige: number; nilBudget: number; facilitiesRating: number; internationalScoutingRating: number;
+    isPlayerControlled: boolean; headCoachId: string;
   }[] = [];
   const playerRows: any[] = [];
   const pendingTeams: PendingTeam[] = [];
@@ -91,16 +92,17 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
+      const internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 
       teamRows.push({
         id: teamId, saveGameId: saveGame.id, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, isPlayerControlled, headCoachId: coachId,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, isPlayerControlled, headCoachId: coachId,
       });
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled });
 
       const rosterSize = DIVISION_RULES[division].rosterCap;
-      const roster = generateRosterForTeam(rng, prestige, division, rosterSize);
+      const roster = generateRosterForTeam(rng, prestige, division, rosterSize, internationalScoutingRating);
       for (const p of roster) {
         playerRows.push({
           id: randomUUID(),
@@ -112,6 +114,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
           classYear: p.classYear,
           heightInches: p.ratings.heightInches,
           hometownState: p.hometownState,
+          countryOfOrigin: p.countryOfOrigin,
           origin: p.origin,
           scoring: p.ratings.scoring,
           threePoint: p.ratings.threePoint,
@@ -153,12 +156,17 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const prospectRows: any[] = [];
   const hsCount = Math.round(pendingTeams.length * 3);
   const jucoCount = Math.round(pendingTeams.length * 0.6);
+  const internationalCount = Math.round(pendingTeams.length * 0.8);
   for (let i = 0; i < hsCount; i++) {
     const p = generateHighSchoolProspect(rng, seasonYear + 1);
     prospectRows.push(prospectFromGenerated(saveGame.id, p));
   }
   for (let i = 0; i < jucoCount; i++) {
     const p = generateJucoProspect(rng, seasonYear + 1);
+    prospectRows.push(prospectFromGenerated(saveGame.id, p));
+  }
+  for (let i = 0; i < internationalCount; i++) {
+    const p = generateInternationalProspect(rng, seasonYear + 1);
     prospectRows.push(prospectFromGenerated(saveGame.id, p));
   }
   for (let i = 0; i < prospectRows.length; i += chunkSize) {
@@ -193,6 +201,7 @@ function prospectFromGenerated(saveGameId: string, p: ReturnType<typeof generate
     lastName: p.lastName,
     position: p.position,
     hometownState: p.hometownState,
+    countryOfOrigin: p.countryOfOrigin,
     source: p.source,
     starRating: p.starRating,
     scoring: p.ratings.scoring,

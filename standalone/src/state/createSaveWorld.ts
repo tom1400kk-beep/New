@@ -4,8 +4,8 @@ import { loadLeagueData, prestigeTierToScore } from "./leagueData";
 import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
-import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam } from "../engine/budget";
+import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow } from "./types";
 
@@ -62,21 +62,22 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
+      const internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
       const state = toStateAbbr(member.state);
 
       teams.push({
         id: teamId, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, isPlayerControlled, headCoachId: coachId,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, isPlayerControlled, headCoachId: coachId,
       });
       pendingTeams.push({ id: teamId, conferenceId });
 
       const rosterSize = DIVISION_RULES[division].rosterCap;
-      const roster = generateRosterForTeam(rng, prestige, division, rosterSize);
+      const roster = generateRosterForTeam(rng, prestige, division, rosterSize, internationalScoutingRating);
       for (const p of roster) {
         players.push({
           id: newId(), teamId,
           firstName: p.firstName, lastName: p.lastName, position: p.position, classYear: p.classYear,
-          heightInches: p.ratings.heightInches, hometownState: p.hometownState, origin: p.origin,
+          heightInches: p.ratings.heightInches, hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, origin: p.origin,
           scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
           playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
           athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
@@ -94,11 +95,15 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 
   const hsCount = Math.round(pendingTeams.length * 3);
   const jucoCount = Math.round(pendingTeams.length * 0.6);
+  const internationalCount = Math.round(pendingTeams.length * 0.8);
   for (let i = 0; i < hsCount; i++) {
     prospects.push(prospectFromGenerated(generateHighSchoolProspect(rng, seasonYear + 1)));
   }
   for (let i = 0; i < jucoCount; i++) {
     prospects.push(prospectFromGenerated(generateJucoProspect(rng, seasonYear + 1)));
+  }
+  for (let i = 0; i < internationalCount; i++) {
+    prospects.push(prospectFromGenerated(generateInternationalProspect(rng, seasonYear + 1)));
   }
 
   const scheduleTeams = pendingTeams.map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
@@ -122,7 +127,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 function prospectFromGenerated(p: ReturnType<typeof generateHighSchoolProspect>): ProspectRow {
   return {
     id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position,
-    hometownState: p.hometownState, source: p.source, starRating: p.starRating,
+    hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
     scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
     playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
     athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,

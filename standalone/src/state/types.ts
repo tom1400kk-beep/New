@@ -29,6 +29,7 @@ export interface TeamRow {
   prestige: number;
   nilBudget: number;
   facilitiesRating: number;
+  internationalScoutingRating: number;
   isPlayerControlled: boolean;
   headCoachId: string;
 }
@@ -66,6 +67,7 @@ export interface PlayerRow {
   classYear: string;
   heightInches: number;
   hometownState: string;
+  countryOfOrigin: string | null;
   origin: string;
   scoring: number;
   threePoint: number;
@@ -91,6 +93,7 @@ export interface ProspectRow {
   lastName: string;
   position: string;
   hometownState: string;
+  countryOfOrigin: string | null;
   source: string;
   starRating: number;
   scoring: number;

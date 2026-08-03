@@ -30,6 +30,7 @@ recruitingRouter.get("/saves/:id/recruiting", async (req, res) => {
       lastName: p.lastName,
       position: p.position,
       hometownState: p.hometownState,
+      countryOfOrigin: p.countryOfOrigin,
       source: p.source,
       starRating: p.starRating,
       graduationYear: p.graduationYear,
@@ -73,8 +74,10 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     facilitiesRating: team.facilitiesRating,
     recruitingSkill: team.headCoach?.recruitingSkill ?? 50,
     assistantRecruitingSkill: Math.max(0, ...team.assistants.filter((a) => a.role === "RECRUITING").map((a) => a.rating), 0),
+    internationalScoutingRating: team.internationalScoutingRating,
     hometownState: prospect.hometownState,
     teamState: team.state,
+    isInternational: prospect.source === "INTERNATIONAL",
     pointsInvested,
     prospectStarRating: prospect.starRating,
   });

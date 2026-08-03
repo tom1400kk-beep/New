@@ -1,7 +1,20 @@
 import { randomFirstName, randomLastName } from "./names";
+import { randomInternationalFirstName, randomInternationalLastName } from "./internationalNames";
 import { clamp, randInt, randNormal, weightedPick } from "./rng";
 import { weightedStateList, STATE_PROFILES } from "./regions";
+import { weightedCountryList, COUNTRY_PROFILES } from "./countries";
 import type { ClassYear, Division, PlayerOrigin, PositionType, ProspectSource } from "../types";
+
+// A player's name follows their country of origin when set (foreign-born HS
+// recruits and JUCO players keep their heritage name too), not just true
+// international signees — otherwise a kid born in Serbia reads as generically
+// American, which undercuts the whole point of tracking countryOfOrigin.
+function pickName(rng: () => number, countryOfOrigin: string | null): { firstName: string; lastName: string } {
+  if (countryOfOrigin) {
+    return { firstName: randomInternationalFirstName(rng, countryOfOrigin), lastName: randomInternationalLastName(rng, countryOfOrigin) };
+  }
+  return { firstName: randomFirstName(rng), lastName: randomLastName(rng) };
+}
 
 const POSITIONS: PositionType[] = ["PG", "SG", "SF", "PF", "C"];
 
@@ -76,6 +89,7 @@ export interface GeneratedProspect {
   lastName: string;
   position: PositionType;
   hometownState: string;
+  countryOfOrigin: string | null; // null = USA; set for international prospects and foreign-born HS players
   source: ProspectSource;
   starRating: number;
   graduationYear: number;
@@ -108,11 +122,17 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
   const position = POSITIONS[Math.floor(rng() * POSITIONS.length)];
   const ratings = generateRatings(rng, position, base, variance, starRating);
 
+  // Some US high schoolers were born overseas — flavor/realism, doesn't change
+  // where they play (still a domestic HS recruit with a US hometown state).
+  const countryOfOrigin = rng() < 0.08 ? weightedPick(rng, weightedCountryList()) : null;
+  const { firstName, lastName } = pickName(rng, countryOfOrigin);
+
   return {
-    firstName: randomFirstName(rng),
-    lastName: randomLastName(rng),
+    firstName,
+    lastName,
     position,
     hometownState: state,
+    countryOfOrigin,
     source: "HIGH_SCHOOL",
     starRating,
     graduationYear,
@@ -133,15 +153,47 @@ export function generateJucoProspect(rng: () => number, graduationYear: number):
   const ratings = generateRatings(rng, position, base + 3, Math.max(4, variance - 2), starRating);
   ratings.potential = Math.round(clamp(ratings.potential - 6, 15, 95)); // less physical upside left
 
+  const jucoCountryOfOrigin = rng() < 0.05 ? weightedPick(rng, weightedCountryList()) : null;
+  const jucoName = pickName(rng, jucoCountryOfOrigin);
+
   return {
-    firstName: randomFirstName(rng),
-    lastName: randomLastName(rng),
+    firstName: jucoName.firstName,
+    lastName: jucoName.lastName,
     position,
     hometownState: state,
+    countryOfOrigin: jucoCountryOfOrigin,
     source: "JUCO",
     starRating,
     graduationYear,
     scoutingNoise: randInt(rng, 2, 10), // JUCO players have a track record, less scouting uncertainty
+    ratings,
+  };
+}
+
+export function generateInternationalProspect(rng: () => number, graduationYear: number): GeneratedProspect {
+  const country = weightedPick(rng, weightedCountryList());
+  const qualityBias = COUNTRY_PROFILES[country].qualityBias;
+  // International recruiting nets a wider talent spread than domestic HS: fewer
+  // prospects overall, but real chances at a hidden gem alongside real busts.
+  const talentScore = clamp(randNormal(rng, 47, 17) + qualityBias * 6, 1, 99);
+  const starRating = starTierFromTalentScore(talentScore);
+  const { base, variance } = STAR_TIER_TALENT[starRating];
+  const position = POSITIONS[Math.floor(rng() * POSITIONS.length)];
+  const ratings = generateRatings(rng, position, base, variance, starRating);
+  const intlName = pickName(rng, country);
+
+  return {
+    firstName: intlName.firstName,
+    lastName: intlName.lastName,
+    position,
+    hometownState: "",
+    countryOfOrigin: country,
+    source: "INTERNATIONAL",
+    starRating,
+    graduationYear,
+    // Overseas prospects are the hardest to scout accurately: less game film,
+    // fewer live looks, translation/context gaps.
+    scoutingNoise: randInt(rng, 10, 24),
     ratings,
   };
 }
@@ -154,6 +206,7 @@ export interface GeneratedPlayer {
   position: PositionType;
   classYear: ClassYear;
   hometownState: string;
+  countryOfOrigin: string | null;
   origin: PlayerOrigin;
   eligibilityYearsLeft: number;
   ratings: GeneratedRatings;
@@ -174,9 +227,16 @@ export function generateRosterForTeam(
   prestige: number,
   division: Division,
   rosterSize: number,
+  internationalScoutingRating = 30,
 ): GeneratedPlayer[] {
   const baseTalent = baseTalentForTeam(prestige, division);
   const players: GeneratedPlayer[] = [];
+
+  // Some programs pull far more international talent than others based on
+  // staff connections/scouting network, independent of overall prestige.
+  const internationalShare = clamp((internationalScoutingRating / 100) * 0.22, 0.02, 0.22);
+  const hsShare = Math.max(0.35, 0.75 - internationalShare);
+  const jucoShare = 0.15;
 
   for (let i = 0; i < rosterSize; i++) {
     const position = POSITIONS[i % POSITIONS.length];
@@ -190,14 +250,28 @@ export function generateRosterForTeam(
     const ratings = generateRatings(rng, position, baseTalent + classBump, variance, starTierApprox);
 
     const originRoll = rng();
-    const origin: PlayerOrigin = originRoll < 0.75 ? "HIGH_SCHOOL" : originRoll < 0.9 ? "JUCO" : "TRANSFER_PORTAL";
+    let origin: PlayerOrigin;
+    let countryOfOrigin: string | null = null;
+    if (originRoll < internationalShare) {
+      origin = "INTERNATIONAL";
+      countryOfOrigin = weightedPick(rng, weightedCountryList());
+    } else if (originRoll < internationalShare + hsShare) {
+      origin = "HIGH_SCHOOL";
+      if (rng() < 0.08) countryOfOrigin = weightedPick(rng, weightedCountryList());
+    } else if (originRoll < internationalShare + hsShare + jucoShare) {
+      origin = "JUCO";
+    } else {
+      origin = "TRANSFER_PORTAL";
+    }
 
+    const { firstName, lastName } = pickName(rng, countryOfOrigin);
     players.push({
-      firstName: randomFirstName(rng),
-      lastName: randomLastName(rng),
+      firstName,
+      lastName,
       position,
       classYear,
       hometownState: state,
+      countryOfOrigin,
       origin,
       eligibilityYearsLeft: ELIGIBILITY_BY_CLASS[classYear],
       ratings,

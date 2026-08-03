@@ -1,6 +1,6 @@
 import { computeStandings } from "./standings";
 import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers } from "../engine/career";
-import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect } from "../engine/generation";
+import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
@@ -147,7 +147,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     state.players.push({
       id: newId(), teamId: winnerTeamId, firstName: prospect.firstName, lastName: prospect.lastName,
       position: prospect.position, classYear: "FR", heightInches: 76, hometownState: prospect.hometownState,
-      origin: prospect.source === "JUCO" ? "JUCO" : "HIGH_SCHOOL",
+      countryOfOrigin: prospect.countryOfOrigin, origin: prospect.source,
       scoring: prospect.scoring, threePoint: prospect.threePoint, finishing: prospect.finishing,
       playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
       athleticism: prospect.athleticism, basketballIq: prospect.basketballIq,
@@ -163,7 +163,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const p = generateHighSchoolProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState,
-      source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
+      countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
@@ -174,7 +174,18 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const p = generateJucoProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState,
-      source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
+      countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
+      finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
+      defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
+      potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
+      graduationYear: p.graduationYear, signed: false, committedTeamId: null,
+    });
+  }
+  for (let i = 0; i < Math.round(teamCount * 0.8); i++) {
+    const p = generateInternationalProspect(rng, seasonYear + 2);
+    state.prospects.push({
+      id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState,
+      countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       potential: p.ratings.potential, characterRating: p.ratings.characterRating, scoutingNoise: p.scoutingNoise,
@@ -188,11 +199,11 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const rosterCount = state.players.filter((p) => p.teamId === team.id).length;
     const need = rosterCap - rosterCount;
     if (need <= 0) continue;
-    const roster = generateRosterForTeam(rng, team.prestige, division, need);
+    const roster = generateRosterForTeam(rng, team.prestige, division, need, team.internationalScoutingRating);
     for (const p of roster) {
       state.players.push({
         id: newId(), teamId: team.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
-        classYear: "FR", heightInches: p.ratings.heightInches, hometownState: p.hometownState, origin: p.origin,
+        classYear: "FR", heightInches: p.ratings.heightInches, hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, origin: p.origin,
         scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
         playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
         athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,

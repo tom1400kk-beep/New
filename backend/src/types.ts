@@ -10,8 +10,8 @@ export type SeasonPhase =
 export type AssistantRole = "RECRUITING" | "PLAYER_DEVELOPMENT" | "OFFENSE" | "DEFENSE";
 export type PositionType = "PG" | "SG" | "SF" | "PF" | "C";
 export type ClassYear = "FR" | "SO" | "JR" | "SR" | "GR";
-export type PlayerOrigin = "HIGH_SCHOOL" | "JUCO" | "TRANSFER_PORTAL";
-export type ProspectSource = "HIGH_SCHOOL" | "JUCO";
+export type PlayerOrigin = "HIGH_SCHOOL" | "JUCO" | "TRANSFER_PORTAL" | "INTERNATIONAL";
+export type ProspectSource = "HIGH_SCHOOL" | "JUCO" | "INTERNATIONAL";
 export type TournamentType =
   | "CONFERENCE_TOURNAMENT"
   | "NCAA_TOURNAMENT"

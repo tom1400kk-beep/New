@@ -67,6 +67,7 @@ model Team {
   prestige           Int      @default(50) // 1-100
   nilBudget          Int      @default(100000) // annual NIL/booster dollars available
   facilitiesRating   Int      @default(50) // 1-100
+  internationalScoutingRating Int @default(30) // 1-100, overseas scouting network strength
   isPlayerControlled Boolean  @default(false)
 
   players           Player[]
@@ -141,6 +142,7 @@ model Player {
   classYear        String
   heightInches     Int
   hometownState    String
+  countryOfOrigin  String?  // null = USA; set for international players and foreign-born HS recruits
   origin           String   @default("HIGH_SCHOOL")
 
   // Core ratings, 1-100
@@ -169,8 +171,8 @@ model Player {
   @@index([saveGameId, teamId])
 }
 
-// ---------- Recruiting: HS + JUCO prospects, and portal reuses Player.inTransferPortal ----------
-// ProspectSource: "HIGH_SCHOOL" | "JUCO"
+// ---------- Recruiting: HS + JUCO + international prospects, portal reuses Player.inTransferPortal ----------
+// ProspectSource: "HIGH_SCHOOL" | "JUCO" | "INTERNATIONAL"
 
 model Prospect {
   id               String   @id @default(cuid())
@@ -181,6 +183,7 @@ model Prospect {
   lastName         String
   position         String
   hometownState    String
+  countryOfOrigin  String?  // null = USA; set for international prospects and foreign-born HS recruits
   source           String
   starRating       Int      // 1-5
 

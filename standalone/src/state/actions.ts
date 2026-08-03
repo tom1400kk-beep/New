@@ -13,6 +13,7 @@ export interface RecruitingBoardEntry {
   lastName: string;
   position: string;
   hometownState: string;
+  countryOfOrigin: string | null;
   source: string;
   starRating: number;
   graduationYear: number;
@@ -38,7 +39,7 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
       const interest = state.interests.find((i) => i.prospectId === p.id && i.teamId === teamId);
       return {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
-        hometownState: p.hometownState, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
+        hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
         scouted: {
           scoring: noisy(rng, p.scoring, p.scoutingNoise), threePoint: noisy(rng, p.threePoint, p.scoutingNoise),
           finishing: noisy(rng, p.finishing, p.scoutingNoise), playmaking: noisy(rng, p.playmaking, p.scoutingNoise),
@@ -68,7 +69,9 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
   const gain = computeInterestGain({
     prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
     recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant,
-    hometownState: prospect.hometownState, teamState: team.state, pointsInvested, prospectStarRating: prospect.starRating,
+    internationalScoutingRating: team.internationalScoutingRating,
+    hometownState: prospect.hometownState, teamState: team.state, isInternational: prospect.source === "INTERNATIONAL",
+    pointsInvested, prospectStarRating: prospect.starRating,
   });
 
   if (interest) {

@@ -77,7 +77,7 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
     if (pendingCount === 0) {
       const rosterPlayers = await prisma.player.findMany({
         where: { saveGameId, teamId: save.coachTeamId },
-        select: { id: true, firstName: true, lastName: true, characterRating: true, scoring: true },
+        select: { id: true, firstName: true, lastName: true, characterRating: true, scoring: true, countryOfOrigin: true },
       });
       const chemistry = computeTeamChemistry(rosterPlayers);
       const phase: EventContext["phase"] = save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";

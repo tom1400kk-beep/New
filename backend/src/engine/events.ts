@@ -2,7 +2,10 @@ import { clamp } from "./rng";
 
 export interface EventContext {
   teamId: string;
-  players: { id: string; firstName: string; lastName: string; characterRating: number; scoring: number }[];
+  players: {
+    id: string; firstName: string; lastName: string; characterRating: number; scoring: number;
+    countryOfOrigin: string | null;
+  }[];
   chemistry: number; // 0-100
   phase: "IN_SEASON" | "OFFSEASON";
   recentWinPct: number;
@@ -177,6 +180,44 @@ const TEMPLATES: Template[] = [
         },
       ],
     }),
+  },
+  {
+    type: "OVERSEAS_DEPARTURE",
+    phase: "OFFSEASON",
+    baseWeight: 4,
+    weightModifier: (ctx) => (ctx.players.some((p) => p.countryOfOrigin) ? 1 : 0),
+    generate: (rng, ctx) => {
+      const eligible = ctx.players.filter((p) => p.countryOfOrigin);
+      // Better players draw bigger, harder-to-refuse pro offers.
+      const weights = eligible.map((p) => ({ item: p, weight: Math.max(1, p.scoring) }));
+      const total = weights.reduce((s, w) => s + w.weight, 0);
+      let r = rng() * total;
+      let p = weights[0]?.item;
+      for (const w of weights) {
+        r -= w.weight;
+        if (r <= 0) { p = w.item; break; }
+      }
+      return {
+        type: "OVERSEAS_DEPARTURE",
+        title: `${p.firstName} ${p.lastName} has a pro offer back home`,
+        description: `A club in ${p.countryOfOrigin} has offered ${p.firstName} ${p.lastName} a paid professional contract. They're considering leaving school to take it.`,
+        playerId: p.id,
+        options: [
+          {
+            id: "let_go",
+            label: "Let them chase it",
+            description: "Wish them well and open the roster spot — some opportunities don't wait.",
+            effects: { removePlayer: true, chemistryDelta: 1 },
+          },
+          {
+            id: "convince",
+            label: "Make the case to stay",
+            description: "Sell them on their future here. Might work, might not — and pushing too hard can sour things either way.",
+            effects: { playerCharacterDelta: rng() < 0.45 ? 5 : -4 },
+          },
+        ],
+      };
+    },
   },
   {
     type: "ACADEMIC_ISSUE",

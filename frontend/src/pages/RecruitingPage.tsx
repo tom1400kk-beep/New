@@ -2,6 +2,16 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 
+function sourceLabel(source: string): string {
+  if (source === "JUCO") return "JUCO";
+  if (source === "INTERNATIONAL") return "Int'l";
+  return "HS";
+}
+
+function homeLabel(p: any): string {
+  return p.source === "INTERNATIONAL" ? p.countryOfOrigin : p.hometownState;
+}
+
 export default function RecruitingPage() {
   const { activeSaveId } = useSave();
   const [board, setBoard] = useState<any[]>([]);
@@ -33,6 +43,7 @@ export default function RecruitingPage() {
           <option value="ALL">All</option>
           <option value="HIGH_SCHOOL">High School</option>
           <option value="JUCO">JUCO</option>
+          <option value="INTERNATIONAL">International</option>
         </select>
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
@@ -49,8 +60,8 @@ export default function RecruitingPage() {
                 <td>{p.firstName} {p.lastName}</td>
                 <td>{p.position}</td>
                 <td>{"★".repeat(p.starRating)}</td>
-                <td>{p.hometownState}</td>
-                <td>{p.source === "JUCO" ? "JUCO" : "HS"}</td>
+                <td>{homeLabel(p)}</td>
+                <td>{sourceLabel(p.source)}</td>
                 <td>{p.scouted.scoring}</td>
                 <td>{p.scouted.defense}</td>
                 <td>{p.scouted.characterRating}</td>
@@ -64,6 +75,7 @@ export default function RecruitingPage() {
         {filtered.length === 0 && <p>No prospects loaded.</p>}
         <p className="text-muted" style={{ fontSize: "0.8rem", marginTop: 8 }}>
           * Scouted ratings carry uncertainty — true ability may differ from what your staff reports.
+          International prospects carry extra uncertainty — harder to scout from overseas.
         </p>
       </div>
     </div>

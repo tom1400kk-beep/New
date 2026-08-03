@@ -60,7 +60,7 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
     if (pendingCount === 0) {
       const rosterPlayers = state.players
         .filter((p) => p.teamId === state.save.coachTeamId)
-        .map((p) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, characterRating: p.characterRating, scoring: p.scoring }));
+        .map((p) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, characterRating: p.characterRating, scoring: p.scoring, countryOfOrigin: p.countryOfOrigin }));
       const chemistry = computeTeamChemistry(rosterPlayers);
       const phase: EventContext["phase"] = state.save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
       const ctx: EventContext = { teamId: state.save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5 };

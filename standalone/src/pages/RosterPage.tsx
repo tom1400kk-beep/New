@@ -6,6 +6,12 @@ function overall(p: any): number {
   return Math.round((p.scoring + p.threePoint + p.finishing + p.playmaking + p.rebounding + p.defense + p.athleticism + p.basketballIq) / 8);
 }
 
+function homeLabel(p: any): string {
+  if (p.origin === "INTERNATIONAL") return p.countryOfOrigin;
+  if (p.countryOfOrigin) return `${p.hometownState} (${p.countryOfOrigin})`;
+  return p.hometownState;
+}
+
 export default function RosterPage() {
   const { activeSaveId } = useSave();
   const [players, setPlayers] = useState<any[]>([]);
@@ -21,7 +27,7 @@ export default function RosterPage() {
         <table>
           <thead>
             <tr>
-              <th>Name</th><th>Pos</th><th>Yr</th><th>OVR</th><th>Scoring</th><th>3PT</th><th>Finish</th>
+              <th>Name</th><th>Pos</th><th>Home</th><th>Yr</th><th>OVR</th><th>Scoring</th><th>3PT</th><th>Finish</th>
               <th>Playmaking</th><th>Rebounding</th><th>Defense</th><th>Character</th><th>Status</th>
             </tr>
           </thead>
@@ -30,6 +36,7 @@ export default function RosterPage() {
               <tr key={p.id}>
                 <td>{p.firstName} {p.lastName}</td>
                 <td>{p.position}</td>
+                <td>{homeLabel(p)}</td>
                 <td>{p.classYear}</td>
                 <td>{overall(p)}</td>
                 <td>{p.scoring}</td>

@@ -19,3 +19,10 @@ export function nilBudgetForTeam(rng: () => number, prestige: number, division: 
 export function facilitiesForTeam(rng: () => number, prestige: number): number {
   return Math.round(clamp(randNormal(rng, prestige, 10), 10, 99));
 }
+
+// International/European scouting strength is deliberately close to
+// independent of prestige — a mid-major with the right staff connections
+// can out-recruit a blue-blood overseas, and vice versa.
+export function internationalScoutingForTeam(rng: () => number, prestige: number): number {
+  return Math.round(clamp(randNormal(rng, 35 + prestige * 0.15, 22), 5, 95));
+}

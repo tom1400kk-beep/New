@@ -6,8 +6,10 @@ export interface RecruitingInputs {
   facilitiesRating: number; // 1-100
   recruitingSkill: number; // head coach, 1-100
   assistantRecruitingSkill: number; // best assistant assigned to recruiting, 1-100, 0 if none
+  internationalScoutingRating: number; // 1-100, team's overseas scouting network strength
   hometownState: string;
   teamState: string;
+  isInternational: boolean; // true for INTERNATIONAL-source prospects
   pointsInvested: number; // cumulative points this team has spent on this prospect
   prospectStarRating: number;
 }
@@ -28,11 +30,15 @@ function nilPullFactor(nilBudget: number): number {
 export function computeInterestGain(inputs: RecruitingInputs): number {
   const {
     prestige, nilBudget, facilitiesRating, recruitingSkill, assistantRecruitingSkill,
-    hometownState, teamState, pointsInvested, prospectStarRating,
+    internationalScoutingRating, hometownState, teamState, isInternational, pointsInvested, prospectStarRating,
   } = inputs;
 
   const nilPull = nilPullFactor(nilBudget);
-  const homeStateBonus = hometownState === teamState ? 8 : 0;
+  const homeStateBonus = !isInternational && hometownState === teamState ? 8 : 0;
+  // A program's overseas scouting network matters far more than prestige for
+  // actually landing international prospects — this is what makes some
+  // schools genuinely better at it than others, independent of blue-blood status.
+  const internationalBonus = isInternational ? internationalScoutingRating * 0.3 : 0;
 
   // Higher-rated recruits are harder to move the needle on for lower-prestige programs.
   const difficultyPenalty = Math.max(0, prospectStarRating * 6 - prestige * 0.15);
@@ -44,7 +50,8 @@ export function computeInterestGain(inputs: RecruitingInputs): number {
     facilitiesRating * 0.1 +
     recruitingSkill * 0.15 +
     assistantRecruitingSkill * 0.1 +
-    homeStateBonus -
+    homeStateBonus +
+    internationalBonus -
     difficultyPenalty;
 
   return clamp(base, 0, 100);
