@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { HashRouter, Routes, Route, NavLink } from "react-router-dom";
 import { SaveProvider, useSave } from "./SaveContext";
 import SaveSelectPage from "./pages/SaveSelectPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -43,9 +43,9 @@ function Shell() {
 export default function App() {
   return (
     <SaveProvider>
-      <BrowserRouter>
+      <HashRouter>
         <Shell />
-      </BrowserRouter>
+      </HashRouter>
     </SaveProvider>
   );
 }
