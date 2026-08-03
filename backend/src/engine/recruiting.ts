@@ -1,4 +1,4 @@
-import { clamp } from "./rng";
+import { clamp, randNormal } from "./rng";
 import { PRIORITY_KEYS, sameRegion, isWarmState, type PriorityProfile } from "./priorities";
 import { pipelineScore, pipelineMultiplier } from "./pipeline";
 import type { PositionType } from "../types";
@@ -159,3 +159,22 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
 export function commitmentWeights(interestByTeam: { teamId: string; interest: number }[]): { teamId: string; weight: number }[] {
   return interestByTeam.map((t) => ({ teamId: t.teamId, weight: Math.max(1, t.interest) ** 2 }));
 }
+
+// Gentle year-over-year drift for a still-in-high-school prospect's rating —
+// a slight pull toward their long-run potential plus small random noise from
+// how their season actually went, deliberately subtle so scouting reports
+// stay meaningful rather than reshuffling the board every offseason.
+export function driftProspectRating(rng: () => number, current: number, potential: number): number {
+  const pull = (potential - current) * 0.06;
+  return Math.round(clamp(current + pull + randNormal(rng, 0, 1.5), 15, 99));
+}
+
+// Odds a D1-bound HS recruit commits a year early as a junior rather than
+// waiting for senior year to sign.
+export const JUNIOR_EARLY_COMMIT_CHANCE = 0.25;
+
+// Base odds an early-committed junior decommits before signing day, and the
+// bump applied when their committed program just fired its head coach — a
+// realistic, common reason to reopen a commitment.
+export const JUNIOR_DECOMMIT_BASE_CHANCE = 0.07;
+export const JUNIOR_DECOMMIT_COACH_FIRED_CHANCE = 0.35;

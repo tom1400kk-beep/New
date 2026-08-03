@@ -11,7 +11,13 @@ import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
-import { commitmentWeights } from "../engine/recruiting";
+import {
+  commitmentWeights,
+  driftProspectRating,
+  JUNIOR_EARLY_COMMIT_CHANCE,
+  JUNIOR_DECOMMIT_BASE_CHANCE,
+  JUNIOR_DECOMMIT_COACH_FIRED_CHANCE,
+} from "../engine/recruiting";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import type { ClassYear, Division } from "../types";
 import { DIVISION_RULES } from "../types";
@@ -66,6 +72,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   let userNewAdRelationshipsJson = "{}";
   let jobOffers: { teamId: string; teamName: string; prestige: number }[] = [];
   const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
+  const firedTeamIds = new Set<string>();
 
   for (const team of teams) {
     if (!team.headCoach) continue;
@@ -130,6 +137,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     }
 
     if (fired) {
+      firedTeamIds.add(team.id);
       vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation });
       const replacementArchetype = randomArchetype(rng);
       const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
@@ -329,27 +337,82 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     });
   }
 
-  // ---- Recruiting resolution: signed prospects join a roster ----
+  // ---- Recruiting resolution: this year's class gets a small development
+  // nudge from their senior season, then either signs with a team now or —
+  // for D1-bound HS prospects only, ~25% of the time — commits a year early
+  // as a junior instead, buying one more season before actually joining a
+  // roster. Prospects who already committed early get one last chance to
+  // decommit here, far more likely if their program just fired its coach. ----
   const classToSign = await prisma.prospect.findMany({
-    where: { saveGameId, signed: false, graduationYear: seasonYear + 1 },
+    where: { saveGameId, graduationYear: seasonYear + 1 },
     include: { interest: true },
   });
   for (const prospect of classToSign) {
-    if (prospect.interest.length === 0) continue;
-    const weights = commitmentWeights(prospect.interest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
-    const total = weights.reduce((s, w) => s + w.weight, 0);
-    if (total <= 0) continue;
-    let r = rng() * total;
-    let winnerTeamId = weights[0]?.teamId;
-    for (const w of weights) {
-      r -= w.weight;
-      if (r <= 0) { winnerTeamId = w.teamId; break; }
+    if (prospect.source === "HIGH_SCHOOL") {
+      prospect.scoring = driftProspectRating(rng, prospect.scoring, prospect.potential);
+      prospect.threePoint = driftProspectRating(rng, prospect.threePoint, prospect.potential);
+      prospect.finishing = driftProspectRating(rng, prospect.finishing, prospect.potential);
+      prospect.playmaking = driftProspectRating(rng, prospect.playmaking, prospect.potential);
+      prospect.rebounding = driftProspectRating(rng, prospect.rebounding, prospect.potential);
+      prospect.defense = driftProspectRating(rng, prospect.defense, prospect.potential);
+      prospect.athleticism = driftProspectRating(rng, prospect.athleticism, prospect.potential);
+      prospect.basketballIq = driftProspectRating(rng, prospect.basketballIq, prospect.potential);
+    }
+    const driftedRatings = {
+      scoring: prospect.scoring, threePoint: prospect.threePoint, finishing: prospect.finishing,
+      playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
+      athleticism: prospect.athleticism, basketballIq: prospect.basketballIq,
+    };
+
+    let winnerTeamId: string | undefined;
+    let eligibleInterest = prospect.interest;
+
+    if (prospect.signed && prospect.committedTeamId) {
+      const formerTeamId = prospect.committedTeamId;
+      const decommitChance = firedTeamIds.has(formerTeamId) ? JUNIOR_DECOMMIT_COACH_FIRED_CHANCE : JUNIOR_DECOMMIT_BASE_CHANCE;
+      if (rng() >= decommitChance) {
+        winnerTeamId = formerTeamId; // still committed — locks in for good
+      } else {
+        await prisma.recruitInterest.deleteMany({ where: { prospectId: prospect.id, teamId: formerTeamId } });
+        eligibleInterest = prospect.interest.filter((i) => i.teamId !== formerTeamId);
+      }
     }
 
-    await prisma.prospect.update({ where: { id: prospect.id }, data: { signed: true, committedTeamId: winnerTeamId } });
+    if (winnerTeamId === undefined) {
+      if (eligibleInterest.length === 0) {
+        await prisma.prospect.update({ where: { id: prospect.id }, data: { signed: false, committedTeamId: null, ...driftedRatings } });
+        continue;
+      }
+      const weights = commitmentWeights(eligibleInterest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
+      const total = weights.reduce((s, w) => s + w.weight, 0);
+      if (total <= 0) {
+        await prisma.prospect.update({ where: { id: prospect.id }, data: { signed: false, committedTeamId: null, ...driftedRatings } });
+        continue;
+      }
+      let r = rng() * total;
+      winnerTeamId = weights[0]?.teamId;
+      for (const w of weights) {
+        r -= w.weight;
+        if (r <= 0) { winnerTeamId = w.teamId; break; }
+      }
+      if (!winnerTeamId) continue;
+
+      if (division === "D1" && prospect.source === "HIGH_SCHOOL" && rng() < JUNIOR_EARLY_COMMIT_CHANCE) {
+        await prisma.prospect.update({
+          where: { id: prospect.id },
+          data: { signed: true, committedTeamId: winnerTeamId, graduationYear: seasonYear + 2, ...driftedRatings },
+        });
+        continue;
+      }
+      await prisma.prospect.update({ where: { id: prospect.id }, data: { signed: true, committedTeamId: winnerTeamId, ...driftedRatings } });
+    } else {
+      await prisma.prospect.update({ where: { id: prospect.id }, data: driftedRatings });
+    }
+
+    const finalTeamId = winnerTeamId as string;
     await prisma.player.create({
       data: {
-        id: randomUUID(), saveGameId, teamId: winnerTeamId,
+        id: randomUUID(), saveGameId, teamId: finalTeamId,
         firstName: prospect.firstName, lastName: prospect.lastName, position: prospect.position,
         classYear: "FR", heightInches: 76, hometownState: prospect.hometownState,
         countryOfOrigin: prospect.countryOfOrigin,

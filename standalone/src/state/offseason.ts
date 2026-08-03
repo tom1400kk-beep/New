@@ -9,7 +9,13 @@ import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
-import { commitmentWeights } from "../engine/recruiting";
+import {
+  commitmentWeights,
+  driftProspectRating,
+  JUNIOR_EARLY_COMMIT_CHANCE,
+  JUNIOR_DECOMMIT_BASE_CHANCE,
+  JUNIOR_DECOMMIT_COACH_FIRED_CHANCE,
+} from "../engine/recruiting";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import type { ClassYear, Division } from "../types";
 import { DIVISION_RULES } from "../types";
@@ -61,6 +67,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
   let userNewAdRelationshipsJson = "{}";
   let jobOffers: OffseasonResult["jobOffers"] = [];
   const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
+  const firedTeamIds = new Set<string>();
 
   for (const team of state.teams) {
     const headCoach = state.coaches.find((c) => c.id === team.headCoachId);
@@ -126,6 +133,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     }
 
     if (fired) {
+      firedTeamIds.add(team.id);
       vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation });
       const replacementArchetype = randomArchetype(rng);
       const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
@@ -301,25 +309,73 @@ export function runOffseason(state: WorldState): OffseasonResult {
     p.defense = Math.round(clamp(p.defense + growth, 15, 99));
   }
 
-  // Recruiting resolution
-  const classToSign = state.prospects.filter((p) => !p.signed && p.graduationYear === seasonYear + 1);
+  // Recruiting resolution: this year's class gets a small development nudge
+  // from their senior season, then either signs with a team now or — for
+  // D1-bound HS prospects only, ~25% of the time — commits a year early as a
+  // junior instead, buying one more season before actually joining a roster.
+  // Prospects who already committed early get one last chance to decommit
+  // here, far more likely if their program just fired its coach.
+  const classToSign = state.prospects.filter((p) => p.graduationYear === seasonYear + 1);
   for (const prospect of classToSign) {
-    const interests = state.interests.filter((i) => i.prospectId === prospect.id);
-    if (interests.length === 0) continue;
-    const weights = commitmentWeights(interests.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
-    const total = weights.reduce((s, w) => s + w.weight, 0);
-    if (total <= 0) continue;
-    let r = rng() * total;
-    let winnerTeamId = weights[0]?.teamId;
-    for (const w of weights) {
-      r -= w.weight;
-      if (r <= 0) { winnerTeamId = w.teamId; break; }
+    if (prospect.source === "HIGH_SCHOOL") {
+      prospect.scoring = driftProspectRating(rng, prospect.scoring, prospect.potential);
+      prospect.threePoint = driftProspectRating(rng, prospect.threePoint, prospect.potential);
+      prospect.finishing = driftProspectRating(rng, prospect.finishing, prospect.potential);
+      prospect.playmaking = driftProspectRating(rng, prospect.playmaking, prospect.potential);
+      prospect.rebounding = driftProspectRating(rng, prospect.rebounding, prospect.potential);
+      prospect.defense = driftProspectRating(rng, prospect.defense, prospect.potential);
+      prospect.athleticism = driftProspectRating(rng, prospect.athleticism, prospect.potential);
+      prospect.basketballIq = driftProspectRating(rng, prospect.basketballIq, prospect.potential);
     }
 
-    prospect.signed = true;
-    prospect.committedTeamId = winnerTeamId;
+    let winnerTeamId: string | undefined;
+    let eligibleInterest = state.interests.filter((i) => i.prospectId === prospect.id);
+
+    if (prospect.signed && prospect.committedTeamId) {
+      const formerTeamId = prospect.committedTeamId;
+      const decommitChance = firedTeamIds.has(formerTeamId) ? JUNIOR_DECOMMIT_COACH_FIRED_CHANCE : JUNIOR_DECOMMIT_BASE_CHANCE;
+      if (rng() >= decommitChance) {
+        winnerTeamId = formerTeamId; // still committed — locks in for good
+      } else {
+        state.interests = state.interests.filter((i) => !(i.prospectId === prospect.id && i.teamId === formerTeamId));
+        eligibleInterest = eligibleInterest.filter((i) => i.teamId !== formerTeamId);
+      }
+    }
+
+    if (winnerTeamId === undefined) {
+      if (eligibleInterest.length === 0) {
+        prospect.signed = false;
+        prospect.committedTeamId = null;
+        continue;
+      }
+      const weights = commitmentWeights(eligibleInterest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
+      const total = weights.reduce((s, w) => s + w.weight, 0);
+      if (total <= 0) {
+        prospect.signed = false;
+        prospect.committedTeamId = null;
+        continue;
+      }
+      let r = rng() * total;
+      winnerTeamId = weights[0]?.teamId;
+      for (const w of weights) {
+        r -= w.weight;
+        if (r <= 0) { winnerTeamId = w.teamId; break; }
+      }
+      if (!winnerTeamId) continue;
+
+      if (division === "D1" && prospect.source === "HIGH_SCHOOL" && rng() < JUNIOR_EARLY_COMMIT_CHANCE) {
+        prospect.signed = true;
+        prospect.committedTeamId = winnerTeamId;
+        prospect.graduationYear = seasonYear + 2;
+        continue;
+      }
+      prospect.signed = true;
+      prospect.committedTeamId = winnerTeamId;
+    }
+
+    const finalTeamId = winnerTeamId as string;
     state.players.push({
-      id: newId(), teamId: winnerTeamId, firstName: prospect.firstName, lastName: prospect.lastName,
+      id: newId(), teamId: finalTeamId, firstName: prospect.firstName, lastName: prospect.lastName,
       position: prospect.position, classYear: "FR", heightInches: 76, hometownState: prospect.hometownState,
       countryOfOrigin: prospect.countryOfOrigin, origin: prospect.source,
       scoring: prospect.scoring, threePoint: prospect.threePoint, finishing: prospect.finishing,
