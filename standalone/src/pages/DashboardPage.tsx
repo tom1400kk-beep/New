@@ -46,6 +46,25 @@ function adStyleLine(ad: any): string {
   return traits.filter(Boolean).join(", ");
 }
 
+function colLabel(index: number): string {
+  if (index >= 130) return "Much pricier";
+  if (index >= 112) return "Pricier";
+  if (index >= 95) return "About average";
+  if (index >= 85) return "Cheaper";
+  return "Much cheaper";
+}
+
+function offerLine(o: any): string {
+  const parts: string[] = [];
+  if (o.salaryDeltaPct !== null && o.salaryDeltaPct !== undefined) {
+    parts.push(o.salaryDeltaPct >= 0 ? `pays ${o.salaryDeltaPct}% more` : `pays ${Math.abs(o.salaryDeltaPct)}% less`);
+  }
+  if (o.colDeltaPct !== null && o.colDeltaPct !== undefined) {
+    parts.push(o.colDeltaPct >= 0 ? `cost of living ${o.colDeltaPct}% higher` : `cost of living ${Math.abs(o.colDeltaPct)}% lower`);
+  }
+  return parts.join(", ");
+}
+
 function playingCareerLine(coach: any): string | null {
   const parts: string[] = [];
   if (coach.hometownState) parts.push(`From ${coach.hometownState}`);
@@ -66,6 +85,10 @@ export default function DashboardPage() {
   const [jobOffers, setJobOffers] = useState<any[]>([]);
   const [advancing, setAdvancing] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+  const [raiseResult, setRaiseResult] = useState<any>(null);
+  const [askingRaise, setAskingRaise] = useState(false);
+  const [marketOpen, setMarketOpen] = useState(false);
+  const [marketLoading, setMarketLoading] = useState(false);
 
   async function refresh() {
     if (!activeSaveId) return;
@@ -77,6 +100,7 @@ export default function DashboardPage() {
       setJobOffers(offers);
     } else {
       setJobOffers([]);
+      setMarketOpen(false);
     }
   }
 
@@ -95,6 +119,7 @@ export default function DashboardPage() {
     try {
       const result = await api.advance(activeSaveId);
       setLastResult(result);
+      setRaiseResult(null);
       await refresh();
     } finally {
       setAdvancing(false);
@@ -110,6 +135,41 @@ export default function DashboardPage() {
   async function acceptJob(teamId: string) {
     if (!activeSaveId) return;
     await api.acceptJob(activeSaveId, teamId);
+    await refresh();
+  }
+
+  async function handleRequestRaise() {
+    if (!activeSaveId) return;
+    setAskingRaise(true);
+    try {
+      const result = await api.requestRaise(activeSaveId);
+      setRaiseResult(result);
+      await refresh();
+    } finally {
+      setAskingRaise(false);
+    }
+  }
+
+  async function testWaters() {
+    if (!activeSaveId) return;
+    if (marketOpen) {
+      setMarketOpen(false);
+      return;
+    }
+    setMarketLoading(true);
+    try {
+      const offers = await api.getJobOffers(activeSaveId);
+      setJobOffers(offers);
+      setMarketOpen(true);
+    } finally {
+      setMarketLoading(false);
+    }
+  }
+
+  async function resignAndAccept(teamId: string) {
+    if (!activeSaveId) return;
+    await api.resignAndAccept(activeSaveId, teamId);
+    setMarketOpen(false);
     await refresh();
   }
 
@@ -135,6 +195,8 @@ export default function DashboardPage() {
           {jobOffers.map((o) => (
             <div key={o.teamId} className="divider-row">
               <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}
+              {o.salary != null && <span className="text-muted"> · {fmtMoney(o.salary)}/yr</span>}
+              {o.costOfLivingIndex != null && <span className="text-muted"> · {colLabel(o.costOfLivingIndex)} cost of living</span>}
               {o.athleticDirectorName && <span className="text-muted"> · AD: {o.athleticDirectorName}</span>}
               {o.adRemembersYou && <span className="text-good"> — remembers you well from a previous job together</span>}
               {" "}
@@ -201,6 +263,48 @@ export default function DashboardPage() {
             {team.headCoach.legalityReputation}/100
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <h3>Contract</h3>
+        <p>
+          Current salary: <strong>{fmtMoney(team.headCoach.currentSalary)}/yr</strong>
+          {" "}· {team.state} — {colLabel(team.costOfLivingIndex)} cost of living
+        </p>
+        <button onClick={handleRequestRaise} disabled={askingRaise || team.headCoach.raiseRequestedThisSeason}>
+          {team.headCoach.raiseRequestedThisSeason ? "Already asked this season" : askingRaise ? "Asking..." : "Ask for a Raise"}
+        </button>
+        {raiseResult && (
+          <p className={raiseResult.granted ? "text-good" : "text-bad"} style={{ marginTop: 8 }}>
+            {raiseResult.granted
+              ? `Raise granted! New salary: ${fmtMoney(raiseResult.newSalary)}/yr`
+              : "The AD turned you down. Maybe it's time to test the waters elsewhere."}
+          </p>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Job Market</h3>
+        <button onClick={testWaters} disabled={marketLoading}>
+          {marketLoading ? "..." : marketOpen ? "Hide Market" : "Test the Waters"}
+        </button>
+        {marketOpen && (
+          <div style={{ marginTop: 12 }}>
+            {jobOffers.length === 0 && <p className="text-muted">No other programs are open to talking right now.</p>}
+            {jobOffers.map((o) => (
+              <div key={o.teamId} className="divider-row">
+                <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}
+                {o.salary != null && <span className="text-muted"> · {fmtMoney(o.salary)}/yr</span>}
+                {o.costOfLivingIndex != null && <span className="text-muted"> · {colLabel(o.costOfLivingIndex)} cost of living</span>}
+                {offerLine(o) && <span className="text-muted"> ({offerLine(o)})</span>}
+                {o.athleticDirectorName && <span className="text-muted"> · AD: {o.athleticDirectorName}</span>}
+                {o.adRemembersYou && <span className="text-good"> — remembers you well from a previous job together</span>}
+                {" "}
+                <button onClick={() => resignAndAccept(o.teamId)}>Leave for This Job</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {events.length > 0 && (

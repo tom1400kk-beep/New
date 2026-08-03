@@ -31,6 +31,7 @@ export interface TeamRow {
   facilitiesRating: number;
   internationalScoutingRating: number;
   academicReputation: number;
+  baseSalary: number;
   isPlayerControlled: boolean;
   headCoachId: string;
   athleticDirectorId: string;
@@ -67,6 +68,8 @@ export interface CoachRow {
   hometownState: string | null;
   pipelineStatesJson: string;
   adRelationshipsJson: string;
+  currentSalary: number;
+  raiseRequestedThisSeason: boolean;
   careerWins: number;
   careerLosses: number;
   yearsAtCurrentJob: number;

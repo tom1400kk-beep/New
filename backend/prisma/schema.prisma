@@ -70,6 +70,7 @@ model Team {
   facilitiesRating   Int      @default(50) // 1-100
   internationalScoutingRating Int @default(30) // 1-100, overseas scouting network strength
   academicReputation Int      @default(55) // 1-100, independent of prestige
+  baseSalary         Int      @default(300000) // annual head coach salary this program pays, in dollars
   isPlayerControlled Boolean  @default(false)
 
   players           Player[]
@@ -117,6 +118,9 @@ model Coach {
   pipelineStatesJson String   @default("{}") // Record<state, 0-100> recruiting-connection strength; persists across job changes
 
   adRelationshipsJson String  @default("{}") // Record<athleticDirectorId, 0-100> — how ADs who've worked with this coach before remember them
+
+  currentSalary            Int     @default(300000) // annual dollars, set on hire, can grow via granted raises
+  raiseRequestedThisSeason Boolean @default(false) // reset each offseason
 
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)

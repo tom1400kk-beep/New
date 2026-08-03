@@ -50,4 +50,7 @@ export const api = {
   getJobOffers: (saveId: string) => request<any[]>(`/saves/${saveId}/job-offers`),
   acceptJob: (saveId: string, teamId: string) =>
     request<any>(`/saves/${saveId}/accept-job`, { method: "POST", body: JSON.stringify({ teamId }) }),
+  requestRaise: (saveId: string) => request<any>(`/saves/${saveId}/request-raise`, { method: "POST" }),
+  resignAndAccept: (saveId: string, teamId: string) =>
+    request<any>(`/saves/${saveId}/resign-and-accept`, { method: "POST", body: JSON.stringify({ teamId }) }),
 };

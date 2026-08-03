@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { createSaveWorld } from "../seed/createSaveWorld";
 import { loadLeagueData, prestigeTierToScore, divisionDataAvailable } from "../seed/leagueData";
@@ -9,9 +10,12 @@ import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrou
 import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
 import { meetsLegalityBar } from "../engine/career";
-import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
+import { parseAdRelationships, adRelationshipScore, updateAdRelationship } from "../engine/athleticDirector";
 import { EUROPEAN_COUNTRIES } from "../engine/countries";
-import { mulberry32 } from "../engine/rng";
+import { mulberry32, clamp } from "../engine/rng";
+import { costOfLivingIndex } from "../engine/costOfLiving";
+import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
+import { randomFirstName, randomLastName } from "../engine/names";
 import type { Division } from "../types";
 
 export const savesRouter = Router();
@@ -130,34 +134,49 @@ savesRouter.get("/saves/:id/dashboard", async (req, res) => {
 
   const pendingEvents = await prisma.gameEvent.findMany({ where: { saveGameId: save.id, status: "PENDING" } });
 
-  res.json({ save, team, record, nextGame, pendingEvents });
+  res.json({ save, team: { ...team, costOfLivingIndex: costOfLivingIndex(team.state) }, record, nextGame, pendingEvents });
 });
 
 savesRouter.get("/saves/:id/job-offers", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  if (save.coachTeamId) return res.json([]);
   const myCoach = await prisma.coach.findFirst({ where: { saveGameId: save.id, isPlayerControlled: true } });
   const myRelationships = myCoach ? parseAdRelationships(myCoach.adRelationshipsJson) : {};
+
+  // When employed, the player's own team is excluded from its own market
+  // listing, and its salary/state become the baseline the comparison fields
+  // are computed against ("test the waters" without leaving first).
+  const currentTeam = save.coachTeamId ? await prisma.team.findUnique({ where: { id: save.coachTeamId } }) : null;
+
   const openTeams = await prisma.team.findMany({
-    where: { saveGameId: save.id, headCoach: { isPlayerControlled: false } },
+    where: {
+      saveGameId: save.id,
+      headCoach: { isPlayerControlled: false },
+      ...(save.coachTeamId ? { id: { not: save.coachTeamId } } : {}),
+    },
     include: { headCoach: true, athleticDirector: true },
   });
-  // Any team with no player-controlled coach and a below-average hot seat reading of 0
-  // right after firing is a fresh vacancy; keep this simple and just surface all of them
-  // the offseason engine already narrowed via generateJobOffers on the backend pass.
-  // Image-conscious programs (and this specific AD's own standards) still won't call a
-  // coach whose players keep getting arrested — and an AD who remembers this coach
-  // badly from a previous job together won't hire them again at all.
+  // If the player is unemployed, only fresh vacancies (hot seat reset to 0,
+  // no career record yet under the replacement coach) are real openings —
+  // the offseason engine already narrowed these via generateJobOffers. If
+  // the player is employed and just browsing the market, any AI-run program
+  // is fair game to inquire about, vacancy or not.
   res.json(openTeams
-    .filter((t) => t.headCoach?.hotSeatLevel === 0 && t.headCoach?.careerWins === 0 && t.headCoach?.careerLosses === 0)
+    .filter((t) => save.coachTeamId || (t.headCoach?.hotSeatLevel === 0 && t.headCoach?.careerWins === 0 && t.headCoach?.careerLosses === 0))
     .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation, t.athleticDirector?.integrityStandard))
     .filter((t) => !t.athleticDirector || adRelationshipScore(myRelationships, t.athleticDirector.id) > 30)
     .map((t) => {
       const relScore = t.athleticDirector ? adRelationshipScore(myRelationships, t.athleticDirector.id) : null;
+      const col = costOfLivingIndex(t.state);
+      const currentCol = currentTeam ? costOfLivingIndex(currentTeam.state) : null;
       return {
         teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division,
         athleticDirectorName: t.athleticDirector?.name ?? null,
         adRemembersYou: relScore !== null && relScore >= 70,
+        salary: t.baseSalary,
+        state: t.state,
+        costOfLivingIndex: col,
+        salaryDeltaPct: currentTeam ? Math.round(((t.baseSalary - currentTeam.baseSalary) / currentTeam.baseSalary) * 100) : null,
+        colDeltaPct: currentCol !== null ? Math.round(((col - currentCol) / currentCol) * 100) : null,
       };
     }));
 });
@@ -179,6 +198,97 @@ savesRouter.post("/saves/:id/accept-job", async (req, res) => {
 
   await prisma.saveGame.update({ where: { id: save.id }, data: { coachTeamId: teamId, currentPhase: "PRESEASON" } });
   res.json({ ok: true });
+});
+
+// The "current school doesn't want to up your contract" mechanic: once per
+// season, the player can ask their own AD for a raise. Whether it's granted
+// depends on the coach-AD relationship, the AD's own loyalty, and how well
+// the team has performed (proxied by hot seat level, since a coach whose job
+// is safe has more leverage than one already on thin ice).
+savesRouter.post("/saves/:id/request-raise", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (!save.coachTeamId) return res.status(400).json({ error: "Not currently employed" });
+  const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { headCoach: true, athleticDirector: true } });
+  const coach = team.headCoach;
+  if (!coach) return res.status(400).json({ error: "No coach on this team" });
+  if (coach.raiseRequestedThisSeason) return res.status(400).json({ error: "Already asked for a raise this season" });
+
+  const relationships = parseAdRelationships(coach.adRelationshipsJson);
+  const relScore = team.athleticDirector ? adRelationshipScore(relationships, team.athleticDirector.id) : 50;
+  const relTerm = (relScore - 50) / 200;
+  const loyaltyTerm = team.athleticDirector ? (team.athleticDirector.loyalty - 50) / 250 : 0;
+  const perfTerm = ((100 - coach.hotSeatLevel) / 100) * 0.3;
+  const grantChance = clamp(0.15 + relTerm + loyaltyTerm + perfTerm, 0.05, 0.85);
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const granted = rng() < grantChance;
+  const newSalary = granted ? Math.round(coach.currentSalary * 1.15) : coach.currentSalary;
+  const newRelJson = granted && team.athleticDirector
+    ? JSON.stringify({ ...relationships, [team.athleticDirector.id]: clamp(relScore + 3, 5, 99) })
+    : coach.adRelationshipsJson;
+
+  await prisma.coach.update({
+    where: { id: coach.id },
+    data: { currentSalary: newSalary, raiseRequestedThisSeason: true, adRelationshipsJson: newRelJson },
+  });
+
+  res.json({ granted, newSalary, oldSalary: coach.currentSalary });
+});
+
+// Voluntarily leaving a current job for a new one while still employed — the
+// "test the waters" outcome once the current school won't budge on pay.
+// Distinct from /accept-job, which only ever runs from the unemployed state.
+savesRouter.post("/saves/:id/resign-and-accept", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (!save.coachTeamId) return res.status(400).json({ error: "Not currently employed" });
+  const { teamId } = req.body;
+  if (!teamId || teamId === save.coachTeamId) return res.status(400).json({ error: "Invalid target team" });
+
+  const oldTeam = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { headCoach: true, athleticDirector: true } });
+  const newTeam = await prisma.team.findUniqueOrThrow({ where: { id: teamId }, include: { headCoach: true } });
+  const myCoach = oldTeam.headCoach;
+  if (!myCoach || !newTeam.headCoach) return res.status(400).json({ error: "Coach slot missing" });
+
+  // Walking out on the old AD costs some goodwill there, in case this coach's
+  // path crosses that school's again down the line.
+  const relationships = parseAdRelationships(myCoach.adRelationshipsJson);
+  const updatedRelationships = oldTeam.athleticDirector
+    ? { ...relationships, [oldTeam.athleticDirectorId!]: clamp((relationships[oldTeam.athleticDirectorId!] ?? 50) - 10, 5, 99) }
+    : relationships;
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const replacementArchetype = randomArchetype(rng);
+  const replacementSkills = generateCoachSkills(rng, oldTeam.prestige, replacementArchetype);
+
+  // Give the old program a fresh AI coach (mirrors the same replacement
+  // pattern used when a coach is fired at the end of a season).
+  const replacement = await prisma.coach.create({
+    data: {
+      id: randomUUID(), saveGameId: save.id, name: `${randomFirstName(rng)} ${randomLastName(rng)}`,
+      isPlayerControlled: false, hotSeatLevel: 0,
+      offenseSkill: replacementSkills.offenseSkill, defenseSkill: replacementSkills.defenseSkill,
+      recruitingSkill: replacementSkills.recruitingSkill, developmentSkill: replacementSkills.developmentSkill,
+      reputation: replacementSkills.reputation, archetype: replacementArchetype,
+      careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
+    },
+  });
+  await prisma.team.update({ where: { id: oldTeam.id }, data: { headCoachId: replacement.id } });
+
+  // Established, in-demand coaches negotiate a small premium over the raw
+  // posted salary rather than just taking the sticker price.
+  const negotiatedSalary = Math.round(newTeam.baseSalary * 1.05);
+  await prisma.coach.update({ where: { id: newTeam.headCoach.id }, data: { isPlayerControlled: false } });
+  await prisma.team.update({ where: { id: teamId }, data: { headCoachId: myCoach.id } });
+  await prisma.coach.update({
+    where: { id: myCoach.id },
+    data: {
+      isPlayerControlled: true, hotSeatLevel: 0, yearsAtCurrentJob: 0, raiseRequestedThisSeason: false,
+      currentSalary: negotiatedSalary, adRelationshipsJson: JSON.stringify(updatedRelationships),
+    },
+  });
+
+  await prisma.saveGame.update({ where: { id: save.id }, data: { coachTeamId: teamId, currentPhase: "PRESEASON" } });
+  res.json({ ok: true, newSalary: negotiatedSalary });
 });
 
 savesRouter.post("/saves/:id/advance", async (req, res) => {

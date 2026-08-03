@@ -5,6 +5,9 @@ import type { EventEffects, EventOption } from "../engine/events";
 import { meetsLegalityBar } from "../engine/career";
 import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
+import { costOfLivingIndex } from "../engine/costOfLiving";
+import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
+import { randomFirstName, randomLastName } from "../engine/names";
 import { computeStandings, winPct } from "./standings";
 import { newId, type WorldState } from "./types";
 
@@ -194,13 +197,18 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
 }
 
 export function getJobOffers(state: WorldState) {
-  if (state.save.coachTeamId) return [];
   const myCoach = state.coaches.find((c) => c.isPlayerControlled);
   const myRelationships = myCoach ? parseAdRelationships(myCoach.adRelationshipsJson) : {};
+  const currentTeam = state.save.coachTeamId ? state.teams.find((t) => t.id === state.save.coachTeamId) : undefined;
+  const currentCol = currentTeam ? costOfLivingIndex(currentTeam.state) : null;
   return state.teams
+    .filter((t) => t.id !== state.save.coachTeamId)
     .filter((t) => {
       const c = state.coaches.find((cc) => cc.id === t.headCoachId);
-      return c && !c.isPlayerControlled && c.hotSeatLevel === 0 && c.careerWins === 0 && c.careerLosses === 0;
+      if (!c || c.isPlayerControlled) return false;
+      // Unemployed: only fresh vacancies are real openings. Employed and
+      // browsing the market ("test the waters"): any AI-run program is fair game.
+      return !!currentTeam || (c.hotSeatLevel === 0 && c.careerWins === 0 && c.careerLosses === 0);
     })
     .map((t) => ({ team: t, ad: state.athleticDirectors.find((a) => a.id === t.athleticDirectorId) }))
     // Image-conscious programs (and this specific AD's own standards) still won't call a
@@ -208,11 +216,19 @@ export function getJobOffers(state: WorldState) {
     // badly from a previous job together won't hire them again at all.
     .filter(({ team, ad }) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, team.academicReputation, ad?.integrityStandard))
     .filter(({ ad }) => !ad || adRelationshipScore(myRelationships, ad.id) > 30)
-    .map(({ team, ad }) => ({
-      teamId: team.id, teamName: team.name, prestige: team.prestige, division: team.division,
-      athleticDirectorName: ad?.name ?? null,
-      adRemembersYou: ad ? adRelationshipScore(myRelationships, ad.id) >= 70 : false,
-    }));
+    .map(({ team, ad }) => {
+      const col = costOfLivingIndex(team.state);
+      return {
+        teamId: team.id, teamName: team.name, prestige: team.prestige, division: team.division,
+        athleticDirectorName: ad?.name ?? null,
+        adRemembersYou: ad ? adRelationshipScore(myRelationships, ad.id) >= 70 : false,
+        salary: team.baseSalary,
+        state: team.state,
+        costOfLivingIndex: col,
+        salaryDeltaPct: currentTeam ? Math.round(((team.baseSalary - currentTeam.baseSalary) / currentTeam.baseSalary) * 100) : null,
+        colDeltaPct: currentCol !== null ? Math.round(((col - currentCol) / currentCol) * 100) : null,
+      };
+    });
 }
 
 export function acceptJob(state: WorldState, teamId: string) {
@@ -234,4 +250,99 @@ export function acceptJob(state: WorldState, teamId: string) {
   state.save.coachTeamId = teamId;
   state.save.currentPhase = "PRESEASON";
   return { ok: true };
+}
+
+// The "current school doesn't want to up your contract" mechanic: once per
+// season, the player can ask their own AD for a raise. Whether it's granted
+// depends on the coach-AD relationship, the AD's own loyalty, and how well
+// the team has performed (proxied by hot seat level, since a coach whose job
+// is safe has more leverage than one already on thin ice).
+export function requestRaise(state: WorldState) {
+  if (!state.save.coachTeamId) throw new Error("Not currently employed");
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) throw new Error("Team not found");
+  const coach = state.coaches.find((c) => c.id === team.headCoachId);
+  if (!coach) throw new Error("No coach on this team");
+  if (coach.raiseRequestedThisSeason) throw new Error("Already asked for a raise this season");
+
+  const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+  const relationships = parseAdRelationships(coach.adRelationshipsJson);
+  const relScore = ad ? adRelationshipScore(relationships, ad.id) : 50;
+  const relTerm = (relScore - 50) / 200;
+  const loyaltyTerm = ad ? (ad.loyalty - 50) / 250 : 0;
+  const perfTerm = ((100 - coach.hotSeatLevel) / 100) * 0.3;
+  const grantChance = clamp(0.15 + relTerm + loyaltyTerm + perfTerm, 0.05, 0.85);
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const granted = rng() < grantChance;
+  const oldSalary = coach.currentSalary;
+  const newSalary = granted ? Math.round(coach.currentSalary * 1.15) : coach.currentSalary;
+
+  coach.currentSalary = newSalary;
+  coach.raiseRequestedThisSeason = true;
+  if (granted && ad) {
+    coach.adRelationshipsJson = JSON.stringify({ ...relationships, [ad.id]: clamp(relScore + 3, 5, 99) });
+  }
+
+  return { granted, newSalary, oldSalary };
+}
+
+// Voluntarily leaving a current job for a new one while still employed — the
+// "test the waters" outcome once the current school won't budge on pay.
+// Distinct from acceptJob, which only ever runs from the unemployed state.
+export function resignAndAccept(state: WorldState, teamId: string) {
+  if (!state.save.coachTeamId) throw new Error("Not currently employed");
+  if (!teamId || teamId === state.save.coachTeamId) throw new Error("Invalid target team");
+
+  const oldTeam = state.teams.find((t) => t.id === state.save.coachTeamId);
+  const newTeam = state.teams.find((t) => t.id === teamId);
+  if (!oldTeam || !newTeam) throw new Error("Team not found");
+  const myCoach = state.coaches.find((c) => c.id === oldTeam.headCoachId);
+  const newTeamCoach = state.coaches.find((c) => c.id === newTeam.headCoachId);
+  if (!myCoach || !newTeamCoach) throw new Error("Coach slot missing");
+
+  // Walking out on the old AD costs some goodwill there, in case this coach's
+  // path crosses that school's again down the line.
+  const oldAd = state.athleticDirectors.find((a) => a.id === oldTeam.athleticDirectorId);
+  const relationships = parseAdRelationships(myCoach.adRelationshipsJson);
+  const updatedRelationships = oldAd
+    ? { ...relationships, [oldAd.id]: clamp((relationships[oldAd.id] ?? 50) - 10, 5, 99) }
+    : relationships;
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const replacementArchetype = randomArchetype(rng);
+  const replacementSkills = generateCoachSkills(rng, oldTeam.prestige, replacementArchetype);
+
+  // Give the old program a fresh AI coach (mirrors the same replacement
+  // pattern used when a coach is fired at the end of a season).
+  const replacement = {
+    id: newId(), name: `${randomFirstName(rng)} ${randomLastName(rng)}`, isPlayerControlled: false,
+    reputation: replacementSkills.reputation, hotSeatLevel: 0,
+    offenseSkill: replacementSkills.offenseSkill, defenseSkill: replacementSkills.defenseSkill,
+    recruitingSkill: replacementSkills.recruitingSkill, developmentSkill: replacementSkills.developmentSkill,
+    archetype: replacementArchetype, background: null as string | null,
+    playedCollege: false, collegeTeamName: null as string | null, collegeState: null as string | null,
+    proPath: "NONE", proCountry: null as string | null, legalityReputation: 75,
+    hometownState: null as string | null, pipelineStatesJson: "{}", adRelationshipsJson: "{}",
+    currentSalary: 300000, raiseRequestedThisSeason: false,
+    careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
+  };
+  state.coaches.push(replacement);
+  oldTeam.headCoachId = replacement.id;
+
+  // Established, in-demand coaches negotiate a small premium over the raw
+  // posted salary rather than just taking the sticker price.
+  const negotiatedSalary = Math.round(newTeam.baseSalary * 1.05);
+  newTeamCoach.isPlayerControlled = false;
+  newTeam.headCoachId = myCoach.id;
+  myCoach.isPlayerControlled = true;
+  myCoach.hotSeatLevel = 0;
+  myCoach.yearsAtCurrentJob = 0;
+  myCoach.raiseRequestedThisSeason = false;
+  myCoach.currentSalary = negotiatedSalary;
+  myCoach.adRelationshipsJson = JSON.stringify(updatedRelationships);
+
+  state.save.coachTeamId = teamId;
+  state.save.currentPhase = "PRESEASON";
+  return { ok: true, newSalary: negotiatedSalary };
 }

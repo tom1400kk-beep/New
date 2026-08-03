@@ -5,7 +5,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
@@ -61,6 +61,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       const prestige = prestigeTierToScore(member.prestigeTier);
       const isPlayerControlled = member.school === teamSchoolName;
       if (isPlayerControlled) chosenTeamId = teamId;
+      const baseSalary = salaryForTeam(rng, prestige, division);
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
@@ -86,6 +87,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         hometownState: isPlayerControlled ? playingCareer.hometownState : null,
         pipelineStatesJson: isPlayerControlled ? initialPipelineJson : "{}",
         adRelationshipsJson: "{}",
+        currentSalary: isPlayerControlled ? baseSalary : 300000, raiseRequestedThisSeason: false,
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       });
 
@@ -111,7 +113,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 
       teams.push({
         id: teamId, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
       pendingTeams.push({ id: teamId, conferenceId });

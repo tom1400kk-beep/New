@@ -7,7 +7,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
-import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
+import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
@@ -73,11 +73,12 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
     playedCollege: boolean; collegeTeamName: string | null; collegeState: string | null;
     proPath: string; proCountry: string | null;
     hometownState: string | null; pipelineStatesJson: string;
+    currentSalary?: number;
   }[] = [];
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
     prestige: number; nilBudget: number; facilitiesRating: number; internationalScoutingRating: number; academicReputation: number;
-    isPlayerControlled: boolean; headCoachId: string; athleticDirectorId: string;
+    baseSalary: number; isPlayerControlled: boolean; headCoachId: string; athleticDirectorId: string;
   }[] = [];
   const adRows: {
     id: string; saveGameId: string; name: string;
@@ -98,6 +99,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       const prestige = prestigeTierToScore(member.prestigeTier);
       const isPlayerControlled = member.school === teamSchoolName;
       if (isPlayerControlled) foundChosenTeam = true;
+      const baseSalary = salaryForTeam(rng, prestige, division);
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
@@ -122,6 +124,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
         proCountry: isPlayerControlled ? playingCareer.proCountry : null,
         hometownState: isPlayerControlled ? playingCareer.hometownState : null,
         pipelineStatesJson: isPlayerControlled ? initialPipelineJson : "{}",
+        ...(isPlayerControlled ? { currentSalary: baseSalary } : {}),
       });
 
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
@@ -147,7 +150,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
       teamRows.push({
         id: teamId, saveGameId: saveGame.id, name: member.school, state, division, conferenceId,
-        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, isPlayerControlled,
+        prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled });

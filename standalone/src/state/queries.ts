@@ -1,4 +1,5 @@
 import { computeStandings } from "./standings";
+import { costOfLivingIndex } from "../engine/costOfLiving";
 import type { WorldState } from "./types";
 
 export function getDashboard(state: WorldState) {
@@ -27,7 +28,11 @@ export function getDashboard(state: WorldState) {
 
   const pendingEvents = state.events.filter((e) => e.status === "PENDING");
 
-  return { save, team: { ...team, headCoach, conference, athleticDirector }, record, nextGame: nextGameOut, pendingEvents };
+  return {
+    save,
+    team: { ...team, headCoach, conference, athleticDirector, costOfLivingIndex: costOfLivingIndex(team.state) },
+    record, nextGame: nextGameOut, pendingEvents,
+  };
 }
 
 export function getRoster(state: WorldState) {

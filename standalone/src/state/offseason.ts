@@ -108,6 +108,8 @@ export function runOffseason(state: WorldState): OffseasonResult {
         hometownState: null as string | null,
         pipelineStatesJson: "{}",
         adRelationshipsJson: "{}",
+        currentSalary: 300000,
+        raiseRequestedThisSeason: false,
       };
       if (headCoach.isPlayerControlled) {
         const replacement = {
@@ -128,6 +130,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     } else {
       Object.assign(headCoach, {
         hotSeatLevel: newHotSeat, reputation: newReputation, legalityReputation: newLegality,
+        raiseRequestedThisSeason: false,
         careerWins: headCoach.careerWins + record.wins, careerLosses: headCoach.careerLosses + record.losses,
         yearsAtCurrentJob: headCoach.yearsAtCurrentJob + 1,
       });

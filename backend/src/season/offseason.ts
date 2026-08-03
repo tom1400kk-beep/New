@@ -139,6 +139,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           legalityReputation: newLegality,
           pipelineStatesJson: newPipelineJson,
           adRelationshipsJson: newAdRelationshipsJson,
+          raiseRequestedThisSeason: false,
           careerWins: team.headCoach.careerWins + record.wins,
           careerLosses: team.headCoach.careerLosses + record.losses,
           yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob + 1,

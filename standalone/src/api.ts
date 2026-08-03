@@ -117,4 +117,16 @@ export const api = {
     await persistence.persistSave(state);
     return result;
   },
+  requestRaise: async (saveId: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.requestRaise(state);
+    await persistence.persistSave(state);
+    return result;
+  },
+  resignAndAccept: async (saveId: string, teamId: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.resignAndAccept(state, teamId);
+    await persistence.persistSave(state);
+    return result;
+  },
 };
