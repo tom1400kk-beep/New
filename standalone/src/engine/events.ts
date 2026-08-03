@@ -30,6 +30,10 @@ export interface EventEffects {
   removePlayer?: boolean; // player leaves team (transfer out)
   suspensionDays?: number;
   legalityDelta?: number; // program off-court integrity reputation
+  teamPerceptionDelta?: number; // how the locker room views the coach
+  nationalPerceptionDelta?: number; // national media profile
+  localPerceptionDelta?: number; // local fanbase/booster goodwill
+  adRelationshipDelta?: number; // shifts the coach's relationship with the CURRENT team's AD
 }
 
 export interface GeneratedEvent {

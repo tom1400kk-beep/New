@@ -2,6 +2,7 @@ import { computeStandings } from "./standings";
 import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct } from "../engine/career";
 import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
+import { driftPerception } from "../engine/media";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -110,6 +111,9 @@ export function runOffseason(state: WorldState): OffseasonResult {
         adRelationshipsJson: "{}",
         currentSalary: 300000,
         raiseRequestedThisSeason: false,
+        teamPerception: 65,
+        nationalPerception: 20,
+        localPerception: 50,
       };
       if (headCoach.isPlayerControlled) {
         const replacement = {
@@ -131,6 +135,9 @@ export function runOffseason(state: WorldState): OffseasonResult {
       Object.assign(headCoach, {
         hotSeatLevel: newHotSeat, reputation: newReputation, legalityReputation: newLegality,
         raiseRequestedThisSeason: false,
+        teamPerception: driftPerception(headCoach.teamPerception, 60, 0.05),
+        nationalPerception: driftPerception(headCoach.nationalPerception, 20, 0.15),
+        localPerception: driftPerception(headCoach.localPerception, 50, 0.1),
         careerWins: headCoach.careerWins + record.wins, careerLosses: headCoach.careerLosses + record.losses,
         yearsAtCurrentJob: headCoach.yearsAtCurrentJob + 1,
       });

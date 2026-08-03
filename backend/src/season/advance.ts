@@ -4,6 +4,7 @@ import { playGames } from "./playGames";
 import { startConferenceTournaments, advanceTournamentRounds, startNationalTournaments } from "./postseason";
 import { runOffseason } from "./offseason";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
+import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { computeTeamChemistry } from "../engine/chemistry";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
@@ -80,28 +81,69 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
     });
   }
 
-  // 3. Random event roll for the user's team (only if nothing pending)
+  // 3. Media interview / random event roll for the user's team (only if nothing pending)
   let generatedEvent: any = null;
   if (save.coachTeamId) {
     const pendingCount = await prisma.gameEvent.count({ where: { saveGameId, status: "PENDING" } });
     if (pendingCount === 0) {
-      const rosterPlayers = await prisma.player.findMany({
-        where: { saveGameId, teamId: save.coachTeamId },
-        select: { id: true, firstName: true, lastName: true, characterRating: true, disciplineRating: true, scoring: true, countryOfOrigin: true },
-      });
-      const chemistry = computeTeamChemistry(rosterPlayers);
-      const phase: EventContext["phase"] = save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
-      const coachTeam = await prisma.team.findUnique({
-        where: { id: save.coachTeamId },
-        select: { headCoach: { select: { archetype: true, background: true } } },
-      });
-      const ctx: EventContext = {
-        teamId: save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5,
-        coachArchetype: coachTeam?.headCoach?.archetype ?? null,
-        coachBackground: coachTeam?.headCoach?.background ?? null,
-      };
       const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
-      const ev = maybeGenerateEvent(rng, ctx);
+      let ev = null;
+
+      // Media only shows up after a game the coach's own team actually played.
+      const myGameToday = await prisma.game.findFirst({
+        where: { saveGameId, isPlayed: true, date: today, OR: [{ homeTeamId: save.coachTeamId }, { awayTeamId: save.coachTeamId }] },
+        include: { homeTeam: true, awayTeam: true },
+      });
+      if (myGameToday) {
+        const isHome = myGameToday.homeTeamId === save.coachTeamId;
+        const myTeam = isHome ? myGameToday.homeTeam : myGameToday.awayTeam;
+        const oppTeam = isHome ? myGameToday.awayTeam : myGameToday.homeTeam;
+        const myScore = (isHome ? myGameToday.homeScore : myGameToday.awayScore) ?? 0;
+        const oppScore = (isHome ? myGameToday.awayScore : myGameToday.homeScore) ?? 0;
+        const headCoach = await prisma.coach.findUnique({ where: { id: myTeam.headCoachId! }, select: { legalityReputation: true } });
+
+        const recentGames = await prisma.game.findMany({
+          where: { saveGameId, isPlayed: true, OR: [{ homeTeamId: save.coachTeamId }, { awayTeamId: save.coachTeamId }] },
+          orderBy: { date: "desc" },
+          take: 15,
+        });
+        let winStreak = 0, lossStreak = 0;
+        for (const g of recentGames) {
+          const won = (g.homeTeamId === save.coachTeamId ? (g.homeScore ?? 0) > (g.awayScore ?? 0) : (g.awayScore ?? 0) > (g.homeScore ?? 0));
+          if (winStreak === 0 && lossStreak === 0) { won ? winStreak++ : lossStreak++; }
+          else if (winStreak > 0 && won) winStreak++;
+          else if (lossStreak > 0 && !won) lossStreak++;
+          else break;
+        }
+
+        const mediaCtx: MediaContext = {
+          opponentName: oppTeam.name, teamPrestige: myTeam.prestige, division: myTeam.division as Division,
+          opponentPrestige: oppTeam.prestige, result: myScore > oppScore ? "WIN" : "LOSS", margin: myScore - oppScore,
+          winStreak, lossStreak, isTournament: myGameToday.tournamentId !== null,
+          legalityReputation: headCoach?.legalityReputation ?? 75,
+        };
+        ev = maybeGenerateMediaInterview(rng, mediaCtx);
+      }
+
+      if (!ev) {
+        const rosterPlayers = await prisma.player.findMany({
+          where: { saveGameId, teamId: save.coachTeamId },
+          select: { id: true, firstName: true, lastName: true, characterRating: true, disciplineRating: true, scoring: true, countryOfOrigin: true },
+        });
+        const chemistry = computeTeamChemistry(rosterPlayers);
+        const phase: EventContext["phase"] = save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
+        const coachTeam = await prisma.team.findUnique({
+          where: { id: save.coachTeamId },
+          select: { headCoach: { select: { archetype: true, background: true } } },
+        });
+        const ctx: EventContext = {
+          teamId: save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5,
+          coachArchetype: coachTeam?.headCoach?.archetype ?? null,
+          coachBackground: coachTeam?.headCoach?.background ?? null,
+        };
+        ev = maybeGenerateEvent(rng, ctx);
+      }
+
       if (ev) {
         const row = await prisma.gameEvent.create({
           data: {

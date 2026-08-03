@@ -1,5 +1,6 @@
 import { computeStandings } from "./standings";
 import { costOfLivingIndex } from "../engine/costOfLiving";
+import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import type { WorldState } from "./types";
 
 export function getDashboard(state: WorldState) {
@@ -28,9 +29,12 @@ export function getDashboard(state: WorldState) {
 
   const pendingEvents = state.events.filter((e) => e.status === "PENDING");
 
+  const adRelationships = parseAdRelationships(headCoach.adRelationshipsJson);
+  const adPerception = athleticDirector ? adRelationshipScore(adRelationships, athleticDirector.id) : null;
+
   return {
     save,
-    team: { ...team, headCoach, conference, athleticDirector, costOfLivingIndex: costOfLivingIndex(team.state) },
+    team: { ...team, headCoach, conference, athleticDirector, costOfLivingIndex: costOfLivingIndex(team.state), adPerception },
     record, nextGame: nextGameOut, pendingEvents,
   };
 }

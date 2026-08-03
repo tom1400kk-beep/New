@@ -177,6 +177,27 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
         const coach = state.coaches.find((c) => c.id === team.headCoachId);
         if (coach) coach.legalityReputation = Math.round(clamp(coach.legalityReputation + effects.legalityDelta, 5, 99));
       }
+      if (effects.teamPerceptionDelta) {
+        const coach = state.coaches.find((c) => c.id === team.headCoachId);
+        if (coach) coach.teamPerception = Math.round(clamp(coach.teamPerception + effects.teamPerceptionDelta, 1, 100));
+      }
+      if (effects.nationalPerceptionDelta) {
+        const coach = state.coaches.find((c) => c.id === team.headCoachId);
+        if (coach) coach.nationalPerception = Math.round(clamp(coach.nationalPerception + effects.nationalPerceptionDelta, 1, 100));
+      }
+      if (effects.localPerceptionDelta) {
+        const coach = state.coaches.find((c) => c.id === team.headCoachId);
+        if (coach) coach.localPerception = Math.round(clamp(coach.localPerception + effects.localPerceptionDelta, 1, 100));
+      }
+      if (effects.adRelationshipDelta) {
+        const coach = state.coaches.find((c) => c.id === team.headCoachId);
+        const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+        if (coach && ad) {
+          const relationships = parseAdRelationships(coach.adRelationshipsJson);
+          const current = adRelationshipScore(relationships, ad.id);
+          coach.adRelationshipsJson = JSON.stringify({ ...relationships, [ad.id]: Math.round(clamp(current + effects.adRelationshipDelta, 5, 99)) });
+        }
+      }
       if (effects.chemistryDelta) {
         for (const p of state.players) {
           if (p.teamId === team.id) p.characterRating = Math.round(clamp(p.characterRating + effects.chemistryDelta!, 5, 99));
@@ -325,6 +346,7 @@ export function resignAndAccept(state: WorldState, teamId: string) {
     proPath: "NONE", proCountry: null as string | null, legalityReputation: 75,
     hometownState: null as string | null, pipelineStatesJson: "{}", adRelationshipsJson: "{}",
     currentSalary: 300000, raiseRequestedThisSeason: false,
+    teamPerception: 65, nationalPerception: 20, localPerception: 50,
     careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
   };
   state.coaches.push(replacement);

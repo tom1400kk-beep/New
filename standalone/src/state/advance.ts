@@ -2,6 +2,7 @@ import { playGames } from "./playGames";
 import { startConferenceTournaments, advanceTournamentRounds, startNationalTournaments } from "./postseason";
 import { runOffseason, type OffseasonResult } from "./offseason";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
+import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { computeTeamChemistry } from "../engine/chemistry";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
@@ -64,20 +65,59 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
   if (state.save.coachTeamId) {
     const pendingCount = state.events.filter((e) => e.status === "PENDING").length;
     if (pendingCount === 0) {
-      const rosterPlayers = state.players
-        .filter((p) => p.teamId === state.save.coachTeamId)
-        .map((p) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, characterRating: p.characterRating, disciplineRating: p.disciplineRating, scoring: p.scoring, countryOfOrigin: p.countryOfOrigin }));
-      const chemistry = computeTeamChemistry(rosterPlayers);
-      const phase: EventContext["phase"] = state.save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
-      const coachTeam = state.teams.find((t) => t.id === state.save.coachTeamId);
-      const coach = coachTeam ? state.coaches.find((c) => c.id === coachTeam.headCoachId) : undefined;
-      const ctx: EventContext = {
-        teamId: state.save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5,
-        coachArchetype: coach?.archetype ?? null,
-        coachBackground: coach?.background ?? null,
-      };
       const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
-      const ev = maybeGenerateEvent(rng, ctx);
+      let ev = null;
+
+      // Media only shows up after a game the coach's own team actually played.
+      const myGameToday = state.games.find(
+        (g) => g.isPlayed && g.date.getTime() === today.getTime() && (g.homeTeamId === state.save.coachTeamId || g.awayTeamId === state.save.coachTeamId),
+      );
+      if (myGameToday) {
+        const isHome = myGameToday.homeTeamId === state.save.coachTeamId;
+        const myTeam = state.teams.find((t) => t.id === (isHome ? myGameToday.homeTeamId : myGameToday.awayTeamId))!;
+        const oppTeam = state.teams.find((t) => t.id === (isHome ? myGameToday.awayTeamId : myGameToday.homeTeamId))!;
+        const myScore = (isHome ? myGameToday.homeScore : myGameToday.awayScore) ?? 0;
+        const oppScore = (isHome ? myGameToday.awayScore : myGameToday.homeScore) ?? 0;
+        const headCoach = state.coaches.find((c) => c.id === myTeam.headCoachId);
+
+        const recentGames = state.games
+          .filter((g) => g.isPlayed && (g.homeTeamId === state.save.coachTeamId || g.awayTeamId === state.save.coachTeamId))
+          .sort((a, b) => b.date.getTime() - a.date.getTime())
+          .slice(0, 15);
+        let winStreak = 0, lossStreak = 0;
+        for (const g of recentGames) {
+          const won = g.homeTeamId === state.save.coachTeamId ? (g.homeScore ?? 0) > (g.awayScore ?? 0) : (g.awayScore ?? 0) > (g.homeScore ?? 0);
+          if (winStreak === 0 && lossStreak === 0) { won ? winStreak++ : lossStreak++; }
+          else if (winStreak > 0 && won) winStreak++;
+          else if (lossStreak > 0 && !won) lossStreak++;
+          else break;
+        }
+
+        const mediaCtx: MediaContext = {
+          opponentName: oppTeam.name, teamPrestige: myTeam.prestige, division: myTeam.division as Division,
+          opponentPrestige: oppTeam.prestige, result: myScore > oppScore ? "WIN" : "LOSS", margin: myScore - oppScore,
+          winStreak, lossStreak, isTournament: myGameToday.tournamentId !== null,
+          legalityReputation: headCoach?.legalityReputation ?? 75,
+        };
+        ev = maybeGenerateMediaInterview(rng, mediaCtx);
+      }
+
+      if (!ev) {
+        const rosterPlayers = state.players
+          .filter((p) => p.teamId === state.save.coachTeamId)
+          .map((p) => ({ id: p.id, firstName: p.firstName, lastName: p.lastName, characterRating: p.characterRating, disciplineRating: p.disciplineRating, scoring: p.scoring, countryOfOrigin: p.countryOfOrigin }));
+        const chemistry = computeTeamChemistry(rosterPlayers);
+        const phase: EventContext["phase"] = state.save.currentPhase === "OFFSEASON" ? "OFFSEASON" : "IN_SEASON";
+        const coachTeam = state.teams.find((t) => t.id === state.save.coachTeamId);
+        const coach = coachTeam ? state.coaches.find((c) => c.id === coachTeam.headCoachId) : undefined;
+        const ctx: EventContext = {
+          teamId: state.save.coachTeamId, players: rosterPlayers, chemistry, phase, recentWinPct: 0.5,
+          coachArchetype: coach?.archetype ?? null,
+          coachBackground: coach?.background ?? null,
+        };
+        ev = maybeGenerateEvent(rng, ctx);
+      }
+
       if (ev) {
         const row: GameEventRow = {
           id: newId(), seasonYear, date: today, type: ev.type, title: ev.title, description: ev.description,

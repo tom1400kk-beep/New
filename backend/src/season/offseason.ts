@@ -4,6 +4,7 @@ import { computeStandings } from "./standings";
 import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct } from "../engine/career";
 import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
+import { driftPerception } from "../engine/media";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -140,6 +141,9 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           pipelineStatesJson: newPipelineJson,
           adRelationshipsJson: newAdRelationshipsJson,
           raiseRequestedThisSeason: false,
+          teamPerception: driftPerception(team.headCoach.teamPerception, 60, 0.05),
+          nationalPerception: driftPerception(team.headCoach.nationalPerception, 20, 0.15),
+          localPerception: driftPerception(team.headCoach.localPerception, 50, 0.1),
           careerWins: team.headCoach.careerWins + record.wins,
           careerLosses: team.headCoach.careerLosses + record.losses,
           yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob + 1,

@@ -134,7 +134,10 @@ savesRouter.get("/saves/:id/dashboard", async (req, res) => {
 
   const pendingEvents = await prisma.gameEvent.findMany({ where: { saveGameId: save.id, status: "PENDING" } });
 
-  res.json({ save, team: { ...team, costOfLivingIndex: costOfLivingIndex(team.state) }, record, nextGame, pendingEvents });
+  const adRelationships = team.headCoach ? parseAdRelationships(team.headCoach.adRelationshipsJson) : {};
+  const adPerception = team.athleticDirector ? adRelationshipScore(adRelationships, team.athleticDirector.id) : null;
+
+  res.json({ save, team: { ...team, costOfLivingIndex: costOfLivingIndex(team.state), adPerception }, record, nextGame, pendingEvents });
 });
 
 savesRouter.get("/saves/:id/job-offers", async (req, res) => {

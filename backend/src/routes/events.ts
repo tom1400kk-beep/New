@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db";
 import { clamp } from "../engine/rng";
+import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import type { EventEffects, EventOption } from "../engine/events";
 
 export const eventsRouter = Router();
@@ -24,7 +25,7 @@ eventsRouter.post("/saves/:id/events/:eventId/resolve", async (req, res) => {
 
 async function applyEffects(saveGameId: string, teamId: string | null, playerId: string | null, effects: EventEffects) {
   if (teamId) {
-    const team = await prisma.team.findUnique({ where: { id: teamId }, include: { headCoach: true } });
+    const team = await prisma.team.findUnique({ where: { id: teamId }, include: { headCoach: true, athleticDirector: true } });
     if (team) {
       if (effects.prestigeDelta) {
         await prisma.team.update({ where: { id: team.id }, data: { prestige: Math.round(clamp(team.prestige + effects.prestigeDelta, 5, 99)) } });
@@ -40,6 +41,30 @@ async function applyEffects(saveGameId: string, teamId: string | null, playerId:
           where: { id: team.headCoach.id },
           data: { legalityReputation: Math.round(clamp(team.headCoach.legalityReputation + effects.legalityDelta, 5, 99)) },
         });
+      }
+      if (effects.teamPerceptionDelta && team.headCoach) {
+        await prisma.coach.update({
+          where: { id: team.headCoach.id },
+          data: { teamPerception: Math.round(clamp(team.headCoach.teamPerception + effects.teamPerceptionDelta, 1, 100)) },
+        });
+      }
+      if (effects.nationalPerceptionDelta && team.headCoach) {
+        await prisma.coach.update({
+          where: { id: team.headCoach.id },
+          data: { nationalPerception: Math.round(clamp(team.headCoach.nationalPerception + effects.nationalPerceptionDelta, 1, 100)) },
+        });
+      }
+      if (effects.localPerceptionDelta && team.headCoach) {
+        await prisma.coach.update({
+          where: { id: team.headCoach.id },
+          data: { localPerception: Math.round(clamp(team.headCoach.localPerception + effects.localPerceptionDelta, 1, 100)) },
+        });
+      }
+      if (effects.adRelationshipDelta && team.headCoach && team.athleticDirector) {
+        const relationships = parseAdRelationships(team.headCoach.adRelationshipsJson);
+        const current = adRelationshipScore(relationships, team.athleticDirector.id);
+        const updated = { ...relationships, [team.athleticDirector.id]: Math.round(clamp(current + effects.adRelationshipDelta, 5, 99)) };
+        await prisma.coach.update({ where: { id: team.headCoach.id }, data: { adRelationshipsJson: JSON.stringify(updated) } });
       }
       if (effects.chemistryDelta) {
         const roster = await prisma.player.findMany({ where: { teamId: team.id } });

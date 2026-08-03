@@ -122,6 +122,10 @@ model Coach {
   currentSalary            Int     @default(300000) // annual dollars, set on hire, can grow via granted raises
   raiseRequestedThisSeason Boolean @default(false) // reset each offseason
 
+  teamPerception     Int      @default(65) // 1-100, locker room trust in the coach
+  nationalPerception Int      @default(20) // 1-100, national media profile
+  localPerception    Int      @default(50) // 1-100, local fanbase/booster goodwill
+
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)
   yearsAtCurrentJob  Int      @default(0)

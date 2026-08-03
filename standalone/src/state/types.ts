@@ -70,6 +70,9 @@ export interface CoachRow {
   adRelationshipsJson: string;
   currentSalary: number;
   raiseRequestedThisSeason: boolean;
+  teamPerception: number;
+  nationalPerception: number;
+  localPerception: number;
   careerWins: number;
   careerLosses: number;
   yearsAtCurrentJob: number;

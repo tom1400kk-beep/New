@@ -266,6 +266,36 @@ export default function DashboardPage() {
       </div>
 
       <div className="card">
+        <h3>How You're Viewed</h3>
+        <div className="stat-row">
+        <div className="stat-tile">
+          <div className="stat-label">Team</div>
+          <div className={`stat-value ${team.headCoach.teamPerception < 40 ? "text-bad" : team.headCoach.teamPerception > 75 ? "text-good" : ""}`}>
+            {team.headCoach.teamPerception}/100
+          </div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-label">Athletic Director</div>
+          <div className={`stat-value ${team.adPerception != null && team.adPerception < 40 ? "text-bad" : team.adPerception != null && team.adPerception > 75 ? "text-good" : ""}`}>
+            {team.adPerception != null ? `${team.adPerception}/100` : "—"}
+          </div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-label">National</div>
+          <div className={`stat-value ${team.headCoach.nationalPerception > 75 ? "text-good" : ""}`}>
+            {team.headCoach.nationalPerception}/100
+          </div>
+        </div>
+        <div className="stat-tile">
+          <div className="stat-label">Local</div>
+          <div className={`stat-value ${team.headCoach.localPerception < 40 ? "text-bad" : team.headCoach.localPerception > 75 ? "text-good" : ""}`}>
+            {team.headCoach.localPerception}/100
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <div className="card">
         <h3>Contract</h3>
         <p>
           Current salary: <strong>{fmtMoney(team.headCoach.currentSalary)}/yr</strong>
