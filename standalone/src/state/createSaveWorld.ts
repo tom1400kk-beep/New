@@ -10,6 +10,7 @@ import { generateSeasonSchedule } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
+import { seedPipeline } from "../engine/pipeline";
 import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow } from "./types";
 
 export interface CreateSaveInput {
@@ -30,6 +31,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   const playingCareer: PlayingCareerChoice = input.playingCareer ?? NO_PLAYING_CAREER;
   const careerEffects = playingCareerEffects(playingCareer);
   const combinedExtraDeltas = mergeDeltas(backgroundProfile?.deltas, careerEffects.deltas);
+  const initialPipelineJson = JSON.stringify(seedPipeline(playingCareer.hometownState, playingCareer.collegeState));
   const league = loadLeagueData(division);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
@@ -79,6 +81,8 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         proPath: isPlayerControlled ? playingCareer.proPath : "NONE",
         proCountry: isPlayerControlled ? playingCareer.proCountry : null,
         legalityReputation: 75,
+        hometownState: isPlayerControlled ? playingCareer.hometownState : null,
+        pipelineStatesJson: isPlayerControlled ? initialPipelineJson : "{}",
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       });
 

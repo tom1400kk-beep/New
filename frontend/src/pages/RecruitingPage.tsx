@@ -13,6 +13,22 @@ function homeLabel(p: any): string {
   return p.source === "INTERNATIONAL" ? p.countryOfOrigin : p.hometownState;
 }
 
+// Pipeline strength (a coach's persistent, per-state recruiting connection)
+// shown as color on the home-state text: green = built pipeline, red = gone cold.
+function pipelineClass(p: any): string {
+  if (p.pipelineScore == null) return "";
+  if (p.pipelineScore >= 70) return "text-good";
+  if (p.pipelineScore <= 30) return "text-bad";
+  return "";
+}
+
+function pipelineTitle(p: any): string | undefined {
+  if (p.pipelineScore == null) return undefined;
+  if (p.pipelineScore >= 70) return `Pipeline state (${p.pipelineScore}/100) — a well-built recruiting connection here`;
+  if (p.pipelineScore <= 30) return `Cold state (${p.pipelineScore}/100) — this connection has gone cold from neglect`;
+  return `Recruiting connection: ${p.pipelineScore}/100`;
+}
+
 function priorityLabel(p: any): string {
   if (!p.topPriorities || p.topPriorities.length === 0) return "—";
   return p.topPriorities.map((k: string) => PRIORITY_LABELS[k as keyof typeof PRIORITY_LABELS] ?? k).join(", ");
@@ -67,7 +83,7 @@ export default function RecruitingPage() {
                 <td>{p.firstName} {p.lastName}</td>
                 <td>{p.position}</td>
                 <td>{"★".repeat(p.starRating)}</td>
-                <td>{homeLabel(p)}</td>
+                <td className={pipelineClass(p)} title={pipelineTitle(p)}>{homeLabel(p)}</td>
                 <td>{sourceLabel(p.source)}</td>
                 <td className="text-muted" style={{ fontFamily: "inherit", whiteSpace: "nowrap" }}>{priorityLabel(p)}</td>
                 <td>{p.scouted.scoring}</td>
@@ -86,6 +102,7 @@ export default function RecruitingPage() {
           * Scouted ratings carry uncertainty — true ability may differ from what your staff reports.
           International prospects carry extra uncertainty — harder to scout from overseas.
           "Priorities" are what this recruit actually cares about when picking a school.
+          The home state is colored when you have a notable recruiting pipeline there (green) or it's gone cold (red) — hover for details.
         </p>
       </div>
     </div>

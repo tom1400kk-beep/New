@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import { STATES } from "../engine/regions";
+import { toStateAbbr } from "../state/stateAbbr";
 
 const SKILL_LABELS: Record<string, string> = {
   offenseSkill: "Offense", defenseSkill: "Defense", recruitingSkill: "Recruiting",
@@ -15,6 +17,7 @@ function formatDeltas(deltas: Record<string, number>): string {
 }
 
 const NO_PLAYING_CAREER = {
+  hometownState: null as string | null,
   playedCollege: false,
   collegeTeamName: null as string | null,
   collegeState: null as string | null,
@@ -47,6 +50,7 @@ export default function SaveSelectPage() {
   const [coachBackground, setCoachBackground] = useState("");
 
   const [allTeams, setAllTeams] = useState<any[]>([]);
+  const [hometownState, setHometownState] = useState("");
   const [playedCollege, setPlayedCollege] = useState(false);
   const [collegeTeamName, setCollegeTeamName] = useState("");
   const [proPath, setProPath] = useState<"NONE" | "DOMESTIC_PRO" | "OVERSEAS_PRO">("NONE");
@@ -82,12 +86,14 @@ export default function SaveSelectPage() {
   }, [division]);
 
   function playingCareerChoice() {
-    if (!playedCollege) return NO_PLAYING_CAREER;
+    const hometown = hometownState || null;
+    if (!playedCollege) return { ...NO_PLAYING_CAREER, hometownState: hometown };
     const college = allTeams.find((t) => t.school === collegeTeamName);
     return {
+      hometownState: hometown,
       playedCollege: true,
       collegeTeamName: collegeTeamName || null,
-      collegeState: college?.state ?? null,
+      collegeState: college?.state ? toStateAbbr(college.state) : null,
       proPath,
       proCountry: proPath === "OVERSEAS_PRO" ? proCountry || null : null,
     };
@@ -275,7 +281,20 @@ export default function SaveSelectPage() {
               <label>Playing career</label>
             </p>
             <div className="card" style={{ background: "transparent" }}>
-              <label>
+              <p>
+                <label>Hometown state</label><br />
+                <select value={hometownState} onChange={(e) => setHometownState(e.target.value)}>
+                  <option value="">Not specified</option>
+                  {STATES.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </p>
+              <p className="text-muted" style={{ fontSize: "0.8rem", marginTop: -8 }}>
+                Seeds a recruiting pipeline in your home state that travels with you between jobs.
+              </p>
+
+              <label style={{ marginTop: 12, display: "block" }}>
                 <input
                   type="checkbox"
                   checked={playedCollege}

@@ -53,6 +53,8 @@ export interface CoachRow {
   proPath: string;
   proCountry: string | null;
   legalityReputation: number;
+  hometownState: string | null;
+  pipelineStatesJson: string;
   careerWins: number;
   careerLosses: number;
   yearsAtCurrentJob: number;

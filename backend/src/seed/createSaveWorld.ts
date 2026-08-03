@@ -12,6 +12,7 @@ import { generateSeasonSchedule } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
+import { seedPipeline } from "../engine/pipeline";
 
 export interface CreateSaveInput {
   saveName: string;
@@ -36,6 +37,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const playingCareer: PlayingCareerChoice = input.playingCareer ?? NO_PLAYING_CAREER;
   const careerEffects = playingCareerEffects(playingCareer);
   const combinedExtraDeltas = mergeDeltas(backgroundProfile?.deltas, careerEffects.deltas);
+  const initialPipelineJson = JSON.stringify(seedPipeline(playingCareer.hometownState, playingCareer.collegeState));
   const league = loadLeagueData(division);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
@@ -69,6 +71,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
     archetype: string; background: string | null;
     playedCollege: boolean; collegeTeamName: string | null; collegeState: string | null;
     proPath: string; proCountry: string | null;
+    hometownState: string | null; pipelineStatesJson: string;
   }[] = [];
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
@@ -112,6 +115,8 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
         collegeState: isPlayerControlled ? playingCareer.collegeState : null,
         proPath: isPlayerControlled ? playingCareer.proPath : "NONE",
         proCountry: isPlayerControlled ? playingCareer.proCountry : null,
+        hometownState: isPlayerControlled ? playingCareer.hometownState : null,
+        pipelineStatesJson: isPlayerControlled ? initialPipelineJson : "{}",
       });
 
       const nilBudget = nilBudgetForTeam(rng, prestige, division);

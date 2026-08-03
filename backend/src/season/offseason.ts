@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { computeStandings } from "./standings";
 import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation } from "../engine/career";
+import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -58,6 +59,11 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const newReputation = updateReputation(team.headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, team.headCoach.background);
     const newLegality = driftLegalityReputation(team.headCoach.legalityReputation);
+    // Pipeline decay is coach-scoped and only matters for the player's own
+    // coach — skip the JSON parse/stringify for every AI coach every season.
+    const newPipelineJson = team.headCoach.isPlayerControlled
+      ? JSON.stringify(decayPipeline(parsePipelineStates(team.headCoach.pipelineStatesJson)))
+      : undefined;
 
     if (team.headCoach.isPlayerControlled) {
       userTeamId = team.id;
@@ -94,7 +100,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           where: { id: team.headCoach.id },
           data: {
             careerWins: team.headCoach.careerWins + record.wins, careerLosses: team.headCoach.careerLosses + record.losses,
-            legalityReputation: newLegality,
+            legalityReputation: newLegality, pipelineStatesJson: newPipelineJson,
           },
         });
       } else {
@@ -116,6 +122,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           hotSeatLevel: newHotSeat,
           reputation: newReputation,
           legalityReputation: newLegality,
+          pipelineStatesJson: newPipelineJson,
           careerWins: team.headCoach.careerWins + record.wins,
           careerLosses: team.headCoach.careerLosses + record.losses,
           yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob + 1,

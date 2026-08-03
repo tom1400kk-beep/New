@@ -110,6 +110,9 @@ model Coach {
 
   legalityReputation Int      @default(75) // 1-100, program off-court integrity — image-conscious schools won't hire a coach whose players keep getting arrested
 
+  hometownState      String?  // where the coach grew up / played HS ball
+  pipelineStatesJson String   @default("{}") // Record<state, 0-100> recruiting-connection strength; persists across job changes
+
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)
   yearsAtCurrentJob  Int      @default(0)

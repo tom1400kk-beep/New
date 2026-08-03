@@ -1,5 +1,6 @@
 import { clamp } from "./rng";
 import { PRIORITY_KEYS, sameRegion, isWarmState, type PriorityProfile } from "./priorities";
+import { pipelineScore, pipelineMultiplier } from "./pipeline";
 import type { PositionType } from "../types";
 
 // Weekly recruiting points a program can allocate, driven by staff quality.
@@ -52,9 +53,9 @@ export interface RecruitingTeamInput {
   recentWinPct: number; // 0-1; caller should fall back to prestige/100 pre-season
   roster: RecruitingRosterPlayer[];
   coachBackground?: string | null;
-  almaMaterState?: string | null;
   proCountry?: string | null;
   playedProDomestic?: boolean;
+  coachPipelineStates?: Record<string, number>;
 }
 
 // Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
@@ -133,10 +134,11 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
     base *= 1.1; // "Big-Time Pedigree" — blue-chips recognize the résumé
   }
 
-  // Playing-career perks: an alma mater and a pro career leave their own,
-  // narrower recruiting ties independent of the coaching background chosen.
-  if (team.almaMaterState && !isInternational && prospect.hometownState === team.almaMaterState) {
-    base *= 1.1; // "Alma Mater Ties"
+  // Recruiting pipeline: a persistent, per-coach connection strength for each
+  // US state, seeded by hometown/alma mater and built (or let go cold) by
+  // actually recruiting there over time — travels with the coach across jobs.
+  if (team.coachPipelineStates && !isInternational && prospect.hometownState) {
+    base *= pipelineMultiplier(pipelineScore(team.coachPipelineStates, prospect.hometownState));
   }
   if (team.proCountry && prospect.countryOfOrigin === team.proCountry) {
     base *= 1.15; // "International Playing Ties" — a specific-country match is rarer, so it counts more

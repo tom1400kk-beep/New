@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { computeInterestGain, weeklyRecruitingPoints, type RecruitingProspectInput, type RecruitingTeamInput } from "../engine/recruiting";
 import { PRIORITY_KEYS, topPriorities, type PriorityProfile } from "../engine/priorities";
 import { clamp, randInt, mulberry32 } from "../engine/rng";
+import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
 import { computeStandings, winPct } from "../season/standings";
 
 export const recruitingRouter = Router();
@@ -31,6 +32,9 @@ recruitingRouter.get("/saves/:id/recruiting", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
   if (!save.coachTeamId) return res.json([]);
 
+  const team = await prisma.team.findUnique({ where: { id: save.coachTeamId }, include: { headCoach: true } });
+  const pipeline = parsePipelineStates(team?.headCoach?.pipelineStatesJson ?? "{}");
+
   const prospects = await prisma.prospect.findMany({
     where: { saveGameId: save.id, signed: false, graduationYear: { gte: save.currentSeasonYear + 1 } },
     include: { interest: { where: { teamId: save.coachTeamId } } },
@@ -53,6 +57,7 @@ recruitingRouter.get("/saves/:id/recruiting", async (req, res) => {
       starRating: p.starRating,
       graduationYear: p.graduationYear,
       topPriorities: topPriorities(priorities, 3),
+      pipelineScore: p.hometownState ? pipelineScore(pipeline, p.hometownState) : null,
       // scouted ratings include noise proportional to scoutingNoise — true ratings are hidden
       scouted: {
         scoring: noisy(rng, p.scoring, p.scoutingNoise),
@@ -126,9 +131,9 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     recentWinPct,
     roster: team.players.map((p) => ({ position: p.position, overall: playerOverall(p), characterRating: p.characterRating })),
     coachBackground: team.headCoach?.background ?? null,
-    almaMaterState: team.headCoach?.collegeState ?? null,
     proCountry: team.headCoach?.proCountry ?? null,
     playedProDomestic: team.headCoach?.proPath === "DOMESTIC_PRO",
+    coachPipelineStates: parsePipelineStates(team.headCoach?.pipelineStatesJson ?? "{}"),
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);
@@ -138,6 +143,13 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     create: { id: randomUUID(), prospectId: prospect.id, teamId: team.id, interestLevel: Math.round(gain), pointsInvested, offered: true },
     update: { interestLevel: Math.round(gain), pointsInvested, offered: true },
   });
+
+  // Actively recruiting a prospect strengthens the coach's personal pipeline
+  // in their home state — this persists on the coach, not the team.
+  if (team.headCoach && prospect.hometownState) {
+    const updatedPipeline = bumpPipelineState(teamInput.coachPipelineStates!, prospect.hometownState);
+    await prisma.coach.update({ where: { id: team.headCoach.id }, data: { pipelineStatesJson: JSON.stringify(updatedPipeline) } });
+  }
 
   res.json(interest);
 });

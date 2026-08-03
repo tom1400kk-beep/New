@@ -1,5 +1,6 @@
 import { computeStandings } from "./standings";
 import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation } from "../engine/career";
+import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
@@ -57,6 +58,9 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const newReputation = updateReputation(headCoach.reputation, record.wins, record.losses, made, wins, fired);
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, headCoach.background);
     const newLegality = driftLegalityReputation(headCoach.legalityReputation);
+    if (headCoach.isPlayerControlled) {
+      headCoach.pipelineStatesJson = JSON.stringify(decayPipeline(parsePipelineStates(headCoach.pipelineStatesJson)));
+    }
 
     if (headCoach.isPlayerControlled) {
       userTeamId = team.id;
@@ -84,6 +88,8 @@ export function runOffseason(state: WorldState): OffseasonResult {
         proPath: "NONE",
         proCountry: null as string | null,
         legalityReputation: 75,
+        hometownState: null as string | null,
+        pipelineStatesJson: "{}",
       };
       if (headCoach.isPlayerControlled) {
         const replacement = {

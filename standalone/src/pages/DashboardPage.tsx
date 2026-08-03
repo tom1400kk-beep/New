@@ -36,11 +36,15 @@ const BACKGROUND_LABELS: Record<string, string> = {
 };
 
 function playingCareerLine(coach: any): string | null {
-  if (!coach.playedCollege) return null;
-  let line = `Played at ${coach.collegeTeamName ?? "college"}`;
-  if (coach.proPath === "DOMESTIC_PRO") line += " · played pro";
-  else if (coach.proPath === "OVERSEAS_PRO") line += ` · played pro in ${coach.proCountry ?? "overseas"}`;
-  return line;
+  const parts: string[] = [];
+  if (coach.hometownState) parts.push(`From ${coach.hometownState}`);
+  if (coach.playedCollege) {
+    let line = `Played at ${coach.collegeTeamName ?? "college"}`;
+    if (coach.proPath === "DOMESTIC_PRO") line += " · played pro";
+    else if (coach.proPath === "OVERSEAS_PRO") line += ` · played pro in ${coach.proCountry ?? "overseas"}`;
+    parts.push(line);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 export default function DashboardPage() {

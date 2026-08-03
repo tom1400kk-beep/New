@@ -3,6 +3,7 @@ import { PRIORITY_KEYS, topPriorities, type PriorityKey, type PriorityProfile } 
 import { clamp, randInt, mulberry32 } from "../engine/rng";
 import type { EventEffects, EventOption } from "../engine/events";
 import { meetsLegalityBar } from "../engine/career";
+import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
 import { computeStandings, winPct } from "./standings";
 import { newId, type WorldState } from "./types";
 
@@ -37,6 +38,7 @@ export interface RecruitingBoardEntry {
   starRating: number;
   graduationYear: number;
   topPriorities: PriorityKey[];
+  pipelineScore: number | null;
   scouted: {
     scoring: number; threePoint: number; finishing: number; playmaking: number;
     rebounding: number; defense: number; athleticism: number; characterRating: number; disciplineRating: number;
@@ -51,6 +53,10 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
   const teamId = state.save.coachTeamId;
   const rng = mulberry32(42);
 
+  const team = state.teams.find((t) => t.id === teamId);
+  const coach = team ? state.coaches.find((c) => c.id === team.headCoachId) : undefined;
+  const pipeline = parsePipelineStates(coach?.pipelineStatesJson ?? "{}");
+
   return state.prospects
     .filter((p) => !p.signed && p.graduationYear >= state.save.currentSeasonYear + 1)
     .sort((a, b) => b.starRating - a.starRating)
@@ -61,6 +67,7 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
         hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
         topPriorities: topPriorities(parsePriorities(p.prioritiesJson), 3),
+        pipelineScore: p.hometownState ? pipelineScore(pipeline, p.hometownState) : null,
         scouted: {
           scoring: noisy(rng, p.scoring, p.scoutingNoise), threePoint: noisy(rng, p.threePoint, p.scoutingNoise),
           finishing: noisy(rng, p.finishing, p.scoutingNoise), playmaking: noisy(rng, p.playmaking, p.scoutingNoise),
@@ -107,9 +114,9 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     offenseSkill: coach.offenseSkill, defenseSkill: coach.defenseSkill, hotSeatLevel: coach.hotSeatLevel,
     recentWinPct, roster: roster.map((p) => ({ position: p.position, overall: playerOverall(p), characterRating: p.characterRating })),
     coachBackground: coach.background,
-    almaMaterState: coach.collegeState,
     proCountry: coach.proCountry,
     playedProDomestic: coach.proPath === "DOMESTIC_PRO",
+    coachPipelineStates: parsePipelineStates(coach.pipelineStatesJson),
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);
@@ -122,6 +129,13 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     interest = { id: newId(), prospectId, teamId: team.id, interestLevel: Math.round(gain), pointsInvested, offered: true, visitCompleted: false };
     state.interests.push(interest);
   }
+
+  // Actively recruiting a prospect strengthens the coach's personal pipeline
+  // in their home state — this persists on the coach, not the team.
+  if (prospect.hometownState) {
+    coach.pipelineStatesJson = JSON.stringify(bumpPipelineState(teamInput.coachPipelineStates!, prospect.hometownState));
+  }
+
   return interest;
 }
 
