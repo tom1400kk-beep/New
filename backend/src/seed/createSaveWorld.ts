@@ -9,8 +9,9 @@ import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam } from "../engine/budget";
 import { generateSeasonSchedule } from "../engine/schedule";
-import { generateCoachSkills, randomArchetype, type CoachArchetype } from "../engine/coachArchetypes";
+import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
+import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 
 export interface CreateSaveInput {
   saveName: string;
@@ -19,6 +20,7 @@ export interface CreateSaveInput {
   coachName: string;
   coachArchetype?: CoachArchetype;
   coachBackground?: CoachBackground | null;
+  playingCareer?: PlayingCareerChoice;
 }
 
 export interface CreateSaveResult {
@@ -31,6 +33,9 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const chosenArchetype: CoachArchetype = input.coachArchetype ?? "PROGRAM_BUILDER";
   const chosenBackground: CoachBackground | null = input.coachBackground ?? null;
   const backgroundProfile = getBackgroundProfile(chosenBackground);
+  const playingCareer: PlayingCareerChoice = input.playingCareer ?? NO_PLAYING_CAREER;
+  const careerEffects = playingCareerEffects(playingCareer);
+  const combinedExtraDeltas = mergeDeltas(backgroundProfile?.deltas, careerEffects.deltas);
   const league = loadLeagueData(division);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
@@ -62,6 +67,8 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
     id: string; saveGameId: string; name: string; isPlayerControlled: boolean; reputation: number;
     hotSeatLevel: number; offenseSkill: number; defenseSkill: number; recruitingSkill: number; developmentSkill: number;
     archetype: string; background: string | null;
+    playedCollege: boolean; collegeTeamName: string | null; collegeState: string | null;
+    proPath: string; proCountry: string | null;
   }[] = [];
   const teamRows: {
     id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
@@ -86,7 +93,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
-      const skills = generateCoachSkills(rng, prestige, archetype, isPlayerControlled ? backgroundProfile?.deltas : undefined);
+      const skills = generateCoachSkills(rng, prestige, archetype, isPlayerControlled ? combinedExtraDeltas : undefined);
       coachRows.push({
         id: coachId,
         saveGameId: saveGame.id,
@@ -100,6 +107,11 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
         developmentSkill: skills.developmentSkill,
         archetype,
         background,
+        playedCollege: isPlayerControlled ? playingCareer.playedCollege : false,
+        collegeTeamName: isPlayerControlled ? playingCareer.collegeTeamName : null,
+        collegeState: isPlayerControlled ? playingCareer.collegeState : null,
+        proPath: isPlayerControlled ? playingCareer.proPath : "NONE",
+        proCountry: isPlayerControlled ? playingCareer.proCountry : null,
       });
 
       const nilBudget = nilBudgetForTeam(rng, prestige, division);
@@ -107,6 +119,9 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       let internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
       if (isPlayerControlled && chosenBackground === "INTERNATIONAL_SCOUT") {
         internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 25, 5, 99));
+      }
+      if (isPlayerControlled && playingCareer.proPath === "OVERSEAS_PRO") {
+        internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 12, 5, 99));
       }
       const academicReputation = academicReputationForTeam(rng, prestige);
       const state = toStateAbbr(member.state);

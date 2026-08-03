@@ -72,6 +72,11 @@ export function runOffseason(state: WorldState): OffseasonResult {
         developmentSkill: replacementSkillRoll.developmentSkill,
         archetype: replacementArchetype,
         background: null as string | null,
+        playedCollege: false,
+        collegeTeamName: null as string | null,
+        collegeState: null as string | null,
+        proPath: "NONE",
+        proCountry: null as string | null,
       };
       if (headCoach.isPlayerControlled) {
         const replacement = {

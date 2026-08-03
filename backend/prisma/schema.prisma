@@ -102,6 +102,12 @@ model Coach {
   archetype          String   @default("PROGRAM_BUILDER") // CoachArchetype — every coach in the league has one
   background         String?  // CoachBackground — RPG-creator "past" choice, set only for the user's own coach
 
+  playedCollege      Boolean  @default(false)
+  collegeTeamName    String?
+  collegeState       String?
+  proPath            String   @default("NONE") // ProPath: NONE | DOMESTIC_PRO | OVERSEAS_PRO
+  proCountry         String?  // set only when proPath is OVERSEAS_PRO
+
   careerWins         Int      @default(0)
   careerLosses       Int      @default(0)
   yearsAtCurrentJob  Int      @default(0)

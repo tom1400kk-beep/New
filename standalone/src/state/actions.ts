@@ -106,6 +106,9 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     offenseSkill: coach.offenseSkill, defenseSkill: coach.defenseSkill, hotSeatLevel: coach.hotSeatLevel,
     recentWinPct, roster: roster.map((p) => ({ position: p.position, overall: playerOverall(p), characterRating: p.characterRating })),
     coachBackground: coach.background,
+    almaMaterState: coach.collegeState,
+    proCountry: coach.proCountry,
+    playedProDomestic: coach.proPath === "DOMESTIC_PRO",
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);

@@ -6,12 +6,56 @@ import { advanceOneDay } from "../season/advance";
 import { computeStandings, winPct } from "../season/standings";
 import { COACH_ARCHETYPES, type CoachArchetype } from "../engine/coachArchetypes";
 import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrounds";
+import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
+import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
+import { EUROPEAN_COUNTRIES } from "../engine/countries";
+import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
 
 export const savesRouter = Router();
 
+const ALL_DIVISIONS: Division[] = ["D1", "D2", "D3"];
+
 savesRouter.get("/coach-options", (_req, res) => {
-  res.json({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS });
+  res.json({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS, countries: EUROPEAN_COUNTRIES });
+});
+
+// The full national school list (all divisions), used both for the alma
+// mater picker and as the candidate pool for starting job offers.
+savesRouter.get("/all-teams", (_req, res) => {
+  const teams: CandidateJob[] = [];
+  for (const division of ALL_DIVISIONS) {
+    if (!divisionDataAvailable(division)) continue;
+    const data = loadLeagueData(division);
+    for (const c of data.conferences) {
+      for (const m of c.members) {
+        teams.push({ school: m.school, conference: c.name, division, state: m.state, prestige: prestigeTierToScore(m.prestigeTier) });
+      }
+    }
+  }
+  res.json(teams);
+});
+
+savesRouter.post("/coach-offers", (req, res) => {
+  const { coachArchetype, coachBackground, playingCareer } = req.body;
+  const archetype: CoachArchetype = COACH_ARCHETYPES.some((a) => a.key === coachArchetype) ? coachArchetype : "PROGRAM_BUILDER";
+  const background: CoachBackground | null = COACH_BACKGROUNDS.some((b) => b.key === coachBackground) ? coachBackground : null;
+  const career: PlayingCareerChoice = playingCareer ?? NO_PLAYING_CAREER;
+
+  const allCandidates: CandidateJob[] = [];
+  for (const division of ALL_DIVISIONS) {
+    if (!divisionDataAvailable(division)) continue;
+    const data = loadLeagueData(division);
+    for (const c of data.conferences) {
+      for (const m of c.members) {
+        allCandidates.push({ school: m.school, conference: c.name, division, state: m.state, prestige: prestigeTierToScore(m.prestigeTier) });
+      }
+    }
+  }
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const result = generateStartingJobOffers({ archetype, background, playingCareer: career }, allCandidates, rng, 3);
+  res.json(result);
 });
 
 savesRouter.get("/league-teams", (req, res) => {
@@ -37,14 +81,16 @@ savesRouter.get("/saves", async (_req, res) => {
 
 savesRouter.post("/saves", async (req, res) => {
   try {
-    const { name, division, teamSchoolName, coachName, coachArchetype, coachBackground } = req.body;
+    const { name, division, teamSchoolName, coachName, coachArchetype, coachBackground, playingCareer } = req.body;
     if (!name || !division || !teamSchoolName || !coachName) {
       return res.status(400).json({ error: "name, division, teamSchoolName, coachName are required" });
     }
     const archetype: CoachArchetype = COACH_ARCHETYPES.some((a) => a.key === coachArchetype) ? coachArchetype : "PROGRAM_BUILDER";
     const background: CoachBackground | null = COACH_BACKGROUNDS.some((b) => b.key === coachBackground) ? coachBackground : null;
+    const career: PlayingCareerChoice = playingCareer && typeof playingCareer === "object" ? { ...NO_PLAYING_CAREER, ...playingCareer } : NO_PLAYING_CAREER;
     const result = await createSaveWorld({
       saveName: name, division, teamSchoolName, coachName, coachArchetype: archetype, coachBackground: background,
+      playingCareer: career,
     });
     const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: result.saveGameId } });
     res.status(201).json(save);

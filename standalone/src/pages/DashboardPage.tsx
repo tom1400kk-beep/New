@@ -35,6 +35,14 @@ const BACKGROUND_LABELS: Record<string, string> = {
   INTERNATIONAL_SCOUT: "International Scouting Background",
 };
 
+function playingCareerLine(coach: any): string | null {
+  if (!coach.playedCollege) return null;
+  let line = `Played at ${coach.collegeTeamName ?? "college"}`;
+  if (coach.proPath === "DOMESTIC_PRO") line += " · played pro";
+  else if (coach.proPath === "OVERSEAS_PRO") line += ` · played pro in ${coach.proCountry ?? "overseas"}`;
+  return line;
+}
+
 export default function DashboardPage() {
   const { activeSaveId, setActiveSaveId } = useSave();
   const navigate = useNavigate();
@@ -131,6 +139,9 @@ export default function DashboardPage() {
         Coach: {ARCHETYPE_LABELS[team.headCoach.archetype] ?? formatKey(team.headCoach.archetype)}
         {team.headCoach.background ? ` · ${BACKGROUND_LABELS[team.headCoach.background] ?? formatKey(team.headCoach.background)}` : ""}
       </p>
+      {playingCareerLine(team.headCoach) && (
+        <p className="text-muted" style={{ marginTop: -8 }}>{playingCareerLine(team.headCoach)}</p>
+      )}
 
       <div className="card stat-row">
         <div className="stat-tile">

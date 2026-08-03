@@ -17,12 +17,15 @@ export const api = {
   listSaves: () => request<any[]>("/saves"),
   createSave: (data: {
     name: string; division: string; teamSchoolName: string; coachName: string;
-    coachArchetype?: string; coachBackground?: string | null;
+    coachArchetype?: string; coachBackground?: string | null; playingCareer?: any;
   }) => request<any>("/saves", { method: "POST", body: JSON.stringify(data) }),
   deleteSave: (id: string) => request<void>(`/saves/${id}`, { method: "DELETE" }),
 
   listLeagueTeams: (division: string) => request<any[]>(`/league-teams?division=${division}`),
   getCoachOptions: () => request<any>("/coach-options"),
+  getAllTeams: () => request<any[]>("/all-teams"),
+  generateCoachOffers: (data: { coachArchetype: string; coachBackground: string | null; playingCareer: any }) =>
+    request<any>("/coach-offers", { method: "POST", body: JSON.stringify(data) }),
 
   getDashboard: (saveId: string) => request<any>(`/saves/${saveId}/dashboard`),
   getRoster: (saveId: string) => request<any[]>(`/saves/${saveId}/roster`),

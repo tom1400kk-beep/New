@@ -47,6 +47,11 @@ export interface CoachRow {
   developmentSkill: number;
   archetype: string;
   background: string | null;
+  playedCollege: boolean;
+  collegeTeamName: string | null;
+  collegeState: string | null;
+  proPath: string;
+  proCountry: string | null;
   careerWins: number;
   careerLosses: number;
   yearsAtCurrentJob: number;

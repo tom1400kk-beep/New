@@ -72,6 +72,19 @@ export function randomArchetype(rng: () => number): CoachArchetype {
   return COACH_ARCHETYPES[Math.floor(rng() * COACH_ARCHETYPES.length)].key;
 }
 
+// Combines skill-delta sources (archetype + background + playing career, etc)
+// into one object so generateCoachSkills only has to deal with a single bias.
+export function mergeDeltas(...deltasList: (SkillDeltas | undefined)[]): SkillDeltas {
+  const merged: SkillDeltas = {};
+  for (const d of deltasList) {
+    if (!d) continue;
+    for (const key of Object.keys(d) as (keyof SkillDeltas)[]) {
+      merged[key] = (merged[key] ?? 0) + (d[key] ?? 0);
+    }
+  }
+  return merged;
+}
+
 export interface GeneratedCoachSkills {
   offenseSkill: number;
   defenseSkill: number;
