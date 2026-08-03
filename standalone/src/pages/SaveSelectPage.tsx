@@ -30,7 +30,7 @@ export default function SaveSelectPage() {
     setTeamsLoading(true);
     setTeamSchoolName("");
     api.listLeagueTeams(division).then((t) => {
-      setTeams(t);
+      setTeams([...t].sort((a, b) => a.school.localeCompare(b.school)));
       setTeamsLoading(false);
     });
   }, [division]);
