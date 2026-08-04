@@ -122,6 +122,7 @@ transfersRouter.post("/saves/:id/transfers/:playerId/pursue", async (req, res) =
   const prospectInput: RecruitingProspectInput = {
     position: player.position,
     hometownState: player.hometownState,
+    hometownCity: player.hometownCity,
     countryOfOrigin: player.countryOfOrigin,
     characterRating: player.characterRating,
     scoring: player.scoring,
@@ -139,6 +140,7 @@ transfersRouter.post("/saves/:id/transfers/:playerId/pursue", async (req, res) =
   const teamInput: RecruitingTeamInput = {
     division: team.division as Division,
     state: team.state,
+    city: team.city,
     prestige: team.prestige,
     nilBudget: team.nilBudget,
     facilitiesRating: team.facilitiesRating,

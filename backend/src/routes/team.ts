@@ -53,7 +53,7 @@ teamRouter.get("/saves/:id/teams/:teamId", async (req, res) => {
   }
 
   res.json({
-    id: team.id, name: team.name, state: team.state, division: team.division,
+    id: team.id, name: team.name, state: team.state, city: team.city, division: team.division,
     conferenceName: team.conference.name, conferenceAbbreviation: team.conference.abbreviation,
     prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
     academicReputation: team.academicReputation, venueCapacity: team.venueCapacity,

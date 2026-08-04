@@ -2,6 +2,9 @@ import { clamp, randNormal } from "./rng";
 import { PRIORITY_KEYS, sameRegion, isWarmState, type PriorityProfile } from "./priorities";
 import { pipelineScore, pipelineMultiplier } from "./pipeline";
 import { tourRecruitingMultiplier } from "./internationalTour";
+import { cityCoordinate, haversineMiles } from "./geo";
+import { regionForState } from "./travelRegions";
+import { eyblTeamRegion } from "./generation";
 import type { Division, PositionType } from "../types";
 
 // Real-world ceiling on how much star power a division can plausibly land —
@@ -32,6 +35,7 @@ export interface RecruitingRosterPlayer {
 export interface RecruitingProspectInput {
   position: PositionType | string;
   hometownState: string;
+  hometownCity?: string | null;
   countryOfOrigin: string | null;
   characterRating: number;
   scoring: number;
@@ -45,11 +49,13 @@ export interface RecruitingProspectInput {
   previousSchool?: string | null; // set for transfer portal players — the program they're leaving
   source?: string; // ProspectSource: "HIGH_SCHOOL" | "JUCO" | "INTERNATIONAL"
   playedEYBL?: boolean;
+  eyblTeam?: string | null;
 }
 
 export interface RecruitingTeamInput {
   division: Division;
   state: string;
+  city?: string;
   prestige: number;
   nilBudget: number;
   facilitiesRating: number;
@@ -103,9 +109,21 @@ function computeDimensionScores(prospect: RecruitingProspectInput, team: Recruit
   const brandExposure = clamp(team.prestige, 0, 100);
   const coachStability = clamp(100 - team.hotSeatLevel, 0, 100);
 
+  // Real city-to-city distance, not just a same-state/same-region bucket —
+  // a recruit in Miami now reads as meaningfully closer to Tampa than to
+  // Jacksonville, even though all three are "FL". Falls back to the old
+  // state/region buckets only if a coordinate genuinely can't be resolved
+  // (e.g. a non-US team state on an override list).
   let proximityHome = 50;
   if (!isInternational && prospect.hometownState) {
-    proximityHome = prospect.hometownState === team.state ? 100 : sameRegion(prospect.hometownState, team.state) ? 60 : 25;
+    const prospectCoord = cityCoordinate(prospect.hometownCity ?? "", prospect.hometownState);
+    const teamCoord = cityCoordinate(team.city ?? "", team.state);
+    if (prospectCoord && teamCoord) {
+      const miles = haversineMiles(prospectCoord, teamCoord);
+      proximityHome = clamp(100 - miles / 28, 12, 100);
+    } else {
+      proximityHome = prospect.hometownState === team.state ? 100 : sameRegion(prospect.hometownState, team.state) ? 60 : 25;
+    }
   }
 
   const academics = clamp(team.academicReputation, 0, 100);
@@ -197,6 +215,17 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   // doesn't snowball into an unstoppable pipeline.
   if (prospect.playedEYBL && team.eyblCommitsThisClass) {
     base *= 1 + Math.min(team.eyblCommitsThisClass, 3) * 0.08;
+  }
+
+  // Local AAU/EYBL ties: a program that's a fixture on the same regional
+  // circuit as the prospect's EYBL team already has coaches and boosters who
+  // know that program and those families — a real, separate edge from the
+  // national word-of-mouth bonus above.
+  if (prospect.eyblTeam) {
+    const teamRegion = eyblTeamRegion(prospect.eyblTeam);
+    if (teamRegion && teamRegion === regionForState(team.state)) {
+      base *= 1.12;
+    }
   }
 
   // A walk-on offer (no guaranteed aid) is a real tradeoff, not a footnote —

@@ -122,6 +122,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
   const prospectInput: RecruitingProspectInput = {
     position: prospect.position,
     hometownState: prospect.hometownState,
+    hometownCity: prospect.hometownCity,
     countryOfOrigin: prospect.countryOfOrigin,
     characterRating: prospect.characterRating,
     scoring: prospect.scoring,
@@ -134,11 +135,13 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     priorities: parsePriorities(prospect.prioritiesJson),
     source: prospect.source,
     playedEYBL: prospect.playedEYBL,
+    eyblTeam: prospect.eyblTeam,
   };
 
   const teamInput: RecruitingTeamInput = {
     division: team.division as Division,
     state: team.state,
+    city: team.city,
     prestige: team.prestige,
     nilBudget: team.nilBudget,
     facilitiesRating: team.facilitiesRating,

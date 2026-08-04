@@ -21,7 +21,7 @@ hotSeatRouter.get("/saves/:id/hot-seat", async (req, res) => {
     .map((t) => {
       const record = standings.get(t.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
       return {
-        teamId: t.id, teamName: t.name, division: t.division, state: t.state, prestige: t.prestige,
+        teamId: t.id, teamName: t.name, division: t.division, state: t.state, city: t.city, prestige: t.prestige,
         isUserTeam: t.id === save.coachTeamId,
         coach: {
           id: t.headCoach!.id, name: t.headCoach!.name, archetype: t.headCoach!.archetype, background: t.headCoach!.background,

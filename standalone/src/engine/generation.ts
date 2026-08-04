@@ -160,6 +160,15 @@ const EYBL_TEAMS: EyblTeamDef[] = [
   { name: "LA Fire", region: "PACIFIC" },
 ];
 
+const EYBL_TEAM_REGION: Record<string, TravelRegion> = Object.fromEntries(EYBL_TEAMS.map((t) => [t.name, t.region]));
+
+// Looks up which region an EYBL circuit team recruits out of — used to boost
+// recruiting interest when a prospect's circuit team is local to the
+// recruiting program, on top of the existing national EYBL word-of-mouth bonus.
+export function eyblTeamRegion(eyblTeam: string): TravelRegion | null {
+  return EYBL_TEAM_REGION[eyblTeam] ?? null;
+}
+
 // Most kids play for a club near home; a real minority get scooped up by a
 // program from clear across the country (the way a handful of blue-chips
 // end up on a marquee circuit team far from their hometown).

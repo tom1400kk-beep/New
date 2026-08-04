@@ -160,7 +160,7 @@ export function getTeamProfile(state: WorldState, teamId: string) {
   }
 
   return {
-    id: team.id, name: team.name, state: team.state, division: team.division,
+    id: team.id, name: team.name, state: team.state, city: team.city, division: team.division,
     conferenceName: conference?.name ?? null, conferenceAbbreviation: conference?.abbreviation ?? null,
     prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
     academicReputation: team.academicReputation, venueCapacity: team.venueCapacity,
@@ -578,7 +578,7 @@ export function getHotSeatBoard(state: WorldState) {
       if (!coach) return null;
       const record = standings.get(t.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
       return {
-        teamId: t.id, teamName: t.name, division: t.division, state: t.state, prestige: t.prestige,
+        teamId: t.id, teamName: t.name, division: t.division, state: t.state, city: t.city, prestige: t.prestige,
         isUserTeam: t.id === state.save.coachTeamId,
         coach: {
           id: coach.id, name: coach.name, archetype: coach.archetype, background: coach.background,

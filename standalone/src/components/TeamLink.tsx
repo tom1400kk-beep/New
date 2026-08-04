@@ -70,7 +70,7 @@ export default function TeamLink({ teamId, name }: { teamId: string; name: strin
               <>
                 <h2>{profile.name}</h2>
                 <p className="text-muted">
-                  {profile.conferenceName ?? "Independent"} · {profile.division} · {profile.state}
+                  {profile.conferenceName ?? "Independent"} · {profile.division} · {profile.city ? `${profile.city}, ${profile.state}` : profile.state}
                 </p>
 
                 <div className="player-detail-grid">

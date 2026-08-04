@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 import { PRIORITY_LABELS } from "../engine/priorities";
+import USMap from "../components/USMap";
 
 function sourceLabel(source: string): string {
   if (source === "JUCO") return "JUCO";
@@ -56,14 +57,42 @@ const ORIGIN_LABELS: Record<string, string> = {
   HIGH_SCHOOL: "High School", JUCO: "Junior College", INTERNATIONAL: "International",
 };
 
+interface Column {
+  key: string;
+  label: string;
+  getValue: (p: any) => string | number;
+  numeric?: boolean;
+}
+
+const COLUMNS: Column[] = [
+  { key: "name", label: "Name", getValue: (p) => `${p.lastName} ${p.firstName}` },
+  { key: "position", label: "Pos", getValue: (p) => p.position },
+  { key: "starRating", label: "Stars", getValue: (p) => p.starRating, numeric: true },
+  { key: "hometownState", label: "Home", getValue: (p) => p.hometownState ?? p.countryOfOrigin ?? "" },
+  { key: "source", label: "Source", getValue: (p) => sourceLabel(p.source) },
+  { key: "scoring", label: "Scoring", getValue: (p) => p.scouted.scoring, numeric: true },
+  { key: "defense", label: "Defense", getValue: (p) => p.scouted.defense, numeric: true },
+  { key: "characterRating", label: "Character*", getValue: (p) => p.scouted.characterRating, numeric: true },
+  { key: "disciplineRating", label: "Discipline*", getValue: (p) => p.scouted.disciplineRating, numeric: true },
+  { key: "interestLevel", label: "Interest", getValue: (p) => p.interestLevel, numeric: true },
+  { key: "pointsInvested", label: "Points", getValue: (p) => p.pointsInvested, numeric: true },
+];
+
 export default function RecruitingPage() {
   const { activeSaveId } = useSave();
   const [board, setBoard] = useState<any[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
+  const [stateFilter, setStateFilter] = useState<string>("ALL");
   const [selectedRecruit, setSelectedRecruit] = useState<any>(null);
+  const [sortKey, setSortKey] = useState("interestLevel");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [myTeam, setMyTeam] = useState<any>(null);
 
   async function refresh() {
-    if (activeSaveId) setBoard(await api.getRecruitingBoard(activeSaveId));
+    if (!activeSaveId) return;
+    setBoard(await api.getRecruitingBoard(activeSaveId));
+    const dash = await api.getDashboard(activeSaveId);
+    setMyTeam(dash.team ?? null);
   }
 
   useEffect(() => {
@@ -77,11 +106,54 @@ export default function RecruitingPage() {
     await refresh();
   }
 
-  const filtered = board.filter((p) => sourceFilter === "ALL" || p.source === sourceFilter);
+  function handleSort(column: Column) {
+    if (sortKey === column.key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(column.key);
+      setSortDir(column.numeric ? "desc" : "asc");
+    }
+  }
+
+  const availableStates = useMemo(
+    () => [...new Set(board.map((p) => p.hometownState).filter(Boolean))].sort() as string[],
+    [board],
+  );
+
+  const filtered = useMemo(() => {
+    const base = board.filter((p) =>
+      (sourceFilter === "ALL" || p.source === sourceFilter) &&
+      (stateFilter === "ALL" || p.hometownState === stateFilter),
+    );
+    const column = COLUMNS.find((c) => c.key === sortKey) ?? COLUMNS[0];
+    const sorted = [...base].sort((a, b) => {
+      const av = column.getValue(a);
+      const bv = column.getValue(b);
+      if (typeof av === "number" && typeof bv === "number") return av - bv;
+      return String(av).localeCompare(String(bv));
+    });
+    if (sortDir === "desc") sorted.reverse();
+    return sorted;
+  }, [board, sourceFilter, stateFilter, sortKey, sortDir]);
 
   return (
     <div>
       <h1>Recruiting</h1>
+
+      {myTeam?.city && (
+        <div className="card">
+          <h3 style={{ marginTop: 0 }}>Recruiting Map</h3>
+          <p className="text-muted" style={{ marginTop: -8 }}>
+            States are colored by distance from {myTeam.city}, {myTeam.state} — click a state to filter the board below.
+          </p>
+          <USMap
+            homeCity={myTeam.city} homeState={myTeam.state}
+            selectedState={stateFilter === "ALL" ? null : stateFilter}
+            onSelectState={(s) => setStateFilter((cur) => (cur === s ? "ALL" : s))}
+          />
+        </div>
+      )}
+
       <div className="card">
         <label>Source: </label>
         <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
@@ -90,14 +162,30 @@ export default function RecruitingPage() {
           <option value="JUCO">JUCO</option>
           <option value="INTERNATIONAL">International</option>
         </select>
+        {" "}
+        <label style={{ marginLeft: 12 }}>State: </label>
+        <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value)}>
+          <option value="ALL">All</option>
+          {availableStates.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
       </div>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead>
             <tr>
-              <th>Name</th><th>Pos</th><th>Stars</th><th>Home</th><th>Source</th>
+              {COLUMNS.map((c) => (
+                <th
+                  key={c.key}
+                  className={`sortable${sortKey === c.key ? " active" : ""}`}
+                  onClick={() => handleSort(c)}
+                >
+                  {c.label}{sortKey === c.key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+              ))}
               <th>Priorities</th>
-              <th>Scoring</th><th>Defense</th><th>Character*</th><th>Discipline*</th><th>Interest</th><th>Points</th><th></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -119,13 +207,13 @@ export default function RecruitingPage() {
                 </td>
                 <td className={pipelineClass(p)} title={pipelineTitle(p)}>{homeLabel(p)}</td>
                 <td>{sourceLabel(p.source)}</td>
-                <td className="text-muted" style={{ fontFamily: "inherit", whiteSpace: "nowrap" }}>{priorityLabel(p)}</td>
                 <td>{p.scouted.scoring}</td>
                 <td>{p.scouted.defense}</td>
                 <td>{p.scouted.characterRating}</td>
                 <td>{p.scouted.disciplineRating}</td>
                 <td>{p.interestLevel}</td>
                 <td>{p.pointsInvested}</td>
+                <td className="text-muted" style={{ fontFamily: "inherit", whiteSpace: "nowrap" }}>{priorityLabel(p)}</td>
                 <td><button className="secondary" onClick={() => pursue(p.id)}>Pursue (15 pts)</button></td>
               </tr>
             ))}

@@ -24,6 +24,7 @@ export interface TeamRow {
   id: string;
   name: string;
   state: string;
+  city: string;
   division: string;
   conferenceId: string;
   prestige: number;

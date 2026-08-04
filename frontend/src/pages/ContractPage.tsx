@@ -327,7 +327,7 @@ export default function ContractPage() {
         <h3>Salary & Arena</h3>
         <p>
           Current salary: <strong>{fmtMoney(coach.currentSalary)}/yr</strong>
-          {" "}· {team.state} — {colLabel(team.costOfLivingIndex)} cost of living
+          {" "}· {team.city ? `${team.city}, ${team.state}` : team.state} — {colLabel(team.costOfLivingIndex)} cost of living
         </p>
         <button onClick={handleRequestRaise} disabled={askingRaise || coach.raiseRequestedThisSeason}>
           {coach.raiseRequestedThisSeason ? "Already asked this season" : askingRaise ? "Asking..." : "Ask for a Raise"}

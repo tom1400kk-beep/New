@@ -66,6 +66,7 @@ model Team {
   saveGameId         String
   name               String
   state              String
+  city               String   @default("") // real US city the school is in, e.g. "Durham" for Duke
   division           String
   conference         Conference @relation(fields: [conferenceId], references: [id], onDelete: Cascade)
   conferenceId       String

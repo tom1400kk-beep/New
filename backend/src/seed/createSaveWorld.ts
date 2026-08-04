@@ -9,6 +9,9 @@ import { weightedStateList } from "../engine/regions";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { capHighSchoolIfNeeded } from "../engine/highSchools";
+import { CITIES_BY_STATE } from "../engine/cities";
+import { pickTeamCity } from "../engine/geo";
+import { D1_TEAM_CITIES } from "../data/teamCities";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
 import { generatePreseasonTournaments, type PreseasonGenerationResult } from "../season/preseasonTournaments";
@@ -82,7 +85,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
     currentSalary?: number;
   }[] = [];
   const teamRows: {
-    id: string; saveGameId: string; name: string; state: string; division: string; conferenceId: string;
+    id: string; saveGameId: string; name: string; state: string; city: string; division: string; conferenceId: string;
     prestige: number; nilBudget: number; facilitiesRating: number; internationalScoutingRating: number; academicReputation: number;
     baseSalary: number; venueCapacity: number; isPlayerControlled: boolean; headCoachId: string; athleticDirectorId: string;
   }[] = [];
@@ -124,6 +127,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       if (isPlayerControlled) foundChosenTeam = true;
       const baseSalary = salaryForTeam(rng, prestige, div);
       const state = toStateAbbr(member.state);
+      const city = pickTeamCity(rng, member.school, state, D1_TEAM_CITIES, CITIES_BY_STATE);
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
@@ -178,7 +182,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       });
 
       teamRows.push({
-        id: teamId, saveGameId: saveGame.id, name: member.school, state, division: div, conferenceId,
+        id: teamId, saveGameId: saveGame.id, name: member.school, state, city, division: div, conferenceId,
         prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });

@@ -7,6 +7,9 @@ import { weightedStateList } from "../engine/regions";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { capHighSchoolIfNeeded } from "../engine/highSchools";
+import { CITIES_BY_STATE } from "../engine/cities";
+import { pickTeamCity } from "../engine/geo";
+import { D1_TEAM_CITIES } from "../data/teamCities";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
@@ -85,6 +88,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       if (isPlayerControlled) chosenTeamId = teamId;
       const baseSalary = salaryForTeam(rng, prestige, div);
       const state = toStateAbbr(member.state);
+      const city = pickTeamCity(rng, member.school, state, D1_TEAM_CITIES, CITIES_BY_STATE);
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
@@ -142,7 +146,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       });
 
       teams.push({
-        id: teamId, name: member.school, state, division: div, conferenceId,
+        id: teamId, name: member.school, state, city, division: div, conferenceId,
         prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity,
         arenaUpgradeRequestedThisSeason: false, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,

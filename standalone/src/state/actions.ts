@@ -133,17 +133,18 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     : 0;
 
   const prospectInput: RecruitingProspectInput = {
-    position: prospect.position, hometownState: prospect.hometownState, countryOfOrigin: prospect.countryOfOrigin,
+    position: prospect.position, hometownState: prospect.hometownState, hometownCity: prospect.hometownCity, countryOfOrigin: prospect.countryOfOrigin,
     characterRating: prospect.characterRating, scoring: prospect.scoring, threePoint: prospect.threePoint,
     finishing: prospect.finishing, playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
     starRating: prospect.starRating, priorities: parsePriorities(prospect.prioritiesJson),
     source: prospect.source,
     playedEYBL: prospect.playedEYBL,
+    eyblTeam: prospect.eyblTeam,
   };
 
   const teamInput: RecruitingTeamInput = {
     division: team.division as Division,
-    state: team.state, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
+    state: team.state, city: team.city, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
     academicReputation: team.academicReputation, internationalScoutingRating: team.internationalScoutingRating,
     recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant, developmentSkill: coach.developmentSkill,
     offenseSkill: coach.offenseSkill, defenseSkill: coach.defenseSkill, hotSeatLevel: coach.hotSeatLevel,
@@ -256,7 +257,7 @@ export function pursueTransfer(state: WorldState, playerId: string, points: numb
 
   const overall = playerOverall(player);
   const prospectInput: RecruitingProspectInput = {
-    position: player.position, hometownState: player.hometownState, countryOfOrigin: player.countryOfOrigin,
+    position: player.position, hometownState: player.hometownState, hometownCity: player.hometownCity, countryOfOrigin: player.countryOfOrigin,
     characterRating: player.characterRating, scoring: player.scoring, threePoint: player.threePoint,
     finishing: player.finishing, playmaking: player.playmaking, rebounding: player.rebounding, defense: player.defense,
     starRating: clamp(Math.round(overall / 20), 1, 5), priorities: parsePriorities(player.prioritiesJson),
@@ -265,7 +266,7 @@ export function pursueTransfer(state: WorldState, playerId: string, points: numb
 
   const teamInput: RecruitingTeamInput = {
     division: team.division as Division,
-    state: team.state, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
+    state: team.state, city: team.city, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
     academicReputation: team.academicReputation, internationalScoutingRating: team.internationalScoutingRating,
     recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant, developmentSkill: coach.developmentSkill,
     offenseSkill: coach.offenseSkill, defenseSkill: coach.defenseSkill, hotSeatLevel: coach.hotSeatLevel,
