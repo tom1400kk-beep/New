@@ -31,7 +31,26 @@ export function loadLeagueData(division: Division): RawLeagueFile {
   if (!existsSync(filePath)) {
     throw new Error(`No league data seeded yet for ${division} (expected ${filePath})`);
   }
-  return JSON.parse(readFileSync(filePath, "utf-8"));
+  const data: RawLeagueFile = JSON.parse(readFileSync(filePath, "utf-8"));
+  assertNoDuplicateSchools(division, data);
+  return data;
+}
+
+// A school listed under two conferences would spawn two separate programs for the
+// same real-world team once world creation runs — catch that at load time, not in-game.
+function assertNoDuplicateSchools(division: Division, data: RawLeagueFile): void {
+  const seenIn = new Map<string, string>();
+  for (const conf of data.conferences) {
+    for (const member of conf.members) {
+      const prior = seenIn.get(member.school);
+      if (prior) {
+        throw new Error(
+          `Duplicate school in ${FILE_BY_DIVISION[division]}: "${member.school}" appears in both "${prior}" and "${conf.name}"`
+        );
+      }
+      seenIn.set(member.school, conf.name);
+    }
+  }
 }
 
 export function divisionDataAvailable(division: Division): boolean {

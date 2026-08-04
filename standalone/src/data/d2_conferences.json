@@ -17,412 +17,1513 @@
       "name": "California Collegiate Athletic Association",
       "abbreviation": "CCAA",
       "members": [
-        { "school": "Cal Poly Humboldt", "state": "California", "prestigeTier": 2 },
-        { "school": "Cal State Dominguez Hills", "state": "California", "prestigeTier": 2 },
-        { "school": "Cal State East Bay", "state": "California", "prestigeTier": 2 },
-        { "school": "Cal State Los Angeles", "state": "California", "prestigeTier": 2 },
-        { "school": "Cal State Monterey Bay", "state": "California", "prestigeTier": 2 },
-        { "school": "Cal State San Bernardino", "state": "California", "prestigeTier": 4 },
-        { "school": "Cal State San Marcos", "state": "California", "prestigeTier": 1 },
-        { "school": "Chico State", "state": "California", "prestigeTier": 3 },
-        { "school": "San Francisco State", "state": "California", "prestigeTier": 2 },
-        { "school": "Sonoma State", "state": "California", "prestigeTier": 2 },
-        { "school": "Stanislaus State", "state": "California", "prestigeTier": 2 }
+        {
+          "school": "Cal Poly Humboldt",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Cal State Dominguez Hills",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Cal State East Bay",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Cal State Los Angeles",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Cal State Monterey Bay",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Cal State San Bernardino",
+          "state": "California",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Cal State San Marcos",
+          "state": "California",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Chico State",
+          "state": "California",
+          "prestigeTier": 3
+        },
+        {
+          "school": "San Francisco State",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Sonoma State",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Stanislaus State",
+          "state": "California",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "Central Atlantic Collegiate Conference",
       "abbreviation": "CACC",
       "members": [
-        { "school": "Caldwell University", "state": "New Jersey", "prestigeTier": 2 },
-        { "school": "Chestnut Hill College", "state": "Pennsylvania", "prestigeTier": 1 },
-        { "school": "Dominican University New York", "state": "New York", "prestigeTier": 1 },
-        { "school": "Felician University", "state": "New Jersey", "prestigeTier": 2 },
-        { "school": "Georgian Court University", "state": "New Jersey", "prestigeTier": 1 },
-        { "school": "Goldey-Beacom College", "state": "Delaware", "prestigeTier": 1 },
-        { "school": "Holy Family University", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "Jefferson University", "state": "Pennsylvania", "prestigeTier": 1 },
-        { "school": "Nyack University", "state": "New York", "prestigeTier": 1 },
-        { "school": "Post University", "state": "Connecticut", "prestigeTier": 2 },
-        { "school": "Wilmington University", "state": "Delaware", "prestigeTier": 2 }
+        {
+          "school": "Caldwell University",
+          "state": "New Jersey",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Chestnut Hill College",
+          "state": "Pennsylvania",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Dominican University New York",
+          "state": "New York",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Felician University",
+          "state": "New Jersey",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Georgian Court University",
+          "state": "New Jersey",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Goldey-Beacom College",
+          "state": "Delaware",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Holy Family University",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Jefferson University",
+          "state": "Pennsylvania",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Nyack University",
+          "state": "New York",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Post University",
+          "state": "Connecticut",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Wilmington University",
+          "state": "Delaware",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "Central Intercollegiate Athletic Association",
       "abbreviation": "CIAA",
       "members": [
-        { "school": "Bowie State University", "state": "Maryland", "prestigeTier": 3 },
-        { "school": "Chowan University", "state": "North Carolina", "prestigeTier": 1 },
-        { "school": "Claflin University", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Elizabeth City State University", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "Fayetteville State University", "state": "North Carolina", "prestigeTier": 3 },
-        { "school": "Johnson C. Smith University", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "Lincoln University (PA)", "state": "Pennsylvania", "prestigeTier": 1 },
-        { "school": "Livingstone College", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "Saint Augustine's University", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "Shaw University", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "Virginia State University", "state": "Virginia", "prestigeTier": 3 },
-        { "school": "Virginia Union University", "state": "Virginia", "prestigeTier": 4 },
-        { "school": "Winston-Salem State University", "state": "North Carolina", "prestigeTier": 3 }
+        {
+          "school": "Bowie State University",
+          "state": "Maryland",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Chowan University",
+          "state": "North Carolina",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Claflin University",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Elizabeth City State University",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Fayetteville State University",
+          "state": "North Carolina",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Johnson C. Smith University",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Lincoln University (PA)",
+          "state": "Pennsylvania",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Livingstone College",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Saint Augustine's University",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Shaw University",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Virginia State University",
+          "state": "Virginia",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Virginia Union University",
+          "state": "Virginia",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Winston-Salem State University",
+          "state": "North Carolina",
+          "prestigeTier": 3
+        }
       ]
     },
     {
       "name": "Conference Carolinas",
       "abbreviation": "CC",
       "members": [
-        { "school": "Anderson University", "state": "South Carolina", "prestigeTier": 3 },
-        { "school": "Barton College", "state": "North Carolina", "prestigeTier": 3 },
-        { "school": "Belmont Abbey College", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "Coker University", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Converse University", "state": "South Carolina", "prestigeTier": 1 },
-        { "school": "Emmanuel University", "state": "Georgia", "prestigeTier": 1 },
-        { "school": "Erskine College", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Francis Marion University", "state": "South Carolina", "prestigeTier": 3 },
-        { "school": "King University", "state": "Tennessee", "prestigeTier": 2 },
-        { "school": "Lees-McRae College", "state": "North Carolina", "prestigeTier": 1 },
-        { "school": "Limestone University", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Mars Hill University", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "North Greenville University", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Queens University of Charlotte", "state": "North Carolina", "prestigeTier": 3 },
-        { "school": "UNC Pembroke", "state": "North Carolina", "prestigeTier": 3 }
+        {
+          "school": "Anderson University",
+          "state": "South Carolina",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Barton College",
+          "state": "North Carolina",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Belmont Abbey College",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Coker University",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Converse University",
+          "state": "South Carolina",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Emmanuel University",
+          "state": "Georgia",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Erskine College",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Francis Marion University",
+          "state": "South Carolina",
+          "prestigeTier": 3
+        },
+        {
+          "school": "King University",
+          "state": "Tennessee",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Lees-McRae College",
+          "state": "North Carolina",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Limestone University",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Mars Hill University",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "North Greenville University",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Queens University of Charlotte",
+          "state": "North Carolina",
+          "prestigeTier": 3
+        },
+        {
+          "school": "UNC Pembroke",
+          "state": "North Carolina",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Ferrum College",
+          "state": "Virginia",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "East Coast Conference",
       "abbreviation": "ECC",
       "members": [
-        { "school": "College of Staten Island", "state": "New York", "prestigeTier": 1 },
-        { "school": "Daemen University", "state": "New York", "prestigeTier": 2 },
-        { "school": "D'Youville University", "state": "New York", "prestigeTier": 1 },
-        { "school": "Mercy University", "state": "New York", "prestigeTier": 1 },
-        { "school": "Molloy University", "state": "New York", "prestigeTier": 2 },
-        { "school": "Queens College (CUNY)", "state": "New York", "prestigeTier": 1 },
-        { "school": "Roberts Wesleyan University", "state": "New York", "prestigeTier": 2 },
-        { "school": "St. Thomas Aquinas College", "state": "New York", "prestigeTier": 2 },
-        { "school": "University of the District of Columbia", "state": "District of Columbia", "prestigeTier": 1 }
+        {
+          "school": "College of Staten Island",
+          "state": "New York",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Daemen University",
+          "state": "New York",
+          "prestigeTier": 2
+        },
+        {
+          "school": "D'Youville University",
+          "state": "New York",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Mercy University",
+          "state": "New York",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Molloy University",
+          "state": "New York",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Queens College (CUNY)",
+          "state": "New York",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Roberts Wesleyan University",
+          "state": "New York",
+          "prestigeTier": 2
+        },
+        {
+          "school": "St. Thomas Aquinas College",
+          "state": "New York",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of the District of Columbia",
+          "state": "District of Columbia",
+          "prestigeTier": 1
+        }
       ]
     },
     {
       "name": "Great American Conference",
       "abbreviation": "GAC",
       "members": [
-        { "school": "Arkansas Tech University", "state": "Arkansas", "prestigeTier": 2 },
-        { "school": "East Central University", "state": "Oklahoma", "prestigeTier": 1 },
-        { "school": "Harding University", "state": "Arkansas", "prestigeTier": 3 },
-        { "school": "Henderson State University", "state": "Arkansas", "prestigeTier": 3 },
-        { "school": "Northeastern State University", "state": "Oklahoma", "prestigeTier": 2 },
-        { "school": "Northwestern Oklahoma State University", "state": "Oklahoma", "prestigeTier": 1 },
-        { "school": "Oklahoma Baptist University", "state": "Oklahoma", "prestigeTier": 3 },
-        { "school": "Ouachita Baptist University", "state": "Arkansas", "prestigeTier": 2 },
-        { "school": "Southeastern Oklahoma State University", "state": "Oklahoma", "prestigeTier": 2 },
-        { "school": "Southern Arkansas University", "state": "Arkansas", "prestigeTier": 2 },
-        { "school": "Southern Nazarene University", "state": "Oklahoma", "prestigeTier": 2 },
-        { "school": "University of Arkansas-Fort Smith", "state": "Arkansas", "prestigeTier": 2 },
-        { "school": "University of Arkansas-Monticello", "state": "Arkansas", "prestigeTier": 1 }
+        {
+          "school": "Arkansas Tech University",
+          "state": "Arkansas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "East Central University",
+          "state": "Oklahoma",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Harding University",
+          "state": "Arkansas",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Henderson State University",
+          "state": "Arkansas",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Northeastern State University",
+          "state": "Oklahoma",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Northwestern Oklahoma State University",
+          "state": "Oklahoma",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Oklahoma Baptist University",
+          "state": "Oklahoma",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Ouachita Baptist University",
+          "state": "Arkansas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Southeastern Oklahoma State University",
+          "state": "Oklahoma",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Southern Arkansas University",
+          "state": "Arkansas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Southern Nazarene University",
+          "state": "Oklahoma",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Arkansas-Fort Smith",
+          "state": "Arkansas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Arkansas-Monticello",
+          "state": "Arkansas",
+          "prestigeTier": 1
+        }
       ]
     },
     {
       "name": "Great Lakes Intercollegiate Athletic Conference",
       "abbreviation": "GLIAC",
       "members": [
-        { "school": "Davenport University", "state": "Michigan", "prestigeTier": 2 },
-        { "school": "Ferris State University", "state": "Michigan", "prestigeTier": 4 },
-        { "school": "Grand Valley State University", "state": "Michigan", "prestigeTier": 5 },
-        { "school": "Lake Superior State University", "state": "Michigan", "prestigeTier": 1 },
-        { "school": "Michigan Technological University", "state": "Michigan", "prestigeTier": 2 },
-        { "school": "Northern Michigan University", "state": "Michigan", "prestigeTier": 3 },
-        { "school": "Northwood University", "state": "Michigan", "prestigeTier": 2 },
-        { "school": "Purdue University Northwest", "state": "Indiana", "prestigeTier": 2 },
-        { "school": "Roosevelt University", "state": "Illinois", "prestigeTier": 1 },
-        { "school": "Saginaw Valley State University", "state": "Michigan", "prestigeTier": 3 },
-        { "school": "Wayne State University", "state": "Michigan", "prestigeTier": 3 },
-        { "school": "University of Wisconsin-Parkside", "state": "Wisconsin", "prestigeTier": 1 }
+        {
+          "school": "Davenport University",
+          "state": "Michigan",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Ferris State University",
+          "state": "Michigan",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Grand Valley State University",
+          "state": "Michigan",
+          "prestigeTier": 5
+        },
+        {
+          "school": "Lake Superior State University",
+          "state": "Michigan",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Michigan Technological University",
+          "state": "Michigan",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Northern Michigan University",
+          "state": "Michigan",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Northwood University",
+          "state": "Michigan",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Purdue University Northwest",
+          "state": "Indiana",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Roosevelt University",
+          "state": "Illinois",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Saginaw Valley State University",
+          "state": "Michigan",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Wayne State University",
+          "state": "Michigan",
+          "prestigeTier": 3
+        },
+        {
+          "school": "University of Wisconsin-Parkside",
+          "state": "Wisconsin",
+          "prestigeTier": 1
+        }
       ]
     },
     {
       "name": "Great Lakes Valley Conference",
       "abbreviation": "GLVC",
       "members": [
-        { "school": "Drury University", "state": "Missouri", "prestigeTier": 4 },
-        { "school": "University of Illinois Springfield", "state": "Illinois", "prestigeTier": 1 },
-        { "school": "University of Indianapolis", "state": "Indiana", "prestigeTier": 5 },
-        { "school": "Lewis University", "state": "Illinois", "prestigeTier": 3 },
-        { "school": "Lincoln University (MO)", "state": "Missouri", "prestigeTier": 1 },
-        { "school": "Maryville University", "state": "Missouri", "prestigeTier": 2 },
-        { "school": "McKendree University", "state": "Illinois", "prestigeTier": 2 },
-        { "school": "Truman State University", "state": "Missouri", "prestigeTier": 3 },
-        { "school": "Quincy University", "state": "Illinois", "prestigeTier": 2 },
-        { "school": "Rockhurst University", "state": "Missouri", "prestigeTier": 2 },
-        { "school": "Southwest Baptist University", "state": "Missouri", "prestigeTier": 2 },
-        { "school": "University of Missouri-St. Louis", "state": "Missouri", "prestigeTier": 2 },
-        { "school": "Missouri University of Science and Technology", "state": "Missouri", "prestigeTier": 2 },
-        { "school": "William Jewell College", "state": "Missouri", "prestigeTier": 1 }
+        {
+          "school": "Drury University",
+          "state": "Missouri",
+          "prestigeTier": 4
+        },
+        {
+          "school": "University of Illinois Springfield",
+          "state": "Illinois",
+          "prestigeTier": 1
+        },
+        {
+          "school": "University of Indianapolis",
+          "state": "Indiana",
+          "prestigeTier": 5
+        },
+        {
+          "school": "Lewis University",
+          "state": "Illinois",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Lincoln University (MO)",
+          "state": "Missouri",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Maryville University",
+          "state": "Missouri",
+          "prestigeTier": 2
+        },
+        {
+          "school": "McKendree University",
+          "state": "Illinois",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Truman State University",
+          "state": "Missouri",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Quincy University",
+          "state": "Illinois",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Rockhurst University",
+          "state": "Missouri",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Southwest Baptist University",
+          "state": "Missouri",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Missouri-St. Louis",
+          "state": "Missouri",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Missouri University of Science and Technology",
+          "state": "Missouri",
+          "prestigeTier": 2
+        },
+        {
+          "school": "William Jewell College",
+          "state": "Missouri",
+          "prestigeTier": 1
+        }
       ]
     },
     {
       "name": "Great Midwest Athletic Conference",
       "abbreviation": "G-MAC",
       "members": [
-        { "school": "Ashland University", "state": "Ohio", "prestigeTier": 4 },
-        { "school": "Cedarville University", "state": "Ohio", "prestigeTier": 3 },
-        { "school": "Davis & Elkins College", "state": "West Virginia", "prestigeTier": 1 },
-        { "school": "University of Findlay", "state": "Ohio", "prestigeTier": 3 },
-        { "school": "Kentucky Wesleyan College", "state": "Kentucky", "prestigeTier": 5 },
-        { "school": "Lake Erie College", "state": "Ohio", "prestigeTier": 1 },
-        { "school": "Malone University", "state": "Ohio", "prestigeTier": 2 },
-        { "school": "Ohio Dominican University", "state": "Ohio", "prestigeTier": 2 },
-        { "school": "Thomas More University", "state": "Kentucky", "prestigeTier": 1 },
-        { "school": "Tiffin University", "state": "Ohio", "prestigeTier": 2 },
-        { "school": "Trevecca Nazarene University", "state": "Tennessee", "prestigeTier": 2 },
-        { "school": "Walsh University", "state": "Ohio", "prestigeTier": 2 }
+        {
+          "school": "Ashland University",
+          "state": "Ohio",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Cedarville University",
+          "state": "Ohio",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Davis & Elkins College",
+          "state": "West Virginia",
+          "prestigeTier": 1
+        },
+        {
+          "school": "University of Findlay",
+          "state": "Ohio",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Kentucky Wesleyan College",
+          "state": "Kentucky",
+          "prestigeTier": 5
+        },
+        {
+          "school": "Lake Erie College",
+          "state": "Ohio",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Malone University",
+          "state": "Ohio",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Ohio Dominican University",
+          "state": "Ohio",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Thomas More University",
+          "state": "Kentucky",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Tiffin University",
+          "state": "Ohio",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Trevecca Nazarene University",
+          "state": "Tennessee",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Walsh University",
+          "state": "Ohio",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "Great Northwest Athletic Conference",
       "abbreviation": "GNAC",
       "members": [
-        { "school": "University of Alaska Anchorage", "state": "Alaska", "prestigeTier": 2 },
-        { "school": "University of Alaska Fairbanks", "state": "Alaska", "prestigeTier": 1 },
-        { "school": "Central Washington University", "state": "Washington", "prestigeTier": 2 },
-        { "school": "Montana State University Billings", "state": "Montana", "prestigeTier": 1 },
-        { "school": "Northwest Nazarene University", "state": "Idaho", "prestigeTier": 3 },
-        { "school": "Saint Martin's University", "state": "Washington", "prestigeTier": 1 },
-        { "school": "Seattle Pacific University", "state": "Washington", "prestigeTier": 3 },
-        { "school": "Simon Fraser University", "state": "British Columbia (Canada)", "prestigeTier": 2 },
-        { "school": "Western Oregon University", "state": "Oregon", "prestigeTier": 2 }
+        {
+          "school": "University of Alaska Anchorage",
+          "state": "Alaska",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Alaska Fairbanks",
+          "state": "Alaska",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Central Washington University",
+          "state": "Washington",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Montana State University Billings",
+          "state": "Montana",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Northwest Nazarene University",
+          "state": "Idaho",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Saint Martin's University",
+          "state": "Washington",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Seattle Pacific University",
+          "state": "Washington",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Simon Fraser University",
+          "state": "British Columbia (Canada)",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Western Oregon University",
+          "state": "Oregon",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "Gulf South Conference",
       "abbreviation": "GSC",
       "members": [
-        { "school": "University of Alabama in Huntsville", "state": "Alabama", "prestigeTier": 3 },
-        { "school": "Auburn University at Montgomery", "state": "Alabama", "prestigeTier": 1 },
-        { "school": "Christian Brothers University", "state": "Tennessee", "prestigeTier": 2 },
-        { "school": "Delta State University", "state": "Mississippi", "prestigeTier": 3 },
-        { "school": "Mississippi College", "state": "Mississippi", "prestigeTier": 2 },
-        { "school": "University of Montevallo", "state": "Alabama", "prestigeTier": 2 },
-        { "school": "University of North Georgia", "state": "Georgia", "prestigeTier": 1 },
-        { "school": "Shorter University", "state": "Georgia", "prestigeTier": 1 },
-        { "school": "Union University", "state": "Tennessee", "prestigeTier": 2 },
-        { "school": "University of West Alabama", "state": "Alabama", "prestigeTier": 1 },
-        { "school": "University of West Florida", "state": "Florida", "prestigeTier": 2 },
-        { "school": "University of West Georgia", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Valdosta State University", "state": "Georgia", "prestigeTier": 3 }
+        {
+          "school": "University of Alabama in Huntsville",
+          "state": "Alabama",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Auburn University at Montgomery",
+          "state": "Alabama",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Christian Brothers University",
+          "state": "Tennessee",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Delta State University",
+          "state": "Mississippi",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Mississippi College",
+          "state": "Mississippi",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Montevallo",
+          "state": "Alabama",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of North Georgia",
+          "state": "Georgia",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Shorter University",
+          "state": "Georgia",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Union University",
+          "state": "Tennessee",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of West Alabama",
+          "state": "Alabama",
+          "prestigeTier": 1
+        },
+        {
+          "school": "University of West Florida",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of West Georgia",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Valdosta State University",
+          "state": "Georgia",
+          "prestigeTier": 3
+        }
       ]
     },
     {
       "name": "Lone Star Conference",
       "abbreviation": "LSC",
       "members": [
-        { "school": "Angelo State University", "state": "Texas", "prestigeTier": 3 },
-        { "school": "Cameron University", "state": "Oklahoma", "prestigeTier": 2 },
-        { "school": "Eastern New Mexico University", "state": "New Mexico", "prestigeTier": 2 },
-        { "school": "Lubbock Christian University", "state": "Texas", "prestigeTier": 2 },
-        { "school": "Midwestern State University", "state": "Texas", "prestigeTier": 3 },
-        { "school": "Oklahoma Christian University", "state": "Oklahoma", "prestigeTier": 2 },
-        { "school": "St. Edward's University", "state": "Texas", "prestigeTier": 2 },
-        { "school": "St. Mary's University", "state": "Texas", "prestigeTier": 2 },
-        { "school": "Texas A&M International University", "state": "Texas", "prestigeTier": 2 },
-        { "school": "Texas A&M University-Kingsville", "state": "Texas", "prestigeTier": 2 },
-        { "school": "Texas Woman's University", "state": "Texas", "prestigeTier": 1 },
-        { "school": "West Texas A&M University", "state": "Texas", "prestigeTier": 5 },
-        { "school": "Western New Mexico University", "state": "New Mexico", "prestigeTier": 2 }
+        {
+          "school": "Angelo State University",
+          "state": "Texas",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Cameron University",
+          "state": "Oklahoma",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Eastern New Mexico University",
+          "state": "New Mexico",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Lubbock Christian University",
+          "state": "Texas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Midwestern State University",
+          "state": "Texas",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Oklahoma Christian University",
+          "state": "Oklahoma",
+          "prestigeTier": 2
+        },
+        {
+          "school": "St. Edward's University",
+          "state": "Texas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "St. Mary's University",
+          "state": "Texas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Texas A&M International University",
+          "state": "Texas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Texas A&M University-Kingsville",
+          "state": "Texas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Texas Woman's University",
+          "state": "Texas",
+          "prestigeTier": 1
+        },
+        {
+          "school": "West Texas A&M University",
+          "state": "Texas",
+          "prestigeTier": 5
+        },
+        {
+          "school": "Western New Mexico University",
+          "state": "New Mexico",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "Mid-America Intercollegiate Athletics Association",
       "abbreviation": "MIAA",
       "members": [
-        { "school": "University of Central Missouri", "state": "Missouri", "prestigeTier": 5 },
-        { "school": "Emporia State University", "state": "Kansas", "prestigeTier": 3 },
-        { "school": "Fort Hays State University", "state": "Kansas", "prestigeTier": 4 },
-        { "school": "Missouri Southern State University", "state": "Missouri", "prestigeTier": 2 },
-        { "school": "Missouri Western State University", "state": "Missouri", "prestigeTier": 2 },
-        { "school": "University of Nebraska-Kearney", "state": "Nebraska", "prestigeTier": 3 },
-        { "school": "Newman University", "state": "Kansas", "prestigeTier": 2 },
-        { "school": "Northwest Missouri State University", "state": "Missouri", "prestigeTier": 5 },
-        { "school": "Pittsburg State University", "state": "Kansas", "prestigeTier": 4 },
-        { "school": "Rogers State University", "state": "Oklahoma", "prestigeTier": 1 },
-        { "school": "Washburn University", "state": "Kansas", "prestigeTier": 3 }
+        {
+          "school": "University of Central Missouri",
+          "state": "Missouri",
+          "prestigeTier": 5
+        },
+        {
+          "school": "Emporia State University",
+          "state": "Kansas",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Fort Hays State University",
+          "state": "Kansas",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Missouri Southern State University",
+          "state": "Missouri",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Missouri Western State University",
+          "state": "Missouri",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Nebraska-Kearney",
+          "state": "Nebraska",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Newman University",
+          "state": "Kansas",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Northwest Missouri State University",
+          "state": "Missouri",
+          "prestigeTier": 5
+        },
+        {
+          "school": "Pittsburg State University",
+          "state": "Kansas",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Rogers State University",
+          "state": "Oklahoma",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Washburn University",
+          "state": "Kansas",
+          "prestigeTier": 3
+        }
       ]
     },
     {
       "name": "Mountain East Conference",
       "abbreviation": "MEC",
       "members": [
-        { "school": "Concord University", "state": "West Virginia", "prestigeTier": 1 },
-        { "school": "Fairmont State University", "state": "West Virginia", "prestigeTier": 3 },
-        { "school": "Frostburg State University", "state": "Maryland", "prestigeTier": 1 },
-        { "school": "Glenville State University", "state": "West Virginia", "prestigeTier": 2 },
-        { "school": "University of Charleston", "state": "West Virginia", "prestigeTier": 3 },
-        { "school": "West Liberty University", "state": "West Virginia", "prestigeTier": 4 },
-        { "school": "West Virginia State University", "state": "West Virginia", "prestigeTier": 2 },
-        { "school": "West Virginia Wesleyan College", "state": "West Virginia", "prestigeTier": 2 },
-        { "school": "Wheeling University", "state": "West Virginia", "prestigeTier": 2 }
+        {
+          "school": "Concord University",
+          "state": "West Virginia",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Fairmont State University",
+          "state": "West Virginia",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Frostburg State University",
+          "state": "Maryland",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Glenville State University",
+          "state": "West Virginia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Charleston",
+          "state": "West Virginia",
+          "prestigeTier": 3
+        },
+        {
+          "school": "West Liberty University",
+          "state": "West Virginia",
+          "prestigeTier": 4
+        },
+        {
+          "school": "West Virginia State University",
+          "state": "West Virginia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "West Virginia Wesleyan College",
+          "state": "West Virginia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Wheeling University",
+          "state": "West Virginia",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "Northeast-10 Conference",
       "abbreviation": "NE10",
       "members": [
-        { "school": "Adelphi University", "state": "New York", "prestigeTier": 3 },
-        { "school": "American International College", "state": "Massachusetts", "prestigeTier": 2 },
-        { "school": "Assumption University", "state": "Massachusetts", "prestigeTier": 3 },
-        { "school": "Franklin Pierce University", "state": "New Hampshire", "prestigeTier": 2 },
-        { "school": "Pace University", "state": "New York", "prestigeTier": 2 },
-        { "school": "Saint Anselm College", "state": "New Hampshire", "prestigeTier": 3 },
-        { "school": "Saint Michael's College", "state": "Vermont", "prestigeTier": 2 },
-        { "school": "Southern Connecticut State University", "state": "Connecticut", "prestigeTier": 3 }
+        {
+          "school": "Adelphi University",
+          "state": "New York",
+          "prestigeTier": 3
+        },
+        {
+          "school": "American International College",
+          "state": "Massachusetts",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Assumption University",
+          "state": "Massachusetts",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Franklin Pierce University",
+          "state": "New Hampshire",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Pace University",
+          "state": "New York",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Saint Anselm College",
+          "state": "New Hampshire",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Saint Michael's College",
+          "state": "Vermont",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Southern Connecticut State University",
+          "state": "Connecticut",
+          "prestigeTier": 3
+        }
       ]
     },
     {
       "name": "Northern Sun Intercollegiate Conference",
       "abbreviation": "NSIC",
       "members": [
-        { "school": "Augustana University", "state": "South Dakota", "prestigeTier": 3 },
-        { "school": "Bemidji State University", "state": "Minnesota", "prestigeTier": 2 },
-        { "school": "Concordia University-St. Paul", "state": "Minnesota", "prestigeTier": 2 },
-        { "school": "Minnesota State University Mankato", "state": "Minnesota", "prestigeTier": 4 },
-        { "school": "Minnesota State University Moorhead", "state": "Minnesota", "prestigeTier": 2 },
-        { "school": "Minot State University", "state": "North Dakota", "prestigeTier": 1 },
-        { "school": "Northern State University", "state": "South Dakota", "prestigeTier": 3 },
-        { "school": "Southwest Minnesota State University", "state": "Minnesota", "prestigeTier": 1 },
-        { "school": "St. Cloud State University", "state": "Minnesota", "prestigeTier": 3 },
-        { "school": "University of Mary", "state": "North Dakota", "prestigeTier": 2 },
-        { "school": "University of Minnesota Crookston", "state": "Minnesota", "prestigeTier": 1 },
-        { "school": "University of Minnesota Duluth", "state": "Minnesota", "prestigeTier": 3 },
-        { "school": "University of Sioux Falls", "state": "South Dakota", "prestigeTier": 4 },
-        { "school": "Wayne State College", "state": "Nebraska", "prestigeTier": 2 },
-        { "school": "Winona State University", "state": "Minnesota", "prestigeTier": 3 }
+        {
+          "school": "Augustana University",
+          "state": "South Dakota",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Bemidji State University",
+          "state": "Minnesota",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Concordia University-St. Paul",
+          "state": "Minnesota",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Minnesota State University Mankato",
+          "state": "Minnesota",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Minnesota State University Moorhead",
+          "state": "Minnesota",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Minot State University",
+          "state": "North Dakota",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Northern State University",
+          "state": "South Dakota",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Southwest Minnesota State University",
+          "state": "Minnesota",
+          "prestigeTier": 1
+        },
+        {
+          "school": "St. Cloud State University",
+          "state": "Minnesota",
+          "prestigeTier": 3
+        },
+        {
+          "school": "University of Mary",
+          "state": "North Dakota",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Minnesota Crookston",
+          "state": "Minnesota",
+          "prestigeTier": 1
+        },
+        {
+          "school": "University of Minnesota Duluth",
+          "state": "Minnesota",
+          "prestigeTier": 3
+        },
+        {
+          "school": "University of Sioux Falls",
+          "state": "South Dakota",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Wayne State College",
+          "state": "Nebraska",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Winona State University",
+          "state": "Minnesota",
+          "prestigeTier": 3
+        }
       ]
     },
     {
       "name": "Pacific West Conference",
       "abbreviation": "PacWest",
       "members": [
-        { "school": "Academy of Art University", "state": "California", "prestigeTier": 1 },
-        { "school": "Azusa Pacific University", "state": "California", "prestigeTier": 2 },
-        { "school": "Biola University", "state": "California", "prestigeTier": 2 },
-        { "school": "Concordia University Irvine", "state": "California", "prestigeTier": 2 },
-        { "school": "Dominican University of California", "state": "California", "prestigeTier": 1 },
-        { "school": "Fresno Pacific University", "state": "California", "prestigeTier": 2 },
-        { "school": "University of Hawaii at Hilo", "state": "Hawaii", "prestigeTier": 2 },
-        { "school": "Hawaii Pacific University", "state": "Hawaii", "prestigeTier": 2 },
-        { "school": "Point Loma Nazarene University", "state": "California", "prestigeTier": 4 },
-        { "school": "William Jessup University", "state": "California", "prestigeTier": 1 }
+        {
+          "school": "Academy of Art University",
+          "state": "California",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Azusa Pacific University",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Biola University",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Concordia University Irvine",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Dominican University of California",
+          "state": "California",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Fresno Pacific University",
+          "state": "California",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Hawaii at Hilo",
+          "state": "Hawaii",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Hawaii Pacific University",
+          "state": "Hawaii",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Point Loma Nazarene University",
+          "state": "California",
+          "prestigeTier": 4
+        },
+        {
+          "school": "William Jessup University",
+          "state": "California",
+          "prestigeTier": 1
+        }
       ]
     },
     {
       "name": "Peach Belt Conference",
       "abbreviation": "PBC",
       "members": [
-        { "school": "Augusta University", "state": "Georgia", "prestigeTier": 3 },
-        { "school": "Clayton State University", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Columbus State University", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Georgia College & State University", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Georgia Southwestern State University", "state": "Georgia", "prestigeTier": 1 },
-        { "school": "Lander University", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "University of South Carolina Aiken", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Young Harris College", "state": "Georgia", "prestigeTier": 1 }
+        {
+          "school": "Augusta University",
+          "state": "Georgia",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Clayton State University",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Columbus State University",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Georgia College & State University",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Georgia Southwestern State University",
+          "state": "Georgia",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Lander University",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of South Carolina Aiken",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Young Harris College",
+          "state": "Georgia",
+          "prestigeTier": 1
+        }
       ]
     },
     {
       "name": "Pennsylvania State Athletic Conference",
       "abbreviation": "PSAC",
       "members": [
-        { "school": "Bloomsburg University", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "California University of Pennsylvania", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "Clarion University", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "East Stroudsburg University", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "Edinboro University", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "Gannon University", "state": "Pennsylvania", "prestigeTier": 3 },
-        { "school": "Indiana University of Pennsylvania", "state": "Pennsylvania", "prestigeTier": 3 },
-        { "school": "Kutztown University", "state": "Pennsylvania", "prestigeTier": 3 },
-        { "school": "Lock Haven University", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "Mansfield University", "state": "Pennsylvania", "prestigeTier": 1 },
-        { "school": "Mercyhurst University", "state": "Pennsylvania", "prestigeTier": 3 },
-        { "school": "Millersville University", "state": "Pennsylvania", "prestigeTier": 3 },
-        { "school": "Seton Hill University", "state": "Pennsylvania", "prestigeTier": 1 },
-        { "school": "Shippensburg University", "state": "Pennsylvania", "prestigeTier": 2 },
-        { "school": "Slippery Rock University", "state": "Pennsylvania", "prestigeTier": 3 },
-        { "school": "West Chester University", "state": "Pennsylvania", "prestigeTier": 3 }
+        {
+          "school": "Bloomsburg University",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "California University of Pennsylvania",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Clarion University",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "East Stroudsburg University",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Edinboro University",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Gannon University",
+          "state": "Pennsylvania",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Indiana University of Pennsylvania",
+          "state": "Pennsylvania",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Kutztown University",
+          "state": "Pennsylvania",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Lock Haven University",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Mansfield University",
+          "state": "Pennsylvania",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Mercyhurst University",
+          "state": "Pennsylvania",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Millersville University",
+          "state": "Pennsylvania",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Seton Hill University",
+          "state": "Pennsylvania",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Shippensburg University",
+          "state": "Pennsylvania",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Slippery Rock University",
+          "state": "Pennsylvania",
+          "prestigeTier": 3
+        },
+        {
+          "school": "West Chester University",
+          "state": "Pennsylvania",
+          "prestigeTier": 3
+        }
       ]
     },
     {
       "name": "Rocky Mountain Athletic Conference",
       "abbreviation": "RMAC",
       "members": [
-        { "school": "Adams State University", "state": "Colorado", "prestigeTier": 2 },
-        { "school": "Black Hills State University", "state": "South Dakota", "prestigeTier": 2 },
-        { "school": "Chadron State College", "state": "Nebraska", "prestigeTier": 1 },
-        { "school": "Colorado Christian University", "state": "Colorado", "prestigeTier": 3 },
-        { "school": "Colorado Mesa University", "state": "Colorado", "prestigeTier": 3 },
-        { "school": "Colorado School of Mines", "state": "Colorado", "prestigeTier": 3 },
-        { "school": "Colorado State University Pueblo", "state": "Colorado", "prestigeTier": 3 },
-        { "school": "Fort Lewis College", "state": "Colorado", "prestigeTier": 1 },
-        { "school": "Metropolitan State University of Denver", "state": "Colorado", "prestigeTier": 5 },
-        { "school": "New Mexico Highlands University", "state": "New Mexico", "prestigeTier": 1 },
-        { "school": "Regis University", "state": "Colorado", "prestigeTier": 2 },
-        { "school": "South Dakota School of Mines & Technology", "state": "South Dakota", "prestigeTier": 1 },
-        { "school": "University of Colorado Colorado Springs", "state": "Colorado", "prestigeTier": 3 },
-        { "school": "Western Colorado University", "state": "Colorado", "prestigeTier": 2 }
+        {
+          "school": "Adams State University",
+          "state": "Colorado",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Black Hills State University",
+          "state": "South Dakota",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Chadron State College",
+          "state": "Nebraska",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Colorado Christian University",
+          "state": "Colorado",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Colorado Mesa University",
+          "state": "Colorado",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Colorado School of Mines",
+          "state": "Colorado",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Colorado State University Pueblo",
+          "state": "Colorado",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Fort Lewis College",
+          "state": "Colorado",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Metropolitan State University of Denver",
+          "state": "Colorado",
+          "prestigeTier": 5
+        },
+        {
+          "school": "New Mexico Highlands University",
+          "state": "New Mexico",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Regis University",
+          "state": "Colorado",
+          "prestigeTier": 2
+        },
+        {
+          "school": "South Dakota School of Mines & Technology",
+          "state": "South Dakota",
+          "prestigeTier": 1
+        },
+        {
+          "school": "University of Colorado Colorado Springs",
+          "state": "Colorado",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Western Colorado University",
+          "state": "Colorado",
+          "prestigeTier": 2
+        }
       ]
     },
     {
       "name": "South Atlantic Conference",
       "abbreviation": "SAC",
       "members": [
-        { "school": "Carson-Newman University", "state": "Tennessee", "prestigeTier": 3 },
-        { "school": "Catawba College", "state": "North Carolina", "prestigeTier": 2 },
-        { "school": "Emory & Henry University", "state": "Virginia", "prestigeTier": 2 },
-        { "school": "Lenoir-Rhyne University", "state": "North Carolina", "prestigeTier": 3 },
-        { "school": "Lincoln Memorial University", "state": "Tennessee", "prestigeTier": 4 },
-        { "school": "University of Mount Olive", "state": "North Carolina", "prestigeTier": 1 },
-        { "school": "Newberry College", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Tusculum University", "state": "Tennessee", "prestigeTier": 3 },
-        { "school": "Wingate University", "state": "North Carolina", "prestigeTier": 3 }
+        {
+          "school": "Carson-Newman University",
+          "state": "Tennessee",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Catawba College",
+          "state": "North Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Emory & Henry University",
+          "state": "Virginia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Lenoir-Rhyne University",
+          "state": "North Carolina",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Lincoln Memorial University",
+          "state": "Tennessee",
+          "prestigeTier": 4
+        },
+        {
+          "school": "University of Mount Olive",
+          "state": "North Carolina",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Newberry College",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Tusculum University",
+          "state": "Tennessee",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Wingate University",
+          "state": "North Carolina",
+          "prestigeTier": 3
+        }
       ]
     },
     {
       "name": "Southern Intercollegiate Athletic Conference",
       "abbreviation": "SIAC",
       "members": [
-        { "school": "Albany State University", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Allen University", "state": "South Carolina", "prestigeTier": 1 },
-        { "school": "Benedict College", "state": "South Carolina", "prestigeTier": 2 },
-        { "school": "Central State University", "state": "Ohio", "prestigeTier": 2 },
-        { "school": "Clark Atlanta University", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Edward Waters University", "state": "Florida", "prestigeTier": 1 },
-        { "school": "Fort Valley State University", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Kentucky State University", "state": "Kentucky", "prestigeTier": 1 },
-        { "school": "Lane College", "state": "Tennessee", "prestigeTier": 1 },
-        { "school": "LeMoyne-Owen College", "state": "Tennessee", "prestigeTier": 1 },
-        { "school": "Miles College", "state": "Alabama", "prestigeTier": 1 },
-        { "school": "Morehouse College", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Paine College", "state": "Georgia", "prestigeTier": 1 },
-        { "school": "Savannah State University", "state": "Georgia", "prestigeTier": 2 },
-        { "school": "Spring Hill College", "state": "Alabama", "prestigeTier": 1 },
-        { "school": "Tuskegee University", "state": "Alabama", "prestigeTier": 3 },
-        { "school": "Voorhees University", "state": "South Carolina", "prestigeTier": 1 }
+        {
+          "school": "Albany State University",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Allen University",
+          "state": "South Carolina",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Benedict College",
+          "state": "South Carolina",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Central State University",
+          "state": "Ohio",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Clark Atlanta University",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Edward Waters University",
+          "state": "Florida",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Fort Valley State University",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Kentucky State University",
+          "state": "Kentucky",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Lane College",
+          "state": "Tennessee",
+          "prestigeTier": 1
+        },
+        {
+          "school": "LeMoyne-Owen College",
+          "state": "Tennessee",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Miles College",
+          "state": "Alabama",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Morehouse College",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Paine College",
+          "state": "Georgia",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Savannah State University",
+          "state": "Georgia",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Spring Hill College",
+          "state": "Alabama",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Tuskegee University",
+          "state": "Alabama",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Voorhees University",
+          "state": "South Carolina",
+          "prestigeTier": 1
+        }
       ]
     },
     {
       "name": "Sunshine State Conference",
       "abbreviation": "SSC",
       "members": [
-        { "school": "Barry University", "state": "Florida", "prestigeTier": 2 },
-        { "school": "Eckerd College", "state": "Florida", "prestigeTier": 2 },
-        { "school": "Embry-Riddle Aeronautical University", "state": "Florida", "prestigeTier": 1 },
-        { "school": "Flagler College", "state": "Florida", "prestigeTier": 2 },
-        { "school": "Florida Southern College", "state": "Florida", "prestigeTier": 4 },
-        { "school": "Florida Institute of Technology", "state": "Florida", "prestigeTier": 2 },
-        { "school": "Lynn University", "state": "Florida", "prestigeTier": 3 },
-        { "school": "Nova Southeastern University", "state": "Florida", "prestigeTier": 5 },
-        { "school": "Palm Beach Atlantic University", "state": "Florida", "prestigeTier": 2 },
-        { "school": "Rollins College", "state": "Florida", "prestigeTier": 2 },
-        { "school": "Saint Leo University", "state": "Florida", "prestigeTier": 2 },
-        { "school": "University of Tampa", "state": "Florida", "prestigeTier": 4 }
+        {
+          "school": "Barry University",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Eckerd College",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Embry-Riddle Aeronautical University",
+          "state": "Florida",
+          "prestigeTier": 1
+        },
+        {
+          "school": "Flagler College",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Florida Southern College",
+          "state": "Florida",
+          "prestigeTier": 4
+        },
+        {
+          "school": "Florida Institute of Technology",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Lynn University",
+          "state": "Florida",
+          "prestigeTier": 3
+        },
+        {
+          "school": "Nova Southeastern University",
+          "state": "Florida",
+          "prestigeTier": 5
+        },
+        {
+          "school": "Palm Beach Atlantic University",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Rollins College",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "Saint Leo University",
+          "state": "Florida",
+          "prestigeTier": 2
+        },
+        {
+          "school": "University of Tampa",
+          "state": "Florida",
+          "prestigeTier": 4
+        }
       ]
     }
   ]
