@@ -2,7 +2,7 @@ import { computeInterestGain, weeklyRecruitingPoints, type RecruitingProspectInp
 import { PRIORITY_KEYS, topPriorities, type PriorityKey, type PriorityProfile } from "../engine/priorities";
 import { clamp, randInt, mulberry32 } from "../engine/rng";
 import type { EventEffects, EventOption } from "../engine/events";
-import { meetsLegalityBar, expectedWinPct } from "../engine/career";
+import { meetsLegalityBar, expectedWinPct, generateJobOffers, type JobOpening } from "../engine/career";
 import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { costOfLivingIndex } from "../engine/costOfLiving";
@@ -372,21 +372,44 @@ export function getJobOffers(state: WorldState) {
   const myRelationships = myCoach ? parseAdRelationships(myCoach.adRelationshipsJson) : {};
   const currentTeam = state.save.coachTeamId ? state.teams.find((t) => t.id === state.save.coachTeamId) : undefined;
   const currentCol = currentTeam ? costOfLivingIndex(currentTeam.state) : null;
-  return state.teams
+
+  const aiCoachedTeams = state.teams
     .filter((t) => t.id !== state.save.coachTeamId)
     .filter((t) => {
       const c = state.coaches.find((cc) => cc.id === t.headCoachId);
-      if (!c || c.isPlayerControlled) return false;
-      // Unemployed: only fresh vacancies are real openings. Employed and
-      // browsing the market ("test the waters"): any AI-run program is fair game.
-      return !!currentTeam || (c.hotSeatLevel === 0 && c.careerWins === 0 && c.careerLosses === 0);
-    })
+      return !!c && !c.isPlayerControlled;
+    });
+
+  let eligibleTeams: typeof aiCoachedTeams;
+  if (currentTeam) {
+    // Employed and just browsing the market ("test the waters") — any
+    // AI-run program is fair game to inquire about, vacancy or not.
+    eligibleTeams = aiCoachedTeams
+      .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation, state.athleticDirectors.find((a) => a.id === t.athleticDirectorId)?.integrityStandard))
+      .filter((t) => {
+        const ad = state.athleticDirectors.find((a) => a.id === t.athleticDirectorId);
+        return !ad || adRelationshipScore(myRelationships, ad.id) > 30;
+      });
+  } else {
+    // Unemployed — every AI-run program in the league is a real candidate
+    // (not just teams whose coach happened to be fired the instant we were),
+    // gated by the same reputation/career-record ceiling the offseason
+    // engine uses, with a guaranteed floor so there's always somewhere to go.
+    const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+    const gamesCoached = (myCoach?.careerWins ?? 0) + (myCoach?.careerLosses ?? 0);
+    const careerWinPct = gamesCoached > 0 ? (myCoach!.careerWins / gamesCoached) : undefined;
+    const openings: JobOpening[] = aiCoachedTeams.map((t) => {
+      const ad = state.athleticDirectors.find((a) => a.id === t.athleticDirectorId);
+      return { teamId: t.id, prestige: t.prestige, academicReputation: t.academicReputation, athleticDirectorId: ad?.id, integrityStandard: ad?.integrityStandard };
+    });
+    const reputation = myCoach?.reputation ?? 50;
+    const offers = generateJobOffers(reputation, reputation, openings, rng, 8, myCoach?.legalityReputation ?? 75, myRelationships, careerWinPct);
+    const offerTeamIds = new Set(offers.map((o) => o.teamId));
+    eligibleTeams = aiCoachedTeams.filter((t) => offerTeamIds.has(t.id));
+  }
+
+  return eligibleTeams
     .map((t) => ({ team: t, ad: state.athleticDirectors.find((a) => a.id === t.athleticDirectorId) }))
-    // Image-conscious programs (and this specific AD's own standards) still won't call a
-    // coach whose players keep getting arrested — and an AD who remembers this coach
-    // badly from a previous job together won't hire them again at all.
-    .filter(({ team, ad }) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, team.academicReputation, ad?.integrityStandard))
-    .filter(({ ad }) => !ad || adRelationshipScore(myRelationships, ad.id) > 30)
     .map(({ team, ad }) => {
       const col = costOfLivingIndex(team.state);
       return {

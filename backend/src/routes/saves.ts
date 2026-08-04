@@ -9,7 +9,7 @@ import { COACH_ARCHETYPES, type CoachArchetype } from "../engine/coachArchetypes
 import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrounds";
 import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
-import { meetsLegalityBar, expectedWinPct } from "../engine/career";
+import { meetsLegalityBar, expectedWinPct, generateJobOffers, type JobOpening } from "../engine/career";
 import { parseAdRelationships, adRelationshipScore, updateAdRelationship } from "../engine/athleticDirector";
 import { EUROPEAN_COUNTRIES } from "../engine/countries";
 import { mulberry32, clamp } from "../engine/rng";
@@ -172,15 +172,33 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
     },
     include: { headCoach: true, athleticDirector: true },
   });
-  // If the player is unemployed, only fresh vacancies (hot seat reset to 0,
-  // no career record yet under the replacement coach) are real openings —
-  // the offseason engine already narrowed these via generateJobOffers. If
-  // the player is employed and just browsing the market, any AI-run program
-  // is fair game to inquire about, vacancy or not.
-  res.json(openTeams
-    .filter((t) => save.coachTeamId || (t.headCoach?.hotSeatLevel === 0 && t.headCoach?.careerWins === 0 && t.headCoach?.careerLosses === 0))
-    .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation, t.athleticDirector?.integrityStandard))
-    .filter((t) => !t.athleticDirector || adRelationshipScore(myRelationships, t.athleticDirector.id) > 30)
+
+  let eligible = openTeams;
+  if (save.coachTeamId) {
+    // Employed and just browsing the market ("test the waters") — any
+    // AI-run program is fair game to inquire about, vacancy or not.
+    eligible = openTeams
+      .filter((t) => !myCoach || meetsLegalityBar(myCoach.legalityReputation, t.academicReputation, t.athleticDirector?.integrityStandard))
+      .filter((t) => !t.athleticDirector || adRelationshipScore(myRelationships, t.athleticDirector.id) > 30);
+  } else {
+    // Unemployed — every AI-run program in the league is a real candidate
+    // (not just teams whose coach happened to be fired the instant we were),
+    // gated by the same reputation/career-record ceiling the offseason
+    // engine uses, with a guaranteed floor so there's always somewhere to go.
+    const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+    const gamesCoached = (myCoach?.careerWins ?? 0) + (myCoach?.careerLosses ?? 0);
+    const careerWinPct = gamesCoached > 0 ? (myCoach!.careerWins / gamesCoached) : undefined;
+    const openings: JobOpening[] = openTeams.map((t) => ({
+      teamId: t.id, prestige: t.prestige, academicReputation: t.academicReputation,
+      athleticDirectorId: t.athleticDirector?.id, integrityStandard: t.athleticDirector?.integrityStandard,
+    }));
+    const reputation = myCoach?.reputation ?? 50;
+    const offers = generateJobOffers(reputation, reputation, openings, rng, 8, myCoach?.legalityReputation ?? 75, myRelationships, careerWinPct);
+    const offerTeamIds = new Set(offers.map((o) => o.teamId));
+    eligible = openTeams.filter((t) => offerTeamIds.has(t.id));
+  }
+
+  res.json(eligible
     .map((t) => {
       const relScore = t.athleticDirector ? adRelationshipScore(myRelationships, t.athleticDirector.id) : null;
       const col = costOfLivingIndex(t.state);

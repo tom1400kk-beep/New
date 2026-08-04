@@ -104,6 +104,12 @@ export interface JobOpening {
 // this coach well from a previous job together can open a door a little
 // wider than reputation alone would; one who remembers them badly won't
 // hire them again at all, no matter how good the résumé looks now.
+//
+// careerWinPct (cumulative wins / (wins+losses) across the whole coaching
+// career, undefined if they've never coached a game) layers a longer-run
+// track record on top of reputation, which is itself just a single-season-
+// weighted number — a career .650 coach and a career .350 coach with the
+// same current reputation shouldn't see the same ceiling.
 export function generateJobOffers(
   reputation: number,
   currentPrestige: number,
@@ -112,8 +118,10 @@ export function generateJobOffers(
   maxOffers = 3,
   legalityReputation = 75,
   coachAdRelationships: Record<string, number> = {},
+  careerWinPct?: number,
 ): JobOpening[] {
-  const ceiling = clamp(reputation + randInt(rng, -5, 15), 0, 100);
+  const trackRecordAdjust = careerWinPct !== undefined ? clamp((careerWinPct - 0.5) * 40, -20, 20) : 0;
+  const ceiling = clamp(reputation + trackRecordAdjust + randInt(rng, -5, 15), 0, 100);
   const eligible = openings.filter((o) => {
     const relScore = o.athleticDirectorId ? coachAdRelationships[o.athleticDirectorId] ?? 50 : 50;
     if (relScore <= 30) return false; // bad blood — this AD won't bring them back
@@ -123,7 +131,18 @@ export function generateJobOffers(
     return true;
   });
   const sorted = [...eligible].sort((a, b) => b.prestige - a.prestige);
-  return sorted.slice(0, maxOffers);
+  if (sorted.length > 0) return sorted.slice(0, maxOffers);
+  if (openings.length === 0) return [];
+
+  // Guaranteed floor: a real coaching search never leaves someone with
+  // literally nowhere to go — some program at the bottom of a division will
+  // always take a chance on a coach willing to take the job. This is what
+  // keeps a rough stretch from ever becoming a permanent dead end.
+  const legalityOk = openings.filter((o) =>
+    o.academicReputation === undefined || meetsLegalityBar(legalityReputation, o.academicReputation, o.integrityStandard));
+  const pool = legalityOk.length > 0 ? legalityOk : openings;
+  const floor = [...pool].sort((a, b) => a.prestige - b.prestige)[0];
+  return [floor];
 }
 
 export function updateReputation(currentReputation: number, wins: number, losses: number, madeTournament: boolean, tournamentWins: number, wasFired: boolean): number {
