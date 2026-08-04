@@ -362,6 +362,7 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
     const player = state.players.find((p) => p.id === playerId);
     if (player) {
       if (effects.playerCharacterDelta) player.characterRating = Math.round(clamp(player.characterRating + effects.playerCharacterDelta, 5, 99));
+      if (effects.disciplineRatingDelta) player.disciplineRating = Math.round(clamp(player.disciplineRating + effects.disciplineRatingDelta, 5, 99));
       if (effects.injuryWeeks) { player.isInjured = true; player.injuryWeeksLeft = effects.injuryWeeks * 7; }
       if (effects.suspensionDays) { player.isSuspended = true; player.suspensionDaysLeft = effects.suspensionDays; }
       if (effects.transferToTeamId) {

@@ -31,6 +31,7 @@ export interface EventEffects {
   removePlayerForDiscipline?: boolean; // like removePlayer, but joins the leaguewide discipline-drops signable pool
   transferToTeamId?: string; // player leaves for this specific team (e.g. an NIL poaching loss)
   suspensionDays?: number;
+  disciplineRatingDelta?: number; // the player's own off-court track record
   legalityDelta?: number; // program off-court integrity reputation
   teamPerceptionDelta?: number; // how the locker room views the coach
   nationalPerceptionDelta?: number; // national media profile
@@ -88,6 +89,58 @@ type Template = {
   weightModifier: (ctx: EventContext) => number;
   generate: (rng: () => number, ctx: EventContext) => GeneratedEvent;
 };
+
+// Not every arrest is the same — a marijuana citation and a felony assault
+// charge shouldn't cost a player (or the program) the same amount. Severity
+// is rolled independently of *whether* an arrest happens at all (that part
+// still scales off the roster's riskiest disciplineRating via weightModifier
+// below); most real incidents are minor, serious ones are rarer.
+type ArrestSeverity = "MINOR" | "MODERATE" | "SEVERE";
+
+const ARREST_SEVERITY_WEIGHTS: { severity: ArrestSeverity; weight: number }[] = [
+  { severity: "MINOR", weight: 55 },
+  { severity: "MODERATE", weight: 32 },
+  { severity: "SEVERE", weight: 13 },
+];
+
+const ARREST_CHARGES: Record<ArrestSeverity, string[]> = {
+  MINOR: ["cited for marijuana possession", "picked up for public intoxication", "cited for underage drinking", "arrested for disorderly conduct"],
+  MODERATE: ["arrested for DUI", "charged with petty theft", "arrested following a bar fight", "charged with trespassing"],
+  SEVERE: ["charged with felony assault", "arrested on a domestic violence charge", "charged with illegal weapons possession", "arrested on drug distribution charges"],
+};
+
+const ARREST_COVERAGE: Record<ArrestSeverity, string> = {
+  MINOR: "It's circulating among students and could reach local news.",
+  MODERATE: "It's already circulating on social media and local news has picked it up.",
+  SEVERE: "National outlets have already picked up the story.",
+};
+
+interface ArrestProfile {
+  suspendIndefiniteDays: number;
+  suspendGamesDays: number;
+  legalityMultiplier: number;
+  disciplineHit: number; // baseline hit to the player's own disciplineRating — happens regardless of how the coach responds
+  perceptionMultiplier: number;
+}
+
+const ARREST_PROFILES: Record<ArrestSeverity, ArrestProfile> = {
+  MINOR: { suspendIndefiniteDays: 10, suspendGamesDays: 3, legalityMultiplier: 0.55, disciplineHit: 4, perceptionMultiplier: 0.5 },
+  MODERATE: { suspendIndefiniteDays: 21, suspendGamesDays: 7, legalityMultiplier: 1.0, disciplineHit: 9, perceptionMultiplier: 1.0 },
+  SEVERE: { suspendIndefiniteDays: 45, suspendGamesDays: 14, legalityMultiplier: 1.7, disciplineHit: 16, perceptionMultiplier: 1.9 },
+};
+
+function pickArrestCharge(rng: () => number): { severity: ArrestSeverity; charge: string } {
+  const total = ARREST_SEVERITY_WEIGHTS.reduce((s, w) => s + w.weight, 0);
+  let r = rng() * total;
+  let severity: ArrestSeverity = "MINOR";
+  for (const w of ARREST_SEVERITY_WEIGHTS) {
+    r -= w.weight;
+    if (r <= 0) { severity = w.severity; break; }
+  }
+  const pool = ARREST_CHARGES[severity];
+  const charge = pool[Math.floor(rng() * pool.length)];
+  return { severity, charge };
+}
 
 const TEMPLATES: Template[] = [
   {
@@ -299,35 +352,51 @@ const TEMPLATES: Template[] = [
     },
     generate: (rng, ctx) => {
       const p = pickWeightedByLowDiscipline(rng, ctx.players)!;
+      const { severity, charge } = pickArrestCharge(rng);
+      const profile = ARREST_PROFILES[severity];
+      const legality = (base: number) => Math.round(base * profile.legalityMultiplier);
+      const national = (base: number) => Math.round(base * profile.perceptionMultiplier);
       return {
         type: "ARREST",
         title: `${p.firstName} ${p.lastName} arrested`,
-        description: `${p.firstName} ${p.lastName} was arrested overnight on a misdemeanor charge after an off-campus incident. It's already circulating on social media and local news has picked it up. The administration is waiting on you to decide how the program responds.`,
+        description: `${p.firstName} ${p.lastName} was ${charge} overnight after an off-campus incident. ${ARREST_COVERAGE[severity]} The administration is waiting on you to decide how the program responds.`,
         playerId: p.id,
         options: [
           {
             id: "suspend_indefinite",
-            label: "Suspend indefinitely pending the investigation",
+            label: `Suspend indefinitely pending the investigation (up to ${profile.suspendIndefiniteDays} days)`,
             description: "Hold them out until the legal process resolves. Costs you the player for a while, but shows standards and mostly protects your program's reputation.",
-            effects: { suspensionDays: 21, chemistryDelta: 3, prestigeDelta: 1, hotSeatDelta: -2, legalityDelta: -3 },
+            effects: {
+              suspensionDays: profile.suspendIndefiniteDays, disciplineRatingDelta: -profile.disciplineHit,
+              chemistryDelta: 3, prestigeDelta: 1, hotSeatDelta: -2, legalityDelta: legality(-3), nationalPerceptionDelta: national(-1),
+            },
           },
           {
             id: "suspend_games",
-            label: "Suspend a few games",
+            label: `Suspend ${profile.suspendGamesDays} games`,
             description: "A short, defined suspension while things play out — a middle-ground response that still costs you some program reputation.",
-            effects: { suspensionDays: 7, chemistryDelta: 1, legalityDelta: -6 },
+            effects: {
+              suspensionDays: profile.suspendGamesDays, disciplineRatingDelta: -profile.disciplineHit,
+              chemistryDelta: 1, legalityDelta: legality(-6), nationalPerceptionDelta: national(-3),
+            },
           },
           {
             id: "stand_by",
             label: "Stand by the player, no suspension",
             description: "Keep them available. Protects your roster, but the optics are bad — this is the option that hurts your program's legality reputation most.",
-            effects: { hotSeatDelta: 5, prestigeDelta: -3, chemistryDelta: -4, legalityDelta: -14 },
+            effects: {
+              disciplineRatingDelta: -profile.disciplineHit,
+              hotSeatDelta: 5, prestigeDelta: -3, chemistryDelta: -4, legalityDelta: legality(-14), nationalPerceptionDelta: national(-8),
+            },
           },
           {
             id: "dismiss",
             label: "Dismiss them from the team",
             description: "Cut ties entirely. Opens a scholarship spot, sends a clear message, and actually boosts your program's reputation for accountability — but you lose the player for good. They'll be signable by other programs.",
-            effects: { removePlayerForDiscipline: true, chemistryDelta: 3, prestigeDelta: 2, hotSeatDelta: -3, legalityDelta: 3 },
+            effects: {
+              removePlayerForDiscipline: true, disciplineRatingDelta: -profile.disciplineHit,
+              chemistryDelta: 3, prestigeDelta: 2, hotSeatDelta: -3, legalityDelta: legality(3), nationalPerceptionDelta: national(2),
+            },
           },
         ],
       };

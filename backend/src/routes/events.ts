@@ -85,6 +85,7 @@ async function applyEffects(saveGameId: string, teamId: string | null, playerId:
     if (player) {
       const data: Record<string, unknown> = {};
       if (effects.playerCharacterDelta) data.characterRating = Math.round(clamp(player.characterRating + effects.playerCharacterDelta, 5, 99));
+      if (effects.disciplineRatingDelta) data.disciplineRating = Math.round(clamp(player.disciplineRating + effects.disciplineRatingDelta, 5, 99));
       if (effects.injuryWeeks) {
         data.isInjured = true;
         data.injuryWeeksLeft = effects.injuryWeeks * 7;
