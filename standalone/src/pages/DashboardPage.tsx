@@ -12,6 +12,20 @@ function fmtMoney(n: number) {
   return `$${Math.round(n / 1000)}K`;
 }
 
+function signed(n: number): string {
+  return n > 0 ? `+${n}` : `${n}`;
+}
+
+function fmtKenpom(k: any): string {
+  if (!k) return "—";
+  return `#${k.rank} (${signed(Math.round(k.adjEM * 10) / 10)})`;
+}
+
+function fmtRPI(r: any): string {
+  if (!r) return "—";
+  return `#${r.rank} (${r.rpi.toFixed(3)})`;
+}
+
 function formatKey(k?: string | null): string {
   if (!k) return "";
   return k.toLowerCase().split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
@@ -82,6 +96,8 @@ export default function DashboardPage() {
   const [advancing, setAdvancing] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
   const [rivalries, setRivalries] = useState<any[]>([]);
+  const [preview, setPreview] = useState<any>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   async function refresh() {
     if (!activeSaveId) return;
@@ -124,6 +140,17 @@ export default function DashboardPage() {
     if (!activeSaveId) return;
     await api.resolveEvent(activeSaveId, eventId, optionId);
     await refresh();
+  }
+
+  async function openPreview(gameId: string) {
+    if (!activeSaveId) return;
+    setPreviewLoading(true);
+    try {
+      const data = await api.getGamePreview(activeSaveId, gameId);
+      setPreview(data);
+    } finally {
+      setPreviewLoading(false);
+    }
   }
 
   async function acceptJob(teamId: string) {
@@ -264,22 +291,87 @@ export default function DashboardPage() {
       <div className="card">
         <h3>Next Game</h3>
         {nextGame ? (
-          <p>
+          <button className="player-name-link" style={{ fontSize: "1rem" }} disabled={previewLoading} onClick={() => openPreview(nextGame.id)}>
             {fmtDate(nextGame.date)}: {nextGame.homeTeam.name} vs {nextGame.awayTeam.name}
             {nextGame.tournament ? ` (${nextGame.tournament.type.replace(/_/g, " ")})` : nextGame.isConference ? " (Conference)" : ""}
-          </p>
+          </button>
         ) : (
           <p>No games scheduled right now.</p>
         )}
-        <button onClick={handleAdvance} disabled={advancing}>
-          {advancing ? "Simulating..." : "Advance"}
-        </button>
+        <div style={{ marginTop: nextGame ? 12 : 0 }}>
+          <button onClick={handleAdvance} disabled={advancing}>
+            {advancing ? "Simulating..." : "Advance"}
+          </button>
+        </div>
         {lastResult && (
           <p className="text-muted" style={{ marginTop: 8 }}>
             {lastResult.gamesPlayedToday} game(s) played today · Phase: {lastResult.newPhase}
           </p>
         )}
       </div>
+
+      {preview && (
+        <div className="modal-backdrop" onClick={() => setPreview(null)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620 }}>
+            <h2>{preview.awayTeam.name} at {preview.homeTeam.name}</h2>
+            <p className="text-muted">
+              {fmtDate(preview.date)}
+              {preview.tournament ? ` · ${preview.tournament.name ?? preview.tournament.type.replace(/_/g, " ")}` : preview.isConference ? " · Conference game" : ""}
+            </p>
+
+            <div style={{ overflowX: "auto", marginTop: 6 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Team</th>
+                    <th>Record</th>
+                    <th>KenPom</th>
+                    <th>RPI</th>
+                    <th>Spread</th>
+                    <th>Moneyline</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{preview.awayTeam.name}</td>
+                    <td className="text-muted">{preview.awayTeam.record.wins}-{preview.awayTeam.record.losses}</td>
+                    <td className="text-muted">{fmtKenpom(preview.awayTeam.kenpom)}</td>
+                    <td className="text-muted">{fmtRPI(preview.awayTeam.rpi)}</td>
+                    <td className={preview.odds.favorite === "away" ? "text-good" : undefined} style={{ fontWeight: preview.odds.favorite === "away" ? 700 : 400 }}>
+                      {signed(preview.odds.awaySpread)}
+                    </td>
+                    <td className={preview.odds.favorite === "away" ? "text-good" : undefined} style={{ fontWeight: preview.odds.favorite === "away" ? 700 : 400 }}>
+                      {signed(preview.odds.awayMoneyline)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>{preview.homeTeam.name} <span className="text-muted" style={{ fontWeight: 400, fontSize: "0.78rem" }}>(Home)</span></td>
+                    <td className="text-muted">{preview.homeTeam.record.wins}-{preview.homeTeam.record.losses}</td>
+                    <td className="text-muted">{fmtKenpom(preview.homeTeam.kenpom)}</td>
+                    <td className="text-muted">{fmtRPI(preview.homeTeam.rpi)}</td>
+                    <td className={preview.odds.favorite === "home" ? "text-good" : undefined} style={{ fontWeight: preview.odds.favorite === "home" ? 700 : 400 }}>
+                      {signed(preview.odds.homeSpread)}
+                    </td>
+                    <td className={preview.odds.favorite === "home" ? "text-good" : undefined} style={{ fontWeight: preview.odds.favorite === "home" ? 700 : 400 }}>
+                      {signed(preview.odds.homeMoneyline)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: 14 }}>
+              {preview.odds.favorite === "even"
+                ? "Dead-even matchup."
+                : `${preview.odds.favorite === "home" ? preview.homeTeam.name : preview.awayTeam.name} are ${Math.round(
+                    Math.max(preview.odds.homeWinProbability, preview.odds.awayWinProbability) * 100,
+                  )}% favorites to win.`}
+              {(preview.homeTeam.kenpom === null || preview.awayTeam.kenpom === null) &&
+                " KenPom/RPI shown only once a team has played D1 games this season — odds lean on prestige until then."}
+            </p>
+          </div>
+        </div>
+      )}
 
       <button className="secondary" onClick={exitToSaves}>Back to Saves</button>
     </div>

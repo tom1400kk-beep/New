@@ -64,6 +64,8 @@ export const api = {
   bookInternationalTour: (saveId: string, country: string) =>
     request<any>(`/saves/${saveId}/international-tour`, { method: "POST", body: JSON.stringify({ country }) }),
 
+  getGamePreview: (saveId: string, gameId: string) => request<any>(`/saves/${saveId}/games/${gameId}/preview`),
+
   getPendingEvents: (saveId: string) => request<any[]>(`/saves/${saveId}/events/pending`),
   resolveEvent: (saveId: string, eventId: string, optionId: string) =>
     request<any>(`/saves/${saveId}/events/${eventId}/resolve`, {

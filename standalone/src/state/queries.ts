@@ -6,6 +6,7 @@ import { DIVISION_RULES, type Division } from "../types";
 import { computeKenPomRatings, type TeamGameBoxScore } from "../engine/kenpom";
 import { computeRPI, type RPIGameResult } from "../engine/rpi";
 import { projectBracketology, type BracketTeamInput } from "../engine/bracketology";
+import { computeGameOdds, type OddsTeamInput } from "../engine/gameOdds";
 import type { WorldState } from "./types";
 
 export function getDashboard(state: WorldState) {
@@ -226,4 +227,54 @@ export function getBracketology(state: WorldState) {
     });
 
   return projectBracketology(inputs);
+}
+
+export function getGamePreview(state: WorldState, gameId: string) {
+  const game = state.games.find((g) => g.id === gameId)!;
+  const homeTeam = state.teams.find((t) => t.id === game.homeTeamId)!;
+  const awayTeam = state.teams.find((t) => t.id === game.awayTeamId)!;
+  const tournament = game.tournamentId ? state.tournaments.find((t) => t.id === game.tournamentId) ?? null : null;
+
+  const standings = computeStandings(state, state.save.currentSeasonYear);
+  const homeRecord = standings.get(homeTeam.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+  const awayRecord = standings.get(awayTeam.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+
+  const kenpomByTeam = new Map<string, { rank: number; adjEM: number; adjO: number; adjD: number; adjTempo: number }>();
+  const rpiByTeam = new Map<string, { rank: number; rpi: number }>();
+  if (homeTeam.division === "D1" && awayTeam.division === "D1") {
+    const teams = d1Teams(state);
+    const teamById = new Map(teams.map((t) => [t.id, t]));
+    const seasonYear = state.save.currentSeasonYear;
+    const kenpom = computeKenPomRatings(buildKenPomBoxScores(state, seasonYear).filter((b) => teamById.has(b.teamId)));
+    const rpi = computeRPI(buildRPIResults(state, seasonYear).filter((r) => teamById.has(r.teamId)));
+
+    [...kenpom.values()].sort((a, b) => b.adjEM - a.adjEM).forEach((r, i) => {
+      kenpomByTeam.set(r.teamId, { rank: i + 1, adjEM: r.adjEM, adjO: r.adjO, adjD: r.adjD, adjTempo: r.adjTempo });
+    });
+    [...rpi.values()].sort((a, b) => b.rpi - a.rpi).forEach((r, i) => {
+      rpiByTeam.set(r.teamId, { rank: i + 1, rpi: r.rpi });
+    });
+  }
+
+  function teamPayload(team: typeof homeTeam, record: { wins: number; losses: number; confWins: number; confLosses: number }) {
+    return {
+      teamId: team.id, name: team.name, division: team.division, prestige: team.prestige,
+      record, gamesPlayed: record.wins + record.losses,
+      kenpom: kenpomByTeam.get(team.id) ?? null,
+      rpi: rpiByTeam.get(team.id) ?? null,
+    };
+  }
+
+  const homePayload = teamPayload(homeTeam, homeRecord);
+  const awayPayload = teamPayload(awayTeam, awayRecord);
+
+  const homeOddsInput: OddsTeamInput = { prestige: homeTeam.prestige, kenpomAdjEM: homePayload.kenpom?.adjEM ?? null, gamesPlayed: homePayload.gamesPlayed };
+  const awayOddsInput: OddsTeamInput = { prestige: awayTeam.prestige, kenpomAdjEM: awayPayload.kenpom?.adjEM ?? null, gamesPlayed: awayPayload.gamesPlayed };
+  const odds = computeGameOdds(homeOddsInput, awayOddsInput);
+
+  return {
+    gameId: game.id, date: game.date, isConference: game.isConference,
+    tournament: tournament ? { type: tournament.type, name: tournament.name } : null,
+    homeTeam: homePayload, awayTeam: awayPayload, odds,
+  };
 }

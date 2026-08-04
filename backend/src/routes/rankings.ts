@@ -7,14 +7,14 @@ import { projectBracketology, type BracketTeamInput } from "../engine/bracketolo
 
 export const rankingsRouter = Router();
 
-async function d1Teams(saveGameId: string) {
+export async function d1Teams(saveGameId: string) {
   return prisma.team.findMany({ where: { saveGameId, division: "D1" }, select: { id: true, name: true, conferenceId: true, prestige: true } });
 }
 
 // KenPom-style ratings weigh every game played, including conference and
 // NCAA tournament games, the same way the real system updates all season —
 // unlike the W-L record shown elsewhere, which is regular-season only.
-async function buildKenPomBoxScores(saveGameId: string, seasonYear: number): Promise<TeamGameBoxScore[]> {
+export async function buildKenPomBoxScores(saveGameId: string, seasonYear: number): Promise<TeamGameBoxScore[]> {
   const games = await prisma.game.findMany({
     where: { saveGameId, seasonYear, isPlayed: true },
     select: { id: true, homeTeamId: true, awayTeamId: true, homeScore: true, awayScore: true },
@@ -46,7 +46,7 @@ async function buildKenPomBoxScores(saveGameId: string, seasonYear: number): Pro
 
 // RPI sticks to the regular-season game set (matches the W-L record shown
 // everywhere else in the app), the traditional convention for the metric.
-async function buildRPIResults(saveGameId: string, seasonYear: number): Promise<RPIGameResult[]> {
+export async function buildRPIResults(saveGameId: string, seasonYear: number): Promise<RPIGameResult[]> {
   const games = await prisma.game.findMany({
     where: { saveGameId, seasonYear, isPlayed: true, tournamentId: null },
     select: { homeTeamId: true, awayTeamId: true, homeScore: true, awayScore: true },

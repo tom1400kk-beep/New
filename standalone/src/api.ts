@@ -190,6 +190,8 @@ export const api = {
     return result;
   },
 
+  getGamePreview: async (saveId: string, gameId: string) => queries.getGamePreview(await ensureLoaded(saveId), gameId),
+
   getPendingEvents: async (saveId: string) => actions.getPendingEvents(await ensureLoaded(saveId)),
   resolveEvent: async (saveId: string, eventId: string, optionId: string) => {
     const state = await ensureLoaded(saveId);
