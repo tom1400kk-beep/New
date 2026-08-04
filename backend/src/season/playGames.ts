@@ -4,6 +4,7 @@ import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
 import { computeAttendance } from "../engine/attendance";
 import { homeCourtBonus } from "../engine/atmosphere";
 import { sortedPair } from "../engine/rivalry";
+import { rollInjury } from "../engine/injuries";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
 
@@ -111,5 +112,24 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
   const chunkSize = 400;
   for (let i = 0; i < statRows.length; i += chunkSize) {
     await prisma.playerGameStat.createMany({ data: statRows.slice(i, i + chunkSize) });
+  }
+
+  // Real in-game injury risk, tied to actual minutes played — rolled once
+  // per player who saw the floor, independent of the narrative INJURY event
+  // (which represents a practice tweak, not something that happens live).
+  const injuryUpdates: { id: string; type: string; daysOut: number }[] = [];
+  for (const row of statRows) {
+    const injury = rollInjury(rng, row.minutes);
+    if (injury) injuryUpdates.push({ id: row.playerId, type: injury.type, daysOut: injury.daysOut });
+  }
+  if (injuryUpdates.length > 0) {
+    await prisma.$transaction(
+      injuryUpdates.map((u) =>
+        prisma.player.update({
+          where: { id: u.id },
+          data: { isInjured: true, injuryWeeksLeft: u.daysOut, injuryType: u.type },
+        }),
+      ),
+    );
   }
 }

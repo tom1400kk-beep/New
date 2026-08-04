@@ -132,7 +132,8 @@ export interface PlayerRow {
   previousSchool: string | null;
   prioritiesJson: string;
   isInjured: boolean;
-  injuryWeeksLeft: number;
+  injuryWeeksLeft: number; // despite the name, this actually counts down in days
+  injuryType: string | null;
   isSuspended: boolean;
   suspensionDaysLeft: number;
   onScholarship: boolean;

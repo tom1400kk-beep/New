@@ -26,6 +26,63 @@ function fmtRPI(r: any): string {
   return `#${r.rank} (${r.rpi.toFixed(3)})`;
 }
 
+function fmtStat(n: number | null): string {
+  return n === null ? "—" : n.toFixed(1);
+}
+
+function LineupTable({ team }: { team: any }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <strong>{team.name}</strong>
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>Player</th>
+              <th>Yr</th>
+              <th>PPG</th>
+              <th>RPG</th>
+              <th>APG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {team.startingLineup.map((p: any) => (
+              <tr key={p.playerId}>
+                <td className="text-muted">{p.position}</td>
+                <td>{p.name}</td>
+                <td className="text-muted">{p.classYear}</td>
+                <td>{fmtStat(p.ppg)}</td>
+                <td>{fmtStat(p.rpg)}</td>
+                <td>{fmtStat(p.apg)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {team.startingLineup.length === 0 && <p className="text-muted">No available players.</p>}
+      </div>
+    </div>
+  );
+}
+
+function InjuryReportLine({ team }: { team: any }) {
+  return (
+    <p style={{ marginBottom: 6 }}>
+      <strong>{team.name}: </strong>
+      {team.injuryReport.length === 0 ? (
+        <span className="text-good">No reported injuries</span>
+      ) : (
+        team.injuryReport.map((r: any, i: number) => (
+          <span key={r.playerId}>
+            {i > 0 && ", "}
+            {r.name} <span className="text-bad">({r.detail})</span>
+          </span>
+        ))
+      )}
+    </p>
+  );
+}
+
 function formatKey(k?: string | null): string {
   if (!k) return "";
   return k.toLowerCase().split("_").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
@@ -312,7 +369,7 @@ export default function DashboardPage() {
 
       {preview && (
         <div className="modal-backdrop" onClick={() => setPreview(null)}>
-          <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 620 }}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
             <h2>{preview.awayTeam.name} at {preview.homeTeam.name}</h2>
             <p className="text-muted">
               {fmtDate(preview.date)}
@@ -369,6 +426,14 @@ export default function DashboardPage() {
               {(preview.homeTeam.kenpom === null || preview.awayTeam.kenpom === null) &&
                 " KenPom/RPI shown only once a team has played D1 games this season — odds lean on prestige until then."}
             </p>
+
+            <h3 style={{ marginTop: 18 }}>Projected Starting Lineups</h3>
+            <LineupTable team={preview.awayTeam} />
+            <LineupTable team={preview.homeTeam} />
+
+            <h3 style={{ marginTop: 4 }}>Injury Report</h3>
+            <InjuryReportLine team={preview.awayTeam} />
+            <InjuryReportLine team={preview.homeTeam} />
           </div>
         </div>
       )}

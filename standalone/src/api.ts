@@ -82,6 +82,11 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
     if (t.internationalTourCountry === undefined) t.internationalTourCountry = null;
     if (t.internationalTourSeasonYear === undefined) t.internationalTourSeasonYear = null;
   }
+  // Saves persisted before the realistic in-game injury feature won't have
+  // this field on existing players.
+  for (const p of loaded.players) {
+    if (p.injuryType === undefined) p.injuryType = null;
+  }
   cache = loaded;
   return loaded;
 }

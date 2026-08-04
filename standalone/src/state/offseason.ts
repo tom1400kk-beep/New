@@ -528,7 +528,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)),
       potential: prospect.potential, characterRating: prospect.characterRating,
       disciplineRating: prospect.disciplineRating, chemistryImpact: 0,
-      eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0,
+      eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
       isSuspended: false, suspensionDaysLeft: 0, onScholarship,
     });
   }
@@ -625,7 +625,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)), potential: p.ratings.potential,
         characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
         chemistryImpact: 0, eligibilityYearsLeft: 4,
-        inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0,
+        inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
         isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
       });
     }

@@ -142,7 +142,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
           stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)),
           potential: p.ratings.potential, characterRating: p.ratings.characterRating,
           disciplineRating: p.ratings.disciplineRating, chemistryImpact: 0,
-          eligibilityYearsLeft: p.eligibilityYearsLeft, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0,
+          eligibilityYearsLeft: p.eligibilityYearsLeft, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
           isSuspended: false, suspensionDaysLeft: 0,
           onScholarship: i < scholarshipLimit,
         });

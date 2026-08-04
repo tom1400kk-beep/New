@@ -580,7 +580,7 @@ export function addWalkOn(state: WorldState, candidateId: string) {
     athleticism: candidate.athleticism, basketballIq: candidate.basketballIq,
     stamina: 60, potential: candidate.potential, characterRating: candidate.characterRating,
     disciplineRating: candidate.disciplineRating, chemistryImpact: 0,
-    eligibilityYearsLeft: 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0,
+    eligibilityYearsLeft: 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
     isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
   };
   state.players.push(player);

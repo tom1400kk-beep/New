@@ -50,7 +50,7 @@ const COLUMNS: Column[] = [
   { key: "onScholarship", label: "Aid", getValue: (p) => (p.onScholarship ? "Scholarship" : "Walk-On") },
   {
     key: "status", label: "Status",
-    getValue: (p) => (p.isSuspended ? `Suspended (${p.suspensionDaysLeft}d)` : p.isInjured ? `Injured (${p.injuryWeeksLeft}d)` : "Healthy"),
+    getValue: (p) => (p.isSuspended ? `Suspended (${p.suspensionDaysLeft}d)` : p.isInjured ? `${p.injuryType ?? "Injured"} (${p.injuryWeeksLeft}d)` : "Healthy"),
   },
 ];
 
@@ -160,7 +160,7 @@ export default function RosterPage() {
                   {p.isSuspended
                     ? `Suspended (${p.suspensionDaysLeft}d)`
                     : p.isInjured
-                    ? `Injured (${p.injuryWeeksLeft}d)`
+                    ? `${p.injuryType ?? "Injured"} (${p.injuryWeeksLeft}d)`
                     : "Healthy"}
                 </td>
               </tr>
@@ -276,7 +276,7 @@ export default function RosterPage() {
             {(selectedPlayer.isInjured || selectedPlayer.isSuspended) && (
               <p className="text-bad">
                 {selectedPlayer.isSuspended && `Suspended — ${selectedPlayer.suspensionDaysLeft} day(s) left. `}
-                {selectedPlayer.isInjured && `Injured — ${selectedPlayer.injuryWeeksLeft} week(s) left.`}
+                {selectedPlayer.isInjured && `${selectedPlayer.injuryType ?? "Injured"} — ${selectedPlayer.injuryWeeksLeft} day(s) left.`}
               </p>
             )}
 

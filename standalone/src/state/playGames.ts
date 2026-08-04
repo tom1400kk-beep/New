@@ -2,6 +2,7 @@ import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
 import { computeAttendance } from "../engine/attendance";
 import { homeCourtBonus } from "../engine/atmosphere";
 import { sortedPair } from "../engine/rivalry";
+import { rollInjury } from "../engine/injuries";
 import { mulberry32 } from "../engine/rng";
 import type { Division } from "../types";
 import { newId, type WorldState } from "./types";
@@ -34,6 +35,7 @@ export function playGames(state: WorldState, gameIds: string[]): void {
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
   const activeRivalries = state.rivalries.filter((r) => r.active && teamIds.has(r.teamAId) && teamIds.has(r.teamBId));
   const rivalryByPair = new Map(activeRivalries.map((r) => [`${r.teamAId}|${r.teamBId}`, r]));
+  const playerById = new Map(state.players.map((p) => [p.id, p]));
 
   for (const g of games) {
     const homeTeam = teamById.get(g.homeTeamId);
@@ -77,5 +79,18 @@ export function playGames(state: WorldState, gameIds: string[]): void {
 
     for (const b of result.homeBox) state.stats.push({ id: newId(), gameId: g.id, teamId: homeTeam.id, ...b });
     for (const b of result.awayBox) state.stats.push({ id: newId(), gameId: g.id, teamId: awayTeam.id, ...b });
+
+    // Real in-game injury risk, tied to actual minutes played — rolled once
+    // per player who saw the floor, independent of the narrative INJURY
+    // event (which represents a practice tweak, not something live).
+    for (const b of [...result.homeBox, ...result.awayBox]) {
+      const injury = rollInjury(rng, b.minutes);
+      if (!injury) continue;
+      const player = playerById.get(b.playerId);
+      if (!player) continue;
+      player.isInjured = true;
+      player.injuryWeeksLeft = injury.daysOut;
+      player.injuryType = injury.type;
+    }
   }
 }

@@ -250,7 +250,8 @@ model Player {
   previousSchool   String?  // set when they entered the portal — the program they transferred from
   prioritiesJson   String   @default("{}") // JSON-encoded PriorityProfile, generated when they enter the portal
   isInjured        Boolean  @default(false)
-  injuryWeeksLeft  Int      @default(0)
+  injuryWeeksLeft  Int      @default(0) // despite the name, this actually counts down in days
+  injuryType       String?  // flavor name of the current injury (e.g. "Ankle sprain"), null when healthy
   isSuspended      Boolean  @default(false)
   suspensionDaysLeft Int    @default(0)
   onScholarship    Boolean  @default(true) // false = walk-on, no athletic aid
