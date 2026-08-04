@@ -61,6 +61,8 @@ export default function SaveSelectPage() {
   const [offersReputation, setOffersReputation] = useState<number | null>(null);
   const [offersLoading, setOffersLoading] = useState(false);
   const [offersFilter, setOffersFilter] = useState("");
+  const [offersDivisionFilter, setOffersDivisionFilter] = useState("");
+  const [offersStateFilter, setOffersStateFilter] = useState("");
 
   const DIVISION_LABELS: Record<string, string> = {
     D3: "NCAA Division III", D2: "NCAA Division II", D1: "NCAA Division I",
@@ -396,17 +398,30 @@ export default function SaveSelectPage() {
                   Estimated starting reputation: {offersReputation}/100 — {offers.length} program{offers.length === 1 ? "" : "s"} calling.
                   Most first-time coaches build up from D3; a real D1 shot takes an elite profile.
                 </p>
-                <p>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <input
                     placeholder="Filter by school or conference..."
                     value={offersFilter}
                     onChange={(e) => setOffersFilter(e.target.value)}
                   />
-                </p>
+                  <select value={offersDivisionFilter} onChange={(e) => setOffersDivisionFilter(e.target.value)}>
+                    <option value="">All divisions</option>
+                    <option value="D1">NCAA Division I</option>
+                    <option value="D2">NCAA Division II</option>
+                    <option value="D3">NCAA Division III</option>
+                  </select>
+                  <select value={offersStateFilter} onChange={(e) => setOffersStateFilter(e.target.value)}>
+                    <option value="">All states</option>
+                    {[...new Set(offers.map((o) => o.state))].sort().map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
                 <div>
-                  {(["D3", "D2", "D1"] as const).map((div) => {
+                  {(["D3", "D2", "D1"] as const).filter((div) => !offersDivisionFilter || div === offersDivisionFilter).map((div) => {
                     const group = offers.filter((o) =>
                       o.division === div &&
+                      (!offersStateFilter || o.state === offersStateFilter) &&
                       (!offersFilter || o.school.toLowerCase().includes(offersFilter.toLowerCase()) || o.conference.toLowerCase().includes(offersFilter.toLowerCase()))
                     );
                     if (group.length === 0) return null;
@@ -417,7 +432,7 @@ export default function SaveSelectPage() {
                         </div>
                         <div className="option-grid">
                           {group.map((o) => (
-                            <div key={`${o.division}-${o.school}`} className="option-card" onClick={() => !creating && acceptOffer(o)}>
+                            <div key={`${o.division}-${o.school}-${o.conference}`} className="option-card" onClick={() => !creating && acceptOffer(o)}>
                               <div className="option-title">{o.school}</div>
                               <div className="option-desc">{o.division} · {o.conference} · prestige {o.prestige}</div>
                               <div className="option-perk">{creating ? "Starting career..." : "Accept & Start Career"}</div>

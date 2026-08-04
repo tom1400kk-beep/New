@@ -35,10 +35,32 @@ function priorityLabel(p: any): string {
   return p.topPriorities.map((k: string) => PRIORITY_LABELS[k as keyof typeof PRIORITY_LABELS] ?? k).join(", ");
 }
 
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+// No individual high school games are actually simulated, so this projects
+// a plausible senior-season stat line from the scouting report itself —
+// framed as an estimate, not a tracked box score.
+function estimateHighSchoolStats(p: any): { ppg: number; rpg: number; apg: number } {
+  const s = p.scouted;
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  return {
+    ppg: round1(clamp(6 + s.scoring * 0.28 + p.starRating * 1.5, 8, 38)),
+    rpg: round1(clamp(1 + s.rebounding * 0.11, 1, 15)),
+    apg: round1(clamp(0.5 + s.playmaking * 0.08, 0.5, 11)),
+  };
+}
+
+const ORIGIN_LABELS: Record<string, string> = {
+  HIGH_SCHOOL: "High School", JUCO: "Junior College", INTERNATIONAL: "International",
+};
+
 export default function RecruitingPage() {
   const { activeSaveId } = useSave();
   const [board, setBoard] = useState<any[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string>("ALL");
+  const [selectedRecruit, setSelectedRecruit] = useState<any>(null);
 
   async function refresh() {
     if (activeSaveId) setBoard(await api.getRecruitingBoard(activeSaveId));
@@ -81,7 +103,11 @@ export default function RecruitingPage() {
           <tbody>
             {filtered.map((p) => (
               <tr key={p.id}>
-                <td>{p.firstName} {p.lastName}</td>
+                <td>
+                  <button className="player-name-link" onClick={() => setSelectedRecruit(p)}>
+                    {p.firstName} {p.lastName}
+                  </button>
+                </td>
                 <td>{p.position}</td>
                 <td>{"★".repeat(p.starRating)}</td>
                 <td className={pipelineClass(p)} title={pipelineTitle(p)}>{homeLabel(p)}</td>
@@ -106,6 +132,67 @@ export default function RecruitingPage() {
           The home state is colored when you have a notable recruiting pipeline there (green) or it's gone cold (red) — hover for details.
         </p>
       </div>
+
+      {selectedRecruit && (
+        <div className="modal-backdrop" onClick={() => setSelectedRecruit(null)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h2>{selectedRecruit.firstName} {selectedRecruit.lastName}</h2>
+            <p className="text-muted">
+              {selectedRecruit.position}
+              {" · "}{"★".repeat(selectedRecruit.starRating)}{"☆".repeat(5 - selectedRecruit.starRating)}
+              {" · "}Class of {selectedRecruit.graduationYear}
+              {" · "}{ORIGIN_LABELS[selectedRecruit.source] ?? selectedRecruit.source}
+            </p>
+
+            <div className="player-detail-grid">
+              <div>
+                <div className="label">Hometown</div>
+                <div className="value" title={pipelineTitle(selectedRecruit)}>{homeLabel(selectedRecruit)}</div>
+              </div>
+              <div><div className="label">Interest</div><div className="value">{selectedRecruit.interestLevel}</div></div>
+              <div><div className="label">Points Invested</div><div className="value">{selectedRecruit.pointsInvested}</div></div>
+              {selectedRecruit.pipelineScore != null && (
+                <div><div className="label">Pipeline</div><div className="value">{selectedRecruit.pipelineScore}/100</div></div>
+              )}
+            </div>
+
+            <h3 style={{ marginTop: 16 }}>Estimated Senior Season</h3>
+            <div className="player-detail-grid">
+              {(() => {
+                const hs = estimateHighSchoolStats(selectedRecruit);
+                return (
+                  <>
+                    <div><div className="label">PPG</div><div className="value">{hs.ppg}</div></div>
+                    <div><div className="label">RPG</div><div className="value">{hs.rpg}</div></div>
+                    <div><div className="label">APG</div><div className="value">{hs.apg}</div></div>
+                  </>
+                );
+              })()}
+            </div>
+            <p className="text-muted" style={{ fontSize: "0.76rem", marginTop: -4 }}>
+              Projected from scouting reports, not a tracked box score.
+            </p>
+
+            <h3 style={{ marginTop: 16 }}>Scouted Ratings*</h3>
+            <div className="player-detail-grid">
+              <div><div className="label">Scoring</div><div className="value">{selectedRecruit.scouted.scoring}</div></div>
+              <div><div className="label">3PT</div><div className="value">{selectedRecruit.scouted.threePoint}</div></div>
+              <div><div className="label">Finishing</div><div className="value">{selectedRecruit.scouted.finishing}</div></div>
+              <div><div className="label">Playmaking</div><div className="value">{selectedRecruit.scouted.playmaking}</div></div>
+              <div><div className="label">Rebounding</div><div className="value">{selectedRecruit.scouted.rebounding}</div></div>
+              <div><div className="label">Defense</div><div className="value">{selectedRecruit.scouted.defense}</div></div>
+              <div><div className="label">Athleticism</div><div className="value">{selectedRecruit.scouted.athleticism}</div></div>
+              <div><div className="label">Character</div><div className="value">{selectedRecruit.scouted.characterRating}</div></div>
+              <div><div className="label">Discipline</div><div className="value">{selectedRecruit.scouted.disciplineRating}</div></div>
+            </div>
+
+            <h3 style={{ marginTop: 16 }}>Priorities</h3>
+            <p>{priorityLabel(selectedRecruit)}</p>
+
+            <button style={{ marginTop: 12 }} onClick={() => setSelectedRecruit(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
