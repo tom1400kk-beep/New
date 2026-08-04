@@ -7,6 +7,7 @@ import { pickCityForState } from "./cities";
 import { pickCityForCountry } from "./internationalCities";
 import { pickHighSchool } from "./highSchools";
 import { generateProspectPriorities, boostPriority, type PriorityProfile } from "./priorities";
+import { regionForState, type TravelRegion } from "./travelRegions";
 import type { ClassYear, Division, PlayerOrigin, PositionType, ProspectSource } from "../types";
 
 // A player's name follows their country of origin when set (foreign-born HS
@@ -113,20 +114,91 @@ export interface GeneratedProspect {
 }
 
 // Real EYBL runs ~40 club teams across its circuits — a fixed pool this size
-// is plenty for flavor without needing a procedural name generator.
-const EYBL_TEAMS = [
-  "Atlanta Xpress", "Bay State Wolves", "Cali Supreme", "Carolina Rising", "Chicago Uprising",
-  "DMV Elite", "Dallas Mustangs", "Detroit Cartel", "Florida Rebels", "Garden State Prodigy",
-  "Georgia Stars", "Gulf Coast Heat", "Houston Defenders", "Indy Heat", "Jersey Shore Ballers",
-  "Lone Star Elite", "Memphis Tigers Elite", "Metro Atlanta Heat", "Midwest Uprising",
-  "New England Playaz", "NYC Renegades", "Ohio Basketball Club", "Pacific Northwest Elite",
-  "Palmetto State Ballers", "Philly Triple Threat", "Phoenix Rise", "Queen City Elite",
-  "Rocky Mountain Renegades", "South Florida Heat", "Southern Assault", "Texas Titans", "Tri-State Bandits",
+// is plenty for flavor without needing a procedural name generator. Each
+// team is tagged with the region it actually recruits out of, so a
+// prospect's circuit team is usually one near home, not a random draw from
+// across the country.
+interface EyblTeamDef { name: string; region: TravelRegion }
+const EYBL_TEAMS: EyblTeamDef[] = [
+  { name: "Bay State Wolves", region: "NORTHEAST" },
+  { name: "New England Playaz", region: "NORTHEAST" },
+  { name: "NYC Renegades", region: "NORTHEAST" },
+  { name: "Garden State Prodigy", region: "NORTHEAST" },
+  { name: "Jersey Shore Ballers", region: "NORTHEAST" },
+  { name: "Tri-State Bandits", region: "NORTHEAST" },
+  { name: "DMV Elite", region: "MID_ATLANTIC" },
+  { name: "Philly Triple Threat", region: "MID_ATLANTIC" },
+  { name: "Baltimore Elite", region: "MID_ATLANTIC" },
+  { name: "Virginia Kings", region: "MID_ATLANTIC" },
+  { name: "Atlanta Xpress", region: "SOUTHEAST" },
+  { name: "Carolina Rising", region: "SOUTHEAST" },
+  { name: "Georgia Stars", region: "SOUTHEAST" },
+  { name: "Palmetto State Ballers", region: "SOUTHEAST" },
+  { name: "Queen City Elite", region: "SOUTHEAST" },
+  { name: "South Florida Heat", region: "SOUTHEAST" },
+  { name: "Florida Rebels", region: "SOUTHEAST" },
+  { name: "Southern Assault", region: "SOUTHEAST" },
+  { name: "Memphis Tigers Elite", region: "SOUTHEAST" },
+  { name: "Metro Atlanta Heat", region: "SOUTHEAST" },
+  { name: "Gulf Coast Heat", region: "SOUTHEAST" },
+  { name: "Chicago Uprising", region: "MIDWEST" },
+  { name: "Midwest Uprising", region: "MIDWEST" },
+  { name: "Ohio Basketball Club", region: "MIDWEST" },
+  { name: "Indy Heat", region: "MIDWEST" },
+  { name: "Detroit Cartel", region: "MIDWEST" },
+  { name: "Dallas Mustangs", region: "SOUTH_CENTRAL" },
+  { name: "Houston Defenders", region: "SOUTH_CENTRAL" },
+  { name: "Lone Star Elite", region: "SOUTH_CENTRAL" },
+  { name: "Texas Titans", region: "SOUTH_CENTRAL" },
+  { name: "Rocky Mountain Renegades", region: "MOUNTAIN" },
+  { name: "Phoenix Rise", region: "MOUNTAIN" },
+  { name: "Denver Ballers", region: "MOUNTAIN" },
+  { name: "Vegas Elite", region: "MOUNTAIN" },
+  { name: "Cali Supreme", region: "PACIFIC" },
+  { name: "Pacific Northwest Elite", region: "PACIFIC" },
+  { name: "Seattle Slam", region: "PACIFIC" },
+  { name: "LA Fire", region: "PACIFIC" },
 ];
 
-// Virtually every 5-star plays the circuit; it thins out fast below that —
-// mirrors how real EYBL rosters skew toward the very top of a class.
+// Most kids play for a club near home; a real minority get scooped up by a
+// program from clear across the country (the way a handful of blue-chips
+// end up on a marquee circuit team far from their hometown).
+const EYBL_LOCAL_CHANCE = 0.7;
+
+export function pickEyblTeam(rng: () => number, state: string): string {
+  if (rng() < EYBL_LOCAL_CHANCE) {
+    const local = EYBL_TEAMS.filter((t) => t.region === regionForState(state));
+    if (local.length > 0) return local[Math.floor(rng() * local.length)].name;
+  }
+  return EYBL_TEAMS[Math.floor(rng() * EYBL_TEAMS.length)].name;
+}
+
+// Virtually every 5-star plays the circuit by senior year; it thins out fast
+// below that — mirrors how real EYBL rosters skew toward the very top of a
+// class. This is the eventual (senior-year) participation rate; juniors get
+// a reduced shot at it up front (EYBL_CHANCE_BY_STAR_JUNIOR) with the rest
+// topped up the following year (EYBL_SENIOR_TOPUP_CHANCE_BY_STAR), which is
+// what makes the circuit mostly-seniors-but-juniors-too on the board.
 const EYBL_CHANCE_BY_STAR: Record<number, number> = { 5: 0.9, 4: 0.55, 3: 0.12, 2: 0, 1: 0 };
+
+// Juniors get roughly a quarter of the eventual rate up front — real
+// exposure exists for underclassmen, but the circuit is still a senior's game.
+const EYBL_JUNIOR_SHARE = 0.25;
+const EYBL_CHANCE_BY_STAR_JUNIOR: Record<number, number> = Object.fromEntries(
+  Object.entries(EYBL_CHANCE_BY_STAR).map(([star, chance]) => [star, chance * EYBL_JUNIOR_SHARE]),
+);
+
+// Solved so that P(tagged by senior year) = P(junior) + P(1 - junior) * topup
+// equals the original EYBL_CHANCE_BY_STAR exactly — juniors who didn't get
+// tagged early get a second shot at breaking out senior year, ending up with
+// the same overall population split roughly 80% senior-tagged / 20%
+// junior-tagged among currently-visible EYBL prospects.
+export const EYBL_SENIOR_TOPUP_CHANCE_BY_STAR: Record<number, number> = Object.fromEntries(
+  Object.entries(EYBL_CHANCE_BY_STAR).map(([star, full]) => {
+    const junior = full * EYBL_JUNIOR_SHARE;
+    return [star, junior >= 1 ? 0 : (full - junior) / (1 - junior)];
+  }),
+);
 
 const STAR_TIER_TALENT: Record<number, { base: number; variance: number }> = {
   5: { base: 88, variance: 5 },
@@ -144,7 +216,7 @@ function starTierFromTalentScore(score: number): number {
   return 1;
 }
 
-export function generateHighSchoolProspect(rng: () => number, graduationYear: number): GeneratedProspect {
+export function generateHighSchoolProspect(rng: () => number, graduationYear: number, isJunior = false): GeneratedProspect {
   const state = weightedPick(rng, weightedStateList());
   const qualityBias = STATE_PROFILES[state].qualityBias;
   const talentScore = clamp(randNormal(rng, 50, 15) + qualityBias * 5, 1, 99);
@@ -163,8 +235,11 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
   // EYBL exposure: already-scouted-hard prospects care more about staying in
   // the spotlight (brand/exposure priority bump) and are better-scouted
   // overall (tighter noise) from playing in front of every staff nationally.
-  const playedEYBL = rng() < (EYBL_CHANCE_BY_STAR[starRating] ?? 0);
-  const eyblTeam = playedEYBL ? EYBL_TEAMS[Math.floor(rng() * EYBL_TEAMS.length)] : null;
+  // Freshly-generated juniors get a reduced shot up front (offseason.ts tops
+  // the rest up to the full rate once they reach their senior/signing year).
+  const eyblChanceTable = isJunior ? EYBL_CHANCE_BY_STAR_JUNIOR : EYBL_CHANCE_BY_STAR;
+  const playedEYBL = rng() < (eyblChanceTable[starRating] ?? 0);
+  const eyblTeam = playedEYBL ? pickEyblTeam(rng, state) : null;
   let priorities = generateProspectPriorities(rng);
   let scoutingNoise = randInt(rng, 4, 16);
   if (playedEYBL) {

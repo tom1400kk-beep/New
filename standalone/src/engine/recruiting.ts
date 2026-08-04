@@ -44,6 +44,7 @@ export interface RecruitingProspectInput {
   priorities: PriorityProfile;
   previousSchool?: string | null; // set for transfer portal players — the program they're leaving
   source?: string; // ProspectSource: "HIGH_SCHOOL" | "JUCO" | "INTERNATIONAL"
+  playedEYBL?: boolean;
 }
 
 export interface RecruitingTeamInput {
@@ -72,6 +73,7 @@ export interface RecruitingTeamInput {
   currentSeasonYear?: number;
   internationalTourCountry?: string | null; // country of the program's last foreign exhibition tour
   internationalTourSeasonYear?: number | null;
+  eyblCommitsThisClass?: number; // other EYBL prospects in the same graduating class already committed here
 }
 
 // Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
@@ -187,6 +189,14 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   // to land as a result.
   if (team.coachTransferPipeline && prospect.previousSchool) {
     base *= pipelineMultiplier(pipelineScore(team.coachTransferPipeline, prospect.previousSchool));
+  }
+
+  // EYBL circuit pull: kids on the circuit run in the same circles and talk
+  // to each other — a program that's already landed one EYBL commit this
+  // class becomes a real word-of-mouth draw for the next one. Caps out so it
+  // doesn't snowball into an unstoppable pipeline.
+  if (prospect.playedEYBL && team.eyblCommitsThisClass) {
+    base *= 1 + Math.min(team.eyblCommitsThisClass, 3) * 0.08;
   }
 
   // A walk-on offer (no guaranteed aid) is a real tradeoff, not a footnote —

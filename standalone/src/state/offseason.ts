@@ -2,12 +2,15 @@ import { computeStandings } from "./standings";
 import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct, meetsLegalityBar } from "../engine/career";
 import { disciplineDismissalChance, disciplineSigningReputationHit } from "../engine/disciplineDrops";
 import { parsePipelineStates, decayPipeline, bumpPipelineState } from "../engine/pipeline";
-import { generateProspectPriorities } from "../engine/priorities";
+import { generateProspectPriorities, boostPriority } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
 import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedIntensity, POSTSEASON_RIVALRY_THRESHOLD } from "../engine/rivalry";
-import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
+import {
+  generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect,
+  pickEyblTeam, EYBL_SENIOR_TOPUP_CHANCE_BY_STAR,
+} from "../engine/generation";
 import { POWERHOUSE_SCHOOL_NAMES, POWERHOUSE_D1_CLASS_CAP, capHighSchoolIfNeeded } from "../engine/highSchools";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generatePreseasonTournaments } from "./preseasonTournaments";
@@ -606,6 +609,16 @@ export function runOffseason(state: WorldState): OffseasonResult {
       prospect.defense = driftProspectRating(rng, prospect.defense, prospect.potential);
       prospect.athleticism = driftProspectRating(rng, prospect.athleticism, prospect.potential);
       prospect.basketballIq = driftProspectRating(rng, prospect.basketballIq, prospect.potential);
+
+      // Kids who missed the circuit as juniors get one more shot at breaking
+      // out on the EYBL circuit their senior year — see generation.ts for why
+      // this brings the overall population back to the intended senior-heavy split.
+      if (!prospect.playedEYBL && rng() < (EYBL_SENIOR_TOPUP_CHANCE_BY_STAR[prospect.starRating] ?? 0)) {
+        prospect.playedEYBL = true;
+        prospect.eyblTeam = pickEyblTeam(rng, prospect.hometownState);
+        prospect.prioritiesJson = JSON.stringify(boostPriority(JSON.parse(prospect.prioritiesJson), "BRAND_EXPOSURE", 15));
+        prospect.scoutingNoise = randInt(rng, 3, 10);
+      }
     }
 
     let winnerTeamId: string | undefined;
@@ -696,7 +709,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
   const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
   const intlCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
   for (let i = 0; i < hsCount; i++) {
-    const p = generateHighSchoolProspect(rng, seasonYear + 2);
+    const p = generateHighSchoolProspect(rng, seasonYear + 2, true);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity,
       highSchool: p.highSchool,

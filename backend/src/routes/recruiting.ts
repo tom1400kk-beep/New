@@ -110,6 +110,15 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
   const record = standings.get(team.id);
   const recentWinPct = record && record.wins + record.losses > 0 ? winPct(record) : team.prestige / 100;
 
+  const eyblCommitsThisClass = prospect.source === "HIGH_SCHOOL" && prospect.playedEYBL
+    ? await prisma.prospect.count({
+        where: {
+          saveGameId: save.id, committedTeamId: team.id, playedEYBL: true, signed: true,
+          graduationYear: prospect.graduationYear, id: { not: prospect.id },
+        },
+      })
+    : 0;
+
   const prospectInput: RecruitingProspectInput = {
     position: prospect.position,
     hometownState: prospect.hometownState,
@@ -124,6 +133,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     starRating: prospect.starRating,
     priorities: parsePriorities(prospect.prioritiesJson),
     source: prospect.source,
+    playedEYBL: prospect.playedEYBL,
   };
 
   const teamInput: RecruitingTeamInput = {
@@ -151,6 +161,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     currentSeasonYear: save.currentSeasonYear,
     internationalTourCountry: team.internationalTourCountry,
     internationalTourSeasonYear: team.internationalTourSeasonYear,
+    eyblCommitsThisClass,
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);

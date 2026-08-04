@@ -124,12 +124,20 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
   const recentWinPct = record && record.wins + record.losses > 0 ? winPct(record) : team.prestige / 100;
   const roster = state.players.filter((p) => p.teamId === team.id);
 
+  const eyblCommitsThisClass = prospect.source === "HIGH_SCHOOL" && prospect.playedEYBL
+    ? state.prospects.filter((p) =>
+        p.committedTeamId === team.id && p.playedEYBL && p.signed &&
+        p.graduationYear === prospect.graduationYear && p.id !== prospect.id,
+      ).length
+    : 0;
+
   const prospectInput: RecruitingProspectInput = {
     position: prospect.position, hometownState: prospect.hometownState, countryOfOrigin: prospect.countryOfOrigin,
     characterRating: prospect.characterRating, scoring: prospect.scoring, threePoint: prospect.threePoint,
     finishing: prospect.finishing, playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
     starRating: prospect.starRating, priorities: parsePriorities(prospect.prioritiesJson),
     source: prospect.source,
+    playedEYBL: prospect.playedEYBL,
   };
 
   const teamInput: RecruitingTeamInput = {
@@ -145,6 +153,7 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     coachPipelineStates: parsePipelineStates(coach.pipelineStatesJson),
     campusAtmosphere: coach.campusAtmosphere,
     hasScholarshipOpen: scholarshipOpen(team.division as Division, roster.filter((p) => p.onScholarship).length),
+    eyblCommitsThisClass,
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);
