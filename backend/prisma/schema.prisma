@@ -64,7 +64,7 @@ model Team {
   name               String
   state              String
   division           String
-  conference         Conference @relation(fields: [conferenceId], references: [id])
+  conference         Conference @relation(fields: [conferenceId], references: [id], onDelete: Cascade)
   conferenceId       String
 
   prestige           Int      @default(50) // 1-100
@@ -81,10 +81,10 @@ model Team {
   prospectInterest  RecruitInterest[]
   transferInterest  TransferInterest[]
   walkOnCandidates  WalkOnCandidate[]
-  headCoach         Coach?   @relation("HeadCoach", fields: [headCoachId], references: [id])
+  headCoach         Coach?   @relation("HeadCoach", fields: [headCoachId], references: [id], onDelete: SetNull)
   headCoachId       String?  @unique
   assistants        AssistantCoach[]
-  athleticDirector   AthleticDirector? @relation(fields: [athleticDirectorId], references: [id])
+  athleticDirector   AthleticDirector? @relation(fields: [athleticDirectorId], references: [id], onDelete: SetNull)
   athleticDirectorId String?  @unique
 
   homeGames         Game[]   @relation("HomeTeam")
@@ -172,7 +172,7 @@ model AssistantCoach {
   id            String   @id @default(cuid())
   saveGame      SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
   saveGameId    String
-  team          Team?    @relation(fields: [teamId], references: [id])
+  team          Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId        String?
   name          String
   role          String
@@ -191,7 +191,7 @@ model Player {
   id               String   @id @default(cuid())
   saveGame         SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
   saveGameId       String
-  team             Team?    @relation(fields: [teamId], references: [id])
+  team             Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId           String?
 
   firstName        String
@@ -365,9 +365,9 @@ model Game {
   seasonYear    Int
   date          DateTime
 
-  homeTeam      Team     @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  homeTeam      Team     @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
   homeTeamId    String
-  awayTeam      Team     @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  awayTeam      Team     @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
   awayTeamId    String
 
   homeScore     Int?
@@ -422,7 +422,7 @@ model Tournament {
   seasonYear   Int
   type         String
   division     String
-  conference   Conference? @relation(fields: [conferenceId], references: [id])
+  conference   Conference? @relation(fields: [conferenceId], references: [id], onDelete: Cascade)
   conferenceId String?
 
   games        Game[]
