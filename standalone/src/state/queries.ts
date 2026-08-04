@@ -11,6 +11,7 @@ import { computeGameOdds, type OddsTeamInput } from "../engine/gameOdds";
 import { computeDivisionApPoll } from "./apPoll";
 import { overall, type SimPlayer } from "../engine/simulate";
 import { aggregateCareerStats, type RawGameStatLine } from "../engine/careerStats";
+import { buildSeasonCalendar } from "../engine/seasonCalendar";
 import type { WorldState } from "./types";
 
 export function getDashboard(state: WorldState) {
@@ -471,5 +472,68 @@ export function getGamePreview(state: WorldState, gameId: string) {
     gameId: game.id, date: game.date, isConference: game.isConference,
     tournament: tournament ? { type: tournament.type, name: tournament.name } : null,
     homeTeam: homePayload, awayTeam: awayPayload, odds,
+  };
+}
+
+function nationalTournamentType(division: Division): string {
+  return division === "D1" ? "NCAA_TOURNAMENT" : division === "D2" ? "D2_NATIONAL" : "D3_NATIONAL";
+}
+
+function dateRangeOf(dates: Date[]): { start: Date; end: Date } | null {
+  if (dates.length === 0) return null;
+  let start = dates[0];
+  let end = dates[0];
+  for (const d of dates) {
+    if (d.getTime() < start.getTime()) start = d;
+    if (d.getTime() > end.getTime()) end = d;
+  }
+  return { start, end };
+}
+
+export function getSeasonCalendar(state: WorldState) {
+  let division: Division = "D1";
+  if (state.save.coachTeamId) {
+    const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+    if (team) division = team.division as Division;
+  }
+  const seasonYear = state.save.currentSeasonYear;
+  const teamDivisionById = new Map(state.teams.map((t) => [t.id, t.division]));
+  const tournamentById = new Map(state.tournaments.map((t) => [t.id, t]));
+
+  const regularSeasonDates = state.games
+    .filter((g) => g.seasonYear === seasonYear && g.tournamentId === null && teamDivisionById.get(g.homeTeamId) === division)
+    .map((g) => g.date);
+
+  const gamesByTournamentType = (type: string) => state.games
+    .filter((g) => {
+      if (g.seasonYear !== seasonYear || !g.tournamentId) return false;
+      const t = tournamentById.get(g.tournamentId);
+      return !!t && t.type === type && t.division === division;
+    })
+    .map((g) => g.date);
+
+  const preseasonDates = gamesByTournamentType("PRESEASON_INVITATIONAL");
+  const confTourneyDates = gamesByTournamentType("CONFERENCE_TOURNAMENT");
+  const nationalDates = gamesByTournamentType(nationalTournamentType(division));
+
+  const confs = state.conferences.filter((c) => c.division === division);
+  const conferenceTeamCounts = confs.map((c) => state.teams.filter((t) => t.conferenceId === c.id).length);
+  const divisionTeamCount = state.teams.filter((t) => t.division === division).length;
+
+  const milestones = buildSeasonCalendar({
+    seasonYear,
+    division,
+    regularSeasonRange: dateRangeOf(regularSeasonDates),
+    preseasonEventsStart: preseasonDates.length > 0 ? dateRangeOf(preseasonDates)!.start : null,
+    conferenceTeamCounts,
+    divisionTeamCount,
+    confTourneyRange: dateRangeOf(confTourneyDates),
+    nationalRange: dateRangeOf(nationalDates),
+  });
+
+  return {
+    seasonYear, division,
+    currentDate: state.save.currentDate, currentPhase: state.save.currentPhase,
+    milestones,
   };
 }

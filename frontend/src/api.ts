@@ -44,6 +44,7 @@ export const api = {
   getApPoll: (saveId: string) => request<any>(`/saves/${saveId}/ap-poll`),
   getCoachStats: (saveId: string) => request<any>(`/saves/${saveId}/coach-stats`),
   getRivalries: (saveId: string) => request<any[]>(`/saves/${saveId}/rivalries`),
+  getSeasonCalendar: (saveId: string) => request<any>(`/saves/${saveId}/calendar`),
   advance: (saveId: string) => request<any>(`/saves/${saveId}/advance`, { method: "POST" }),
 
   getRecruitingBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/recruiting`),

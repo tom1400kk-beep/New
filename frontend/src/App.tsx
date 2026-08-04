@@ -11,22 +11,41 @@ import RecruitingPage from "./pages/RecruitingPage";
 import TransfersPage from "./pages/TransfersPage";
 import StandingsPage from "./pages/StandingsPage";
 import ContractPage from "./pages/ContractPage";
+import CalendarPage from "./pages/CalendarPage";
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+const PHASE_LABELS: Record<string, string> = {
+  PRESEASON: "Preseason",
+  REGULAR_SEASON: "Regular Season",
+  CONFERENCE_TOURNAMENT: "Conference Tournament",
+  NCAA_TOURNAMENT: "NCAA Tournament",
+  NIT: "NIT",
+  OFFSEASON: "Offseason",
+};
 
 function Shell() {
   const { activeSaveId } = useSave();
   const location = useLocation();
   const [hasTeam, setHasTeam] = useState(false);
   const [isPreseason, setIsPreseason] = useState(false);
+  const [saveDate, setSaveDate] = useState<{ currentDate: string; currentSeasonYear: number; currentPhase: string } | null>(null);
 
   useEffect(() => {
     if (!activeSaveId) {
       setHasTeam(false);
       setIsPreseason(false);
+      setSaveDate(null);
       return;
     }
     api.getDashboard(activeSaveId).then((d) => {
       setHasTeam(!!d.team);
       setIsPreseason(d.save?.currentPhase === "PRESEASON");
+      if (d.save) {
+        setSaveDate({ currentDate: d.save.currentDate, currentSeasonYear: d.save.currentSeasonYear, currentPhase: d.save.currentPhase });
+      }
     });
   }, [activeSaveId, location.pathname]);
 
@@ -34,6 +53,12 @@ function Shell() {
     <div className="app-shell">
       <nav className="sidebar">
         <div className="brand">🏀 Coach Sim</div>
+        {saveDate && (
+          <div className="text-muted" style={{ fontSize: "0.8rem", padding: "0 4px 12px", lineHeight: 1.4 }}>
+            <div>{fmtDate(saveDate.currentDate)}</div>
+            <div>{PHASE_LABELS[saveDate.currentPhase] ?? saveDate.currentPhase} · {saveDate.currentSeasonYear}–{saveDate.currentSeasonYear + 1}</div>
+          </div>
+        )}
         <NavLink to="/" end>
           Saves
         </NavLink>
@@ -47,6 +72,7 @@ function Shell() {
             <NavLink to="/standings">Standings</NavLink>
             <NavLink to="/recruiting">Recruiting</NavLink>
             <NavLink to="/transfers">Transfers</NavLink>
+            <NavLink to="/calendar">Calendar</NavLink>
           </>
         )}
       </nav>
@@ -61,6 +87,7 @@ function Shell() {
           <Route path="/standings" element={<StandingsPage />} />
           <Route path="/recruiting" element={<RecruitingPage />} />
           <Route path="/transfers" element={<TransfersPage />} />
+          <Route path="/calendar" element={<CalendarPage />} />
         </Routes>
       </main>
     </div>
