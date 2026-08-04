@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 
@@ -12,11 +12,55 @@ function homeLabel(p: any): string {
   return p.hometownState;
 }
 
+function formatHeight(inches: number): string {
+  const feet = Math.floor(inches / 12);
+  const remainder = inches % 12;
+  return `${feet}'${remainder}"`;
+}
+
+const ORIGIN_LABELS: Record<string, string> = {
+  HIGH_SCHOOL: "High School",
+  JUCO: "Junior College",
+  TRANSFER_PORTAL: "Transfer Portal",
+  INTERNATIONAL: "International",
+};
+
+interface Column {
+  key: string;
+  label: string;
+  getValue: (p: any) => string | number;
+  numeric?: boolean;
+}
+
+const COLUMNS: Column[] = [
+  { key: "name", label: "Name", getValue: (p) => `${p.lastName} ${p.firstName}` },
+  { key: "position", label: "Pos", getValue: (p) => p.position },
+  { key: "home", label: "Home", getValue: (p) => homeLabel(p) },
+  { key: "classYear", label: "Yr", getValue: (p) => p.classYear },
+  { key: "overall", label: "OVR", getValue: (p) => overall(p), numeric: true },
+  { key: "scoring", label: "Scoring", getValue: (p) => p.scoring, numeric: true },
+  { key: "threePoint", label: "3PT", getValue: (p) => p.threePoint, numeric: true },
+  { key: "finishing", label: "Finish", getValue: (p) => p.finishing, numeric: true },
+  { key: "playmaking", label: "Playmaking", getValue: (p) => p.playmaking, numeric: true },
+  { key: "rebounding", label: "Rebounding", getValue: (p) => p.rebounding, numeric: true },
+  { key: "defense", label: "Defense", getValue: (p) => p.defense, numeric: true },
+  { key: "characterRating", label: "Character", getValue: (p) => p.characterRating, numeric: true },
+  { key: "disciplineRating", label: "Discipline", getValue: (p) => p.disciplineRating, numeric: true },
+  { key: "onScholarship", label: "Aid", getValue: (p) => (p.onScholarship ? "Scholarship" : "Walk-On") },
+  {
+    key: "status", label: "Status",
+    getValue: (p) => (p.isSuspended ? `Suspended (${p.suspensionDaysLeft}d)` : p.isInjured ? `Injured (${p.injuryWeeksLeft}d)` : "Healthy"),
+  },
+];
+
 export default function RosterPage() {
   const { activeSaveId } = useSave();
   const [players, setPlayers] = useState<any[]>([]);
   const [walkOns, setWalkOns] = useState<{ candidates: any[]; rosterCount: number; rosterCap: number }>({ candidates: [], rosterCount: 0, rosterCap: 0 });
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState("classYear");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
   function loadRoster() {
     if (activeSaveId) api.getRoster(activeSaveId).then(setPlayers);
@@ -45,6 +89,27 @@ export default function RosterPage() {
     }
   }
 
+  function handleSort(column: Column) {
+    if (sortKey === column.key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(column.key);
+      setSortDir(column.numeric ? "desc" : "asc");
+    }
+  }
+
+  const sortedPlayers = useMemo(() => {
+    const column = COLUMNS.find((c) => c.key === sortKey) ?? COLUMNS[0];
+    const sorted = [...players].sort((a, b) => {
+      const av = column.getValue(a);
+      const bv = column.getValue(b);
+      if (typeof av === "number" && typeof bv === "number") return av - bv;
+      return String(av).localeCompare(String(bv));
+    });
+    if (sortDir === "desc") sorted.reverse();
+    return sorted;
+  }, [players, sortKey, sortDir]);
+
   const openSpots = walkOns.rosterCap - walkOns.rosterCount;
 
   return (
@@ -54,14 +119,25 @@ export default function RosterPage() {
         <table>
           <thead>
             <tr>
-              <th>Name</th><th>Pos</th><th>Home</th><th>Yr</th><th>OVR</th><th>Scoring</th><th>3PT</th><th>Finish</th>
-              <th>Playmaking</th><th>Rebounding</th><th>Defense</th><th>Character</th><th>Discipline</th><th>Aid</th><th>Status</th>
+              {COLUMNS.map((c) => (
+                <th
+                  key={c.key}
+                  className={`sortable${sortKey === c.key ? " active" : ""}`}
+                  onClick={() => handleSort(c)}
+                >
+                  {c.label}{sortKey === c.key ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {players.map((p) => (
+            {sortedPlayers.map((p) => (
               <tr key={p.id}>
-                <td>{p.firstName} {p.lastName}</td>
+                <td>
+                  <button className="player-name-link" onClick={() => setSelectedPlayer(p)}>
+                    {p.firstName} {p.lastName}
+                  </button>
+                </td>
                 <td>{p.position}</td>
                 <td>{homeLabel(p)}</td>
                 <td>{p.classYear}</td>
@@ -110,7 +186,11 @@ export default function RosterPage() {
             <tbody>
               {walkOns.candidates.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.firstName} {c.lastName}</td>
+                  <td>
+                    <button className="player-name-link" onClick={() => setSelectedPlayer(c)}>
+                      {c.firstName} {c.lastName}
+                    </button>
+                  </td>
                   <td>{c.position}</td>
                   <td>{homeLabel(c)}</td>
                   <td>{overall(c)}</td>
@@ -130,6 +210,77 @@ export default function RosterPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {selectedPlayer && (
+        <div className="modal-backdrop" onClick={() => setSelectedPlayer(null)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h2>{selectedPlayer.firstName} {selectedPlayer.lastName}</h2>
+            <p className="text-muted">
+              {selectedPlayer.position}
+              {selectedPlayer.classYear ? ` · ${selectedPlayer.classYear}` : ""}
+              {selectedPlayer.heightInches ? ` · ${formatHeight(selectedPlayer.heightInches)}` : ""}
+              {" · "}Overall {overall(selectedPlayer)}
+            </p>
+
+            <div className="player-detail-grid">
+              <div>
+                <div className="label">Hometown</div>
+                <div className="value">{homeLabel(selectedPlayer)}</div>
+              </div>
+              <div>
+                <div className="label">Origin</div>
+                <div className="value">{ORIGIN_LABELS[selectedPlayer.origin] ?? selectedPlayer.origin}</div>
+              </div>
+              {selectedPlayer.potential != null && (
+                <div>
+                  <div className="label">Potential</div>
+                  <div className="value">{selectedPlayer.potential}</div>
+                </div>
+              )}
+              {selectedPlayer.stamina != null && (
+                <div>
+                  <div className="label">Stamina</div>
+                  <div className="value">{selectedPlayer.stamina}</div>
+                </div>
+              )}
+              {selectedPlayer.eligibilityYearsLeft != null && (
+                <div>
+                  <div className="label">Eligibility Left</div>
+                  <div className="value">{selectedPlayer.eligibilityYearsLeft} yr</div>
+                </div>
+              )}
+              {selectedPlayer.onScholarship != null && (
+                <div>
+                  <div className="label">Aid</div>
+                  <div className="value">{selectedPlayer.onScholarship ? "Scholarship" : "Walk-On"}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="player-detail-grid">
+              <div><div className="label">Scoring</div><div className="value">{selectedPlayer.scoring}</div></div>
+              <div><div className="label">3PT</div><div className="value">{selectedPlayer.threePoint}</div></div>
+              <div><div className="label">Finishing</div><div className="value">{selectedPlayer.finishing}</div></div>
+              <div><div className="label">Playmaking</div><div className="value">{selectedPlayer.playmaking}</div></div>
+              <div><div className="label">Rebounding</div><div className="value">{selectedPlayer.rebounding}</div></div>
+              <div><div className="label">Defense</div><div className="value">{selectedPlayer.defense}</div></div>
+              <div><div className="label">Athleticism</div><div className="value">{selectedPlayer.athleticism}</div></div>
+              <div><div className="label">Basketball IQ</div><div className="value">{selectedPlayer.basketballIq}</div></div>
+              <div><div className="label">Character</div><div className="value">{selectedPlayer.characterRating}</div></div>
+              <div><div className="label">Discipline</div><div className="value">{selectedPlayer.disciplineRating}</div></div>
+            </div>
+
+            {(selectedPlayer.isInjured || selectedPlayer.isSuspended) && (
+              <p className="text-bad">
+                {selectedPlayer.isSuspended && `Suspended — ${selectedPlayer.suspensionDaysLeft} day(s) left. `}
+                {selectedPlayer.isInjured && `Injured — ${selectedPlayer.injuryWeeksLeft} week(s) left.`}
+              </p>
+            )}
+
+            <button style={{ marginTop: 12 }} onClick={() => setSelectedPlayer(null)}>Close</button>
+          </div>
         </div>
       )}
     </div>
