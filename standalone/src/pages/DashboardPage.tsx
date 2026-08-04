@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import TeamLink from "../components/TeamLink";
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -256,7 +257,7 @@ export default function DashboardPage() {
           )}
           {jobOffers.map((o) => (
             <div key={o.teamId} className="divider-row">
-              <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}
+              <strong><TeamLink teamId={o.teamId} name={o.teamName} /></strong> ({o.division}) — prestige {o.prestige}
               {o.salary != null && <span className="text-muted"> · {fmtMoney(o.salary)}/yr</span>}
               {o.costOfLivingIndex != null && <span className="text-muted"> · {colLabel(o.costOfLivingIndex)} cost of living</span>}
               {o.athleticDirector && (
@@ -345,7 +346,7 @@ export default function DashboardPage() {
           <h3>Rivalries</h3>
           {rivalries.map((r) => (
             <div key={r.teamId} className="divider-row">
-              <strong>{r.teamName}</strong>
+              <strong><TeamLink teamId={r.teamId} name={r.teamName} /></strong>
               <span className={r.intensity >= 60 ? "text-bad" : ""}> — {rivalryLabel(r.intensity)} ({r.intensity}/100)</span>
               <span className="text-muted"> · all-time {r.allTimeRecord.wins}-{r.allTimeRecord.losses}</span>
               {r.origin === "POSTSEASON" && <span className="text-muted"> · forged in the postseason</span>}
@@ -398,7 +399,7 @@ export default function DashboardPage() {
       {preview && (
         <div className="modal-backdrop" onClick={() => setPreview(null)}>
           <div className="modal-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
-            <h2>{preview.awayTeam.name} at {preview.homeTeam.name}</h2>
+            <h2><TeamLink teamId={preview.awayTeam.teamId} name={preview.awayTeam.name} /> at <TeamLink teamId={preview.homeTeam.teamId} name={preview.homeTeam.name} /></h2>
             <p className="text-muted">
               {fmtDate(preview.date)}
               {preview.tournament ? ` · ${preview.tournament.name ?? preview.tournament.type.replace(/_/g, " ")}` : preview.isConference ? " · Conference game" : ""}
@@ -418,7 +419,7 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>{preview.awayTeam.name}</td>
+                    <td><TeamLink teamId={preview.awayTeam.teamId} name={preview.awayTeam.name} /></td>
                     <td className="text-muted">{preview.awayTeam.record.wins}-{preview.awayTeam.record.losses}</td>
                     <td className="text-muted">{fmtKenpom(preview.awayTeam.kenpom)}</td>
                     <td className="text-muted">{fmtRPI(preview.awayTeam.rpi)}</td>
@@ -430,7 +431,7 @@ export default function DashboardPage() {
                     </td>
                   </tr>
                   <tr>
-                    <td>{preview.homeTeam.name} <span className="text-muted" style={{ fontWeight: 400, fontSize: "0.78rem" }}>(Home)</span></td>
+                    <td><TeamLink teamId={preview.homeTeam.teamId} name={preview.homeTeam.name} /> <span className="text-muted" style={{ fontWeight: 400, fontSize: "0.78rem" }}>(Home)</span></td>
                     <td className="text-muted">{preview.homeTeam.record.wins}-{preview.homeTeam.record.losses}</td>
                     <td className="text-muted">{fmtKenpom(preview.homeTeam.kenpom)}</td>
                     <td className="text-muted">{fmtRPI(preview.homeTeam.rpi)}</td>

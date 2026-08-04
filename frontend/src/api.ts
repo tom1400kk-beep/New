@@ -36,6 +36,7 @@ export const api = {
   signDisciplineDrop: (saveId: string, playerId: string) =>
     request<any>(`/saves/${saveId}/discipline-drops/${playerId}/sign`, { method: "POST" }),
   getSchedule: (saveId: string) => request<any>(`/saves/${saveId}/schedule`),
+  getTeamProfile: (saveId: string, teamId: string) => request<any>(`/saves/${saveId}/teams/${teamId}`),
   getStandings: (saveId: string) => request<any>(`/saves/${saveId}/standings`),
   getKenPom: (saveId: string) => request<any[]>(`/saves/${saveId}/kenpom`),
   getRPI: (saveId: string) => request<any[]>(`/saves/${saveId}/rpi`),

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import TeamLink from "../components/TeamLink";
 
 function fmtAttendance(n: number) {
   return n.toLocaleString();
@@ -28,7 +29,7 @@ export default function SchedulePage() {
               <tr key={g.id} style={g.isRivalry ? { background: "rgba(220, 80, 40, 0.1)" } : undefined}>
                 <td>{new Date(g.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</td>
                 <td>
-                  {g.isHome ? "vs" : "@"} {g.opponentName}
+                  {g.isHome ? "vs" : "@"} <TeamLink teamId={g.opponentId} name={g.opponentName} />
                   {g.isRivalry && <span className="text-bad" title={`Rivalry intensity ${g.rivalryIntensity}/100`}> 🔥 Rivalry</span>}
                 </td>
                 <td>

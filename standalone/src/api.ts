@@ -151,6 +151,7 @@ export const api = {
     return result;
   },
   getSchedule: async (saveId: string) => queries.getSchedule(await ensureLoaded(saveId)),
+  getTeamProfile: async (saveId: string, teamId: string) => queries.getTeamProfile(await ensureLoaded(saveId), teamId),
   getStandings: async (saveId: string) => queries.getStandings(await ensureLoaded(saveId)),
   getKenPom: async (saveId: string) => queries.getKenPom(await ensureLoaded(saveId)),
   getRPI: async (saveId: string) => queries.getRPI(await ensureLoaded(saveId)),

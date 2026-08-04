@@ -115,12 +115,66 @@ export function getSchedule(state: WorldState) {
         awayTeam: state.teams.find((t) => t.id === g.awayTeamId)!,
         tournament: g.tournamentId ? state.tournaments.find((t) => t.id === g.tournamentId) ?? null : null,
         isHome,
+        opponentId,
         opponentName: state.teams.find((t) => t.id === opponentId)?.name ?? "",
         isRivalry: rivalryIntensity !== undefined,
         rivalryIntensity: rivalryIntensity ?? null,
       };
     });
   return { teamName, games };
+}
+
+// Full profile for an arbitrary team (not just the user's own) — powers the
+// "click any team name" feature across the UI. KenPom/RPI are D1-only,
+// mirroring the rest of the app's ranking pages.
+export function getTeamProfile(state: WorldState, teamId: string) {
+  const team = state.teams.find((t) => t.id === teamId);
+  if (!team) return null;
+  const headCoach = state.coaches.find((c) => c.id === team.headCoachId) ?? null;
+  const athleticDirector = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId) ?? null;
+  const conference = state.conferences.find((c) => c.id === team.conferenceId) ?? null;
+
+  const standings = computeStandings(state, state.save.currentSeasonYear);
+  const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+
+  const roster = state.players
+    .filter((p) => p.teamId === team.id)
+    .sort((a, b) => a.classYear.localeCompare(b.classYear) || b.scoring - a.scoring);
+
+  let kenpom: { rank: number; adjEM: number } | null = null;
+  let rpi: { rank: number; rpi: number } | null = null;
+  if (team.division === "D1") {
+    const teams = d1Teams(state);
+    const teamById = new Map(teams.map((t) => [t.id, t]));
+    const seasonYear = state.save.currentSeasonYear;
+    const kenpomSorted = [...computeKenPomRatings(buildKenPomBoxScores(state, seasonYear).filter((b) => teamById.has(b.teamId))).values()]
+      .filter((r) => teamById.has(r.teamId)).sort((a, b) => b.adjEM - a.adjEM);
+    const rpiSorted = [...computeRPI(buildRPIResults(state, seasonYear).filter((r) => teamById.has(r.teamId))).values()]
+      .filter((r) => teamById.has(r.teamId)).sort((a, b) => b.rpi - a.rpi);
+    const kenpomIdx = kenpomSorted.findIndex((r) => r.teamId === team.id);
+    const rpiIdx = rpiSorted.findIndex((r) => r.teamId === team.id);
+    if (kenpomIdx >= 0) kenpom = { rank: kenpomIdx + 1, adjEM: kenpomSorted[kenpomIdx].adjEM };
+    if (rpiIdx >= 0) rpi = { rank: rpiIdx + 1, rpi: rpiSorted[rpiIdx].rpi };
+  }
+
+  return {
+    id: team.id, name: team.name, state: team.state, division: team.division,
+    conferenceName: conference?.name ?? null, conferenceAbbreviation: conference?.abbreviation ?? null,
+    prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
+    academicReputation: team.academicReputation, venueCapacity: team.venueCapacity,
+    isPlayerControlled: team.isPlayerControlled,
+    costOfLivingIndex: costOfLivingIndex(team.state),
+    headCoach: headCoach ? {
+      name: headCoach.name, archetype: headCoach.archetype, background: headCoach.background,
+      hotSeatLevel: headCoach.hotSeatLevel, reputation: headCoach.reputation,
+    } : null,
+    athleticDirector: athleticDirector ? {
+      name: athleticDirector.name, patience: athleticDirector.patience, winFocus: athleticDirector.winFocus,
+      integrityStandard: athleticDirector.integrityStandard, loyalty: athleticDirector.loyalty,
+      yearsAtCurrentJob: athleticDirector.yearsAtCurrentJob,
+    } : null,
+    record, kenpom, rpi, roster,
+  };
 }
 
 export function getRivalries(state: WorldState) {

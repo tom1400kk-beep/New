@@ -6,9 +6,71 @@ import { sortedPair } from "../engine/rivalry";
 import { meetsLegalityBar } from "../engine/career";
 import { disciplineSigningReputationHit } from "../engine/disciplineDrops";
 import { clamp } from "../engine/rng";
+import { costOfLivingIndex } from "../engine/costOfLiving";
+import { computeKenPomRatings } from "../engine/kenpom";
+import { computeRPI } from "../engine/rpi";
+import { d1Teams, buildKenPomBoxScores, buildRPIResults } from "./rankings";
 import { DIVISION_RULES, type Division } from "../types";
 
 export const teamRouter = Router();
+
+// Full profile for an arbitrary team (not just the user's own) — powers the
+// "click any team name" feature across the UI. KenPom/RPI are D1-only,
+// mirroring the rest of the app's ranking pages.
+teamRouter.get("/saves/:id/teams/:teamId", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  const team = await prisma.team.findUniqueOrThrow({
+    where: { id: req.params.teamId },
+    include: { headCoach: true, athleticDirector: true, conference: true },
+  });
+  if (team.saveGameId !== save.id) return res.status(404).json({ error: "Team not found in this save" });
+
+  const standings = await computeStandings(save.id, save.currentSeasonYear);
+  const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+
+  const roster = await prisma.player.findMany({
+    where: { saveGameId: save.id, teamId: team.id },
+    orderBy: [{ classYear: "asc" }, { scoring: "desc" }],
+  });
+
+  let kenpom: { rank: number; adjEM: number } | null = null;
+  let rpi: { rank: number; rpi: number } | null = null;
+  if (team.division === "D1") {
+    const teams = await d1Teams(save.id);
+    const teamById = new Map(teams.map((t) => [t.id, t]));
+    const [boxScores, rpiResults] = await Promise.all([
+      buildKenPomBoxScores(save.id, save.currentSeasonYear),
+      buildRPIResults(save.id, save.currentSeasonYear),
+    ]);
+    const kenpomSorted = [...computeKenPomRatings(boxScores.filter((b) => teamById.has(b.teamId))).values()]
+      .filter((r) => teamById.has(r.teamId)).sort((a, b) => b.adjEM - a.adjEM);
+    const rpiSorted = [...computeRPI(rpiResults.filter((r) => teamById.has(r.teamId))).values()]
+      .filter((r) => teamById.has(r.teamId)).sort((a, b) => b.rpi - a.rpi);
+    const kenpomIdx = kenpomSorted.findIndex((r) => r.teamId === team.id);
+    const rpiIdx = rpiSorted.findIndex((r) => r.teamId === team.id);
+    if (kenpomIdx >= 0) kenpom = { rank: kenpomIdx + 1, adjEM: kenpomSorted[kenpomIdx].adjEM };
+    if (rpiIdx >= 0) rpi = { rank: rpiIdx + 1, rpi: rpiSorted[rpiIdx].rpi };
+  }
+
+  res.json({
+    id: team.id, name: team.name, state: team.state, division: team.division,
+    conferenceName: team.conference.name, conferenceAbbreviation: team.conference.abbreviation,
+    prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
+    academicReputation: team.academicReputation, venueCapacity: team.venueCapacity,
+    isPlayerControlled: team.isPlayerControlled,
+    costOfLivingIndex: costOfLivingIndex(team.state),
+    headCoach: team.headCoach ? {
+      name: team.headCoach.name, archetype: team.headCoach.archetype, background: team.headCoach.background,
+      hotSeatLevel: team.headCoach.hotSeatLevel, reputation: team.headCoach.reputation,
+    } : null,
+    athleticDirector: team.athleticDirector ? {
+      name: team.athleticDirector.name, patience: team.athleticDirector.patience, winFocus: team.athleticDirector.winFocus,
+      integrityStandard: team.athleticDirector.integrityStandard, loyalty: team.athleticDirector.loyalty,
+      yearsAtCurrentJob: team.athleticDirector.yearsAtCurrentJob,
+    } : null,
+    record, kenpom, rpi, roster,
+  });
+});
 
 teamRouter.get("/saves/:id/roster", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
@@ -138,7 +200,7 @@ teamRouter.get("/saves/:id/schedule", async (req, res) => {
     const opponentId = isHome ? g.awayTeamId : g.homeTeamId;
     const opponent = isHome ? g.awayTeam : g.homeTeam;
     const rivalryIntensity = rivalIntensityByOpponent.get(opponentId);
-    return { ...g, isHome, opponentName: opponent.name, isRivalry: rivalryIntensity !== undefined, rivalryIntensity: rivalryIntensity ?? null };
+    return { ...g, isHome, opponentId, opponentName: opponent.name, isRivalry: rivalryIntensity !== undefined, rivalryIntensity: rivalryIntensity ?? null };
   });
   res.json({ teamName: team.name, games: gamesOut });
 });

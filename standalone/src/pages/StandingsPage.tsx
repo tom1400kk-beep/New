@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import TeamLink from "../components/TeamLink";
 
 type Tab = "CONFERENCE" | "AP_POLL" | "KENPOM" | "RPI" | "BRACKETOLOGY";
 const REGIONS = ["East", "West", "South", "Midwest"];
@@ -58,7 +59,7 @@ export default function StandingsPage() {
             <tbody>
               {standings.rows.map((r: any) => (
                 <tr key={r.teamId}>
-                  <td>{r.name}</td>
+                  <td><TeamLink teamId={r.teamId} name={r.name} /></td>
                   <td>{r.wins}-{r.losses}</td>
                   <td>{r.confWins}-{r.confLosses}</td>
                 </tr>
@@ -88,7 +89,7 @@ export default function StandingsPage() {
               {apPoll?.rankings.map((r: any) => (
                 <tr key={r.teamId}>
                   <td>{r.rank}</td>
-                  <td>{r.name}</td>
+                  <td><TeamLink teamId={r.teamId} name={r.name} /></td>
                   <td className="text-muted">{r.wins}-{r.losses}</td>
                 </tr>
               ))}
@@ -113,7 +114,7 @@ export default function StandingsPage() {
               {kenpom.map((r: any) => (
                 <tr key={r.teamId}>
                   <td>{r.rank}</td>
-                  <td>{r.name}</td>
+                  <td><TeamLink teamId={r.teamId} name={r.name} /></td>
                   <td className="text-muted">{r.gamesPlayed}</td>
                   <td className={r.adjEM >= 0 ? "text-good" : "text-bad"}>{r.adjEM > 0 ? "+" : ""}{r.adjEM}</td>
                   <td>{r.adjO}</td>
@@ -142,7 +143,7 @@ export default function StandingsPage() {
               {rpi.map((r: any) => (
                 <tr key={r.teamId}>
                   <td>{r.rank}</td>
-                  <td>{r.name}</td>
+                  <td><TeamLink teamId={r.teamId} name={r.name} /></td>
                   <td className="text-muted">{r.wins}-{r.losses}</td>
                   <td>{r.rpi.toFixed(3)}</td>
                   <td className="text-muted">{r.owp.toFixed(3)}</td>
@@ -178,7 +179,7 @@ export default function StandingsPage() {
                         .map((t: any) => (
                           <tr key={t.teamId}>
                             <td>{t.seedLine}{t.isFirstFour ? "*" : ""}</td>
-                            <td>{t.name}</td>
+                            <td><TeamLink teamId={t.teamId} name={t.name} /></td>
                             <td className="text-muted">{t.wins}-{t.losses}</td>
                             <td className="text-muted">{t.isAutoBid ? "Auto" : "At-Large"}</td>
                           </tr>
@@ -191,8 +192,18 @@ export default function StandingsPage() {
 
               <div className="card">
                 <h3>Bubble Watch</h3>
-                <p><strong>First Four Out:</strong> {bracket.bubbleWatch.firstFourOut.map((t: any) => t.name).join(", ") || "—"}</p>
-                <p><strong>Next Four Out:</strong> {bracket.bubbleWatch.nextFourOut.map((t: any) => t.name).join(", ") || "—"}</p>
+                <p>
+                  <strong>First Four Out:</strong>{" "}
+                  {bracket.bubbleWatch.firstFourOut.length === 0 ? "—" : bracket.bubbleWatch.firstFourOut.map((t: any, i: number) => (
+                    <span key={t.teamId}>{i > 0 && ", "}<TeamLink teamId={t.teamId} name={t.name} /></span>
+                  ))}
+                </p>
+                <p>
+                  <strong>Next Four Out:</strong>{" "}
+                  {bracket.bubbleWatch.nextFourOut.length === 0 ? "—" : bracket.bubbleWatch.nextFourOut.map((t: any, i: number) => (
+                    <span key={t.teamId}>{i > 0 && ", "}<TeamLink teamId={t.teamId} name={t.name} /></span>
+                  ))}
+                </p>
               </div>
             </>
           )}

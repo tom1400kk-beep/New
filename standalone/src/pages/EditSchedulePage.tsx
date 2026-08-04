@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import TeamLink from "../components/TeamLink";
 
 const FORMAT_LABELS: Record<string, string> = {
   BRACKET8: "8-team bracket · 3 games",
@@ -195,7 +196,10 @@ function PreseasonTournamentsSection() {
                 <td>{TIER_LABELS[t.tier] ?? t.tier ?? "—"}</td>
                 <td className="text-muted">{FORMAT_LABELS[t.format] ?? t.format ?? "—"}</td>
                 <td className="text-muted" style={{ maxWidth: 420 }}>
-                  <strong>({t.field.length} teams)</strong> {t.field.map((f: any) => f.name).join(", ")}
+                  <strong>({t.field.length} teams)</strong>{" "}
+                  {t.field.map((f: any, i: number) => (
+                    <span key={f.teamId}>{i > 0 && ", "}<TeamLink teamId={f.teamId} name={f.name} /></span>
+                  ))}
                 </td>
                 {isD1 && (
                   <td>

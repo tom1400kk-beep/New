@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import TeamLink from "../components/TeamLink";
 
 function fmtMoney(n: number) {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
@@ -250,7 +251,7 @@ export default function ContractPage() {
                 <tbody>
                   {coachStats.byTeam.map((t: any) => (
                     <tr key={t.teamId}>
-                      <td>{t.teamName}</td>
+                      <td><TeamLink teamId={t.teamId} name={t.teamName} /></td>
                       <td className="text-muted">{t.seasons}</td>
                       <td className="text-muted">{t.wins}-{t.losses}</td>
                     </tr>
@@ -271,7 +272,7 @@ export default function ContractPage() {
                   {[...coachStats.bySeason].reverse().map((s: any) => (
                     <tr key={`${s.teamId}-${s.seasonYear}`}>
                       <td>{s.seasonYear}</td>
-                      <td>{s.teamName}</td>
+                      <td><TeamLink teamId={s.teamId} name={s.teamName} /></td>
                       <td className="text-muted">{s.wins}-{s.losses}</td>
                       <td className="text-muted">{s.confWins}-{s.confLosses}</td>
                       <td className="text-muted">{s.madePostseason ? `Made it, ${s.postseasonWins} win${s.postseasonWins === 1 ? "" : "s"}` : "—"}</td>
@@ -377,7 +378,7 @@ export default function ContractPage() {
             {jobOffers.length === 0 && <p className="text-muted">No other programs are open to talking right now.</p>}
             {jobOffers.map((o) => (
               <div key={o.teamId} className="divider-row">
-                <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}
+                <strong><TeamLink teamId={o.teamId} name={o.teamName} /></strong> ({o.division}) — prestige {o.prestige}
                 {o.salary != null && <span className="text-muted"> · {fmtMoney(o.salary)}/yr</span>}
                 {o.costOfLivingIndex != null && <span className="text-muted"> · {colLabel(o.costOfLivingIndex)} cost of living</span>}
                 {offerLine(o) && <span className="text-muted"> ({offerLine(o)})</span>}
