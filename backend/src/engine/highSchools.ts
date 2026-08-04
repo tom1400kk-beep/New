@@ -2,6 +2,7 @@
 // generic town-based school names for everyone else — same idea as EYBL_TEAMS
 // in generation.ts (a fixed curated flavor pool) but for the school itself.
 import { REAL_HIGH_SCHOOLS_BY_STATE } from "./realHighSchoolsByState";
+import { cityCoordinate, haversineMiles } from "./geo";
 
 export interface PowerhouseSchool {
   name: string;
@@ -86,10 +87,35 @@ export function pickGenericHighSchool(rng: () => number, city: string): string {
 // rather than the same handful of names repeating across every class.
 const REAL_SCHOOL_CHANCE = 0.85;
 
+// Weights real-school selection toward whichever school in the state is
+// actually closest to the player's hometownCity — a kid from Miami should
+// end up at a Miami-area school far more often than one clear across
+// Florida, without making it a hard requirement (recruits do sometimes
+// leave home for a specific program). Falls back to a uniform pick if
+// either city can't be geo-located.
+function pickNearestRealSchool(rng: () => number, realSchools: { name: string; city: string }[], city: string, state: string): string {
+  const playerCoord = cityCoordinate(city, state);
+  if (!playerCoord) return realSchools[Math.floor(rng() * realSchools.length)].name;
+
+  const weights = realSchools.map((s) => {
+    const schoolCoord = cityCoordinate(s.city, state);
+    if (!schoolCoord) return 1;
+    const miles = haversineMiles(playerCoord, schoolCoord);
+    return 1 / (1 + miles / 15); // steep falloff — nearby schools dominate, distant ones still possible
+  });
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  let r = rng() * total;
+  for (let i = 0; i < realSchools.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return realSchools[i].name;
+  }
+  return realSchools[realSchools.length - 1].name;
+}
+
 export function pickRegularHighSchool(rng: () => number, city: string, state: string): string {
   const realSchools = REAL_HIGH_SCHOOLS_BY_STATE[state];
   if (realSchools && realSchools.length > 0 && rng() < REAL_SCHOOL_CHANCE) {
-    return realSchools[Math.floor(rng() * realSchools.length)];
+    return pickNearestRealSchool(rng, realSchools, city, state);
   }
   return pickGenericHighSchool(rng, city);
 }

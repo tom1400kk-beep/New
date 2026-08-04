@@ -235,11 +235,21 @@ teamRouter.get("/saves/:id/rivalries", async (req, res) => {
   res.json(result);
 });
 
+// Defaults to the user's own conference when no conferenceId is given, so
+// existing callers keep working unchanged; pass ?conferenceId= to look at
+// any other conference in the save (powers the division/conference switcher
+// on the Standings page).
 teamRouter.get("/saves/:id/standings", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  if (!save.coachTeamId) return res.json({ conferenceName: null, rows: [] });
-  const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId } });
-  const confTeams = await prisma.team.findMany({ where: { saveGameId: save.id, conferenceId: team.conferenceId }, include: { conference: true } });
+  let conferenceId = typeof req.query.conferenceId === "string" ? req.query.conferenceId : null;
+  if (!conferenceId) {
+    if (!save.coachTeamId) return res.json({ conferenceName: null, conferenceId: null, division: null, rows: [] });
+    const myTeam = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId } });
+    conferenceId = myTeam.conferenceId;
+  }
+
+  const confTeams = await prisma.team.findMany({ where: { saveGameId: save.id, conferenceId }, include: { conference: true } });
+  if (confTeams.length === 0) return res.json({ conferenceName: null, conferenceId: null, division: null, rows: [] });
   const standings = await computeStandings(save.id, save.currentSeasonYear);
 
   const rows = confTeams
@@ -249,5 +259,18 @@ teamRouter.get("/saves/:id/standings", async (req, res) => {
     })
     .sort((a, b) => b.confWins / Math.max(1, b.confWins + b.confLosses) - a.confWins / Math.max(1, a.confWins + a.confLosses));
 
-  res.json({ conferenceName: confTeams[0]?.conference?.name ?? null, rows });
+  res.json({
+    conferenceName: confTeams[0]?.conference?.name ?? null, conferenceId,
+    division: confTeams[0]?.conference?.division ?? null, rows,
+  });
+});
+
+// Powers the division/conference switcher on the Standings page.
+teamRouter.get("/saves/:id/conferences", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  const division = typeof req.query.division === "string" ? req.query.division : "D1";
+  const conferences = await prisma.conference.findMany({
+    where: { saveGameId: save.id, division }, orderBy: { name: "asc" },
+  });
+  res.json(conferences.map((c) => ({ id: c.id, name: c.name, abbreviation: c.abbreviation })));
 });

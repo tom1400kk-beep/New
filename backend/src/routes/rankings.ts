@@ -9,8 +9,27 @@ import type { Division } from "../types";
 
 export const rankingsRouter = Router();
 
+export async function teamsForDivision(saveGameId: string, division: Division) {
+  return prisma.team.findMany({ where: { saveGameId, division }, select: { id: true, name: true, conferenceId: true, prestige: true } });
+}
+
 export async function d1Teams(saveGameId: string) {
-  return prisma.team.findMany({ where: { saveGameId, division: "D1" }, select: { id: true, name: true, conferenceId: true, prestige: true } });
+  return teamsForDivision(saveGameId, "D1");
+}
+
+const VALID_DIVISIONS: Division[] = ["D1", "D2", "D3"];
+
+// Resolves which division a ranking request should use: an explicit
+// ?division= query param wins, otherwise fall back to the user's own team's
+// division, otherwise D1 — so every ranking route works the same whether or
+// not the coach currently has a team.
+async function resolveDivision(saveGameId: string, coachTeamId: string | null, requested: unknown): Promise<Division> {
+  if (typeof requested === "string" && (VALID_DIVISIONS as string[]).includes(requested)) return requested as Division;
+  if (coachTeamId) {
+    const myTeam = await prisma.team.findUnique({ where: { id: coachTeamId }, select: { division: true } });
+    if (myTeam) return myTeam.division as Division;
+  }
+  return "D1";
 }
 
 // KenPom-style ratings weigh every game played, including conference and
@@ -65,7 +84,8 @@ export async function buildRPIResults(saveGameId: string, seasonYear: number): P
 
 rankingsRouter.get("/saves/:id/kenpom", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  const teams = await d1Teams(save.id);
+  const division = await resolveDivision(save.id, save.coachTeamId, req.query.division);
+  const teams = await teamsForDivision(save.id, division);
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const boxScores = await buildKenPomBoxScores(save.id, save.currentSeasonYear);
   const ratings = computeKenPomRatings(boxScores.filter((b) => teamById.has(b.teamId)));
@@ -74,12 +94,13 @@ rankingsRouter.get("/saves/:id/kenpom", async (req, res) => {
     .filter((r) => teamById.has(r.teamId))
     .sort((a, b) => b.adjEM - a.adjEM)
     .map((r, i) => ({ rank: i + 1, name: teamById.get(r.teamId)!.name, ...r }));
-  res.json(rows);
+  res.json({ division, rows });
 });
 
 rankingsRouter.get("/saves/:id/rpi", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  const teams = await d1Teams(save.id);
+  const division = await resolveDivision(save.id, save.coachTeamId, req.query.division);
+  const teams = await teamsForDivision(save.id, division);
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const results = await buildRPIResults(save.id, save.currentSeasonYear);
   const ratings = computeRPI(results.filter((r) => teamById.has(r.teamId)));
@@ -88,7 +109,7 @@ rankingsRouter.get("/saves/:id/rpi", async (req, res) => {
     .filter((r) => teamById.has(r.teamId))
     .sort((a, b) => b.rpi - a.rpi)
     .map((r, i) => ({ rank: i + 1, name: teamById.get(r.teamId)!.name, ...r }));
-  res.json(rows);
+  res.json({ division, rows });
 });
 
 rankingsRouter.get("/saves/:id/bracketology", async (req, res) => {
@@ -125,8 +146,7 @@ rankingsRouter.get("/saves/:id/bracketology", async (req, res) => {
 // hasn't hit its first Monday yet this season, so the page is never empty.
 rankingsRouter.get("/saves/:id/ap-poll", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  const userTeam = save.coachTeamId ? await prisma.team.findUnique({ where: { id: save.coachTeamId }, select: { division: true } }) : null;
-  const division = (userTeam?.division as Division | undefined) ?? "D1";
+  const division = await resolveDivision(save.id, save.coachTeamId, req.query.division);
 
   const teams = await prisma.team.findMany({ where: { saveGameId: save.id, division }, select: { id: true, name: true } });
   const teamById = new Map(teams.map((t) => [t.id, t]));

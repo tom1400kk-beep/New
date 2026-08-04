@@ -225,11 +225,19 @@ export function getRivalries(state: WorldState) {
   });
 }
 
-export function getStandings(state: WorldState) {
-  if (!state.save.coachTeamId) return { conferenceName: null, rows: [] };
-  const team = state.teams.find((t) => t.id === state.save.coachTeamId)!;
-  const confTeams = state.teams.filter((t) => t.conferenceId === team.conferenceId);
-  const conference = state.conferences.find((c) => c.id === team.conferenceId);
+// Defaults to the user's own conference when no conferenceId is given;
+// pass one explicitly to look at any other conference in the save (powers
+// the division/conference switcher on the Standings page).
+export function getStandings(state: WorldState, conferenceId?: string | null) {
+  let cid = conferenceId ?? null;
+  if (!cid) {
+    if (!state.save.coachTeamId) return { conferenceName: null, conferenceId: null, division: null, rows: [] };
+    const myTeam = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+    cid = myTeam.conferenceId;
+  }
+  const confTeams = state.teams.filter((t) => t.conferenceId === cid);
+  if (confTeams.length === 0) return { conferenceName: null, conferenceId: null, division: null, rows: [] };
+  const conference = state.conferences.find((c) => c.id === cid);
   const standings = computeStandings(state, state.save.currentSeasonYear);
 
   const rows = confTeams
@@ -239,11 +247,23 @@ export function getStandings(state: WorldState) {
     })
     .sort((a, b) => b.confWins / Math.max(1, b.confWins + b.confLosses) - a.confWins / Math.max(1, a.confWins + a.confLosses));
 
-  return { conferenceName: conference?.name ?? null, rows };
+  return { conferenceName: conference?.name ?? null, conferenceId: cid, division: conference?.division ?? null, rows };
+}
+
+// Powers the division/conference switcher on the Standings page.
+export function getConferences(state: WorldState, division: string) {
+  return state.conferences
+    .filter((c) => c.division === division)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((c) => ({ id: c.id, name: c.name, abbreviation: c.abbreviation }));
+}
+
+function teamsForDivision(state: WorldState, division: Division) {
+  return state.teams.filter((t) => t.division === division);
 }
 
 function d1Teams(state: WorldState) {
-  return state.teams.filter((t) => t.division === "D1");
+  return teamsForDivision(state, "D1");
 }
 
 // KenPom-style ratings weigh every game played, including conference and
@@ -288,26 +308,36 @@ function buildRPIResults(state: WorldState, seasonYear: number): RPIGameResult[]
   return results;
 }
 
-export function getKenPom(state: WorldState) {
-  const teams = d1Teams(state);
+function resolveDivision(state: WorldState, requested?: string | null): Division {
+  if (requested === "D1" || requested === "D2" || requested === "D3") return requested;
+  const myTeam = state.save.coachTeamId ? state.teams.find((t) => t.id === state.save.coachTeamId) : undefined;
+  return (myTeam?.division as Division | undefined) ?? "D1";
+}
+
+export function getKenPom(state: WorldState, requestedDivision?: string | null) {
+  const division = resolveDivision(state, requestedDivision);
+  const teams = teamsForDivision(state, division);
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const boxScores = buildKenPomBoxScores(state, state.save.currentSeasonYear).filter((b) => teamById.has(b.teamId));
   const ratings = computeKenPomRatings(boxScores);
-  return [...ratings.values()]
+  const rows = [...ratings.values()]
     .filter((r) => teamById.has(r.teamId))
     .sort((a, b) => b.adjEM - a.adjEM)
     .map((r, i) => ({ rank: i + 1, name: teamById.get(r.teamId)!.name, ...r }));
+  return { division, rows };
 }
 
-export function getRPI(state: WorldState) {
-  const teams = d1Teams(state);
+export function getRPI(state: WorldState, requestedDivision?: string | null) {
+  const division = resolveDivision(state, requestedDivision);
+  const teams = teamsForDivision(state, division);
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const results = buildRPIResults(state, state.save.currentSeasonYear).filter((r) => teamById.has(r.teamId));
   const ratings = computeRPI(results);
-  return [...ratings.values()]
+  const rows = [...ratings.values()]
     .filter((r) => teamById.has(r.teamId))
     .sort((a, b) => b.rpi - a.rpi)
     .map((r, i) => ({ rank: i + 1, name: teamById.get(r.teamId)!.name, ...r }));
+  return { division, rows };
 }
 
 export function getBracketology(state: WorldState) {
@@ -340,9 +370,8 @@ export function getBracketology(state: WorldState) {
 // Top 25 for the user's own division — snapshotted every Monday (see
 // state/apPoll.ts). Falls back to a live, unpersisted preview if the save
 // hasn't hit its first Monday yet this season, so the page is never empty.
-export function getApPoll(state: WorldState) {
-  const userTeam = state.save.coachTeamId ? state.teams.find((t) => t.id === state.save.coachTeamId) : undefined;
-  const division = (userTeam?.division as Division | undefined) ?? "D1";
+export function getApPoll(state: WorldState, requestedDivision?: string | null) {
+  const division = resolveDivision(state, requestedDivision);
   const seasonYear = state.save.currentSeasonYear;
 
   const teams = state.teams.filter((t) => t.division === division);
