@@ -51,6 +51,12 @@ export const api = {
       body: JSON.stringify({ points }),
     }),
 
+  getPreseasonTournaments: (saveId: string) => request<any>(`/saves/${saveId}/preseason-tournaments`),
+  joinPreseasonTournament: (saveId: string, tournamentId: string) =>
+    request<any>(`/saves/${saveId}/preseason-tournaments/${tournamentId}/join`, { method: "POST" }),
+  leavePreseasonTournament: (saveId: string) =>
+    request<any>(`/saves/${saveId}/preseason-tournaments/leave`, { method: "POST" }),
+
   getPendingEvents: (saveId: string) => request<any[]>(`/saves/${saveId}/events/pending`),
   resolveEvent: (saveId: string, eventId: string, optionId: string) =>
     request<any>(`/saves/${saveId}/events/${eventId}/resolve`, {

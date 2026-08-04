@@ -105,7 +105,9 @@ function buildNonConferencePairings(
 
 // Greedy date assignment: walk through candidate game days, assign each
 // pairing to the earliest day where neither team is already booked.
-function assignDates(pairings: Pairing[], seasonStart: Date, seasonEnd: Date, rng: () => number): ScheduledGame[] {
+// `initialBusy` seeds the per-team day-index set so dates already claimed
+// elsewhere (e.g. a preseason multi-team event) never get double-booked.
+function assignDates(pairings: Pairing[], seasonStart: Date, seasonEnd: Date, rng: () => number, initialBusy?: Map<string, Set<number>>): ScheduledGame[] {
   const dayMs = 24 * 60 * 60 * 1000;
   const days: Date[] = [];
   for (let t = seasonStart.getTime(); t <= seasonEnd.getTime(); t += dayMs) {
@@ -119,7 +121,7 @@ function assignDates(pairings: Pairing[], seasonStart: Date, seasonEnd: Date, rn
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
 
-  const busy = new Map<string, Set<number>>(); // teamId -> set of day indices
+  const busy = initialBusy ?? new Map<string, Set<number>>(); // teamId -> set of day indices
   const games: ScheduledGame[] = [];
 
   for (const pairing of shuffled) {
@@ -153,11 +155,17 @@ function assignDates(pairings: Pairing[], seasonStart: Date, seasonEnd: Date, rn
   return games.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
+export interface PreseasonScheduleInfo {
+  gamesUsedByTeam: Map<string, number>; // non-conference games already spoken for by an MTE
+  datesUsedByTeam: Map<string, Date[]>; // exact dates those games landed on
+}
+
 export function generateSeasonSchedule(
   teams: ScheduleTeam[],
   division: Division,
   seasonYear: number,
   rng: () => number,
+  preseason?: PreseasonScheduleInfo,
 ): ScheduledGame[] {
   const { total, conferenceTarget } = TARGET_GAMES[division];
 
@@ -173,7 +181,8 @@ export function generateSeasonSchedule(
   const nonConfNeeded = new Map<string, number>();
   for (const t of teams) {
     const played = confCountPerTeam.get(t.id) ?? 0;
-    nonConfNeeded.set(t.id, Math.max(0, total - played));
+    const preseasonGames = preseason?.gamesUsedByTeam.get(t.id) ?? 0;
+    nonConfNeeded.set(t.id, Math.max(0, total - played - preseasonGames));
   }
 
   const nonConfPairings = buildNonConferencePairings(teams, nonConfNeeded, rng);
@@ -186,7 +195,21 @@ export function generateSeasonSchedule(
   const confStart = new Date(Date.UTC(seasonYear, 11, 31)); // Dec 31
   const seasonEnd = new Date(Date.UTC(seasonYear + 1, 1, 28)); // Feb 28
 
-  const nonConfGames = assignDates(nonConfPairings, seasonStart, nonConfEnd, rng);
+  let nonConfBusy: Map<string, Set<number>> | undefined;
+  if (preseason) {
+    const dayMs = 24 * 60 * 60 * 1000;
+    nonConfBusy = new Map();
+    for (const [teamId, dates] of preseason.datesUsedByTeam) {
+      const set = new Set<number>();
+      for (const d of dates) {
+        const idx = Math.round((d.getTime() - seasonStart.getTime()) / dayMs);
+        if (idx >= 0) set.add(idx);
+      }
+      nonConfBusy.set(teamId, set);
+    }
+  }
+
+  const nonConfGames = assignDates(nonConfPairings, seasonStart, nonConfEnd, rng, nonConfBusy);
   const confGames = assignDates(confPairings, confStart, seasonEnd, rng);
 
   return [...nonConfGames, ...confGames].sort((a, b) => a.date.getTime() - b.date.getTime());

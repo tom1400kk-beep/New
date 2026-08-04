@@ -1,5 +1,6 @@
 import { playGames } from "./playGames";
 import { startConferenceTournaments, advanceTournamentRounds, startNationalTournaments } from "./postseason";
+import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason, type OffseasonResult } from "./offseason";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
@@ -61,6 +62,10 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
 
   const todaysGames = state.games.filter((g) => !g.isPlayed && g.date.getTime() === today.getTime());
   playGames(state, todaysGames.map((g) => g.id));
+
+  // Advance any preseason multi-team event whose round just finished (Maui
+  // Invitational, Battle 4 Atlantis, etc.) — independent of season phase.
+  advancePreseasonBracketRounds(state, seasonYear, addDays(today, 1));
 
   for (const p of state.players) {
     if (!p.isInjured) continue;

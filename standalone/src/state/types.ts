@@ -242,6 +242,7 @@ export interface TournamentRow {
   id: string;
   seasonYear: number;
   type: string;
+  name: string | null; // human-readable event name/location, set only for PRESEASON_INVITATIONAL
   division: string;
   conferenceId: string | null;
 }

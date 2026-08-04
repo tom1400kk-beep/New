@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { playGames } from "./playGames";
 import { startConferenceTournaments, advanceTournamentRounds, startNationalTournaments } from "./postseason";
+import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason } from "./offseason";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
@@ -79,6 +80,10 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
     select: { id: true },
   });
   await playGames(saveGameId, todaysGames.map((g) => g.id));
+
+  // 1b. Advance any preseason multi-team event whose round just finished
+  // (Maui Invitational, Battle 4 Atlantis, etc.) — independent of season phase.
+  await advancePreseasonBracketRounds(saveGameId, seasonYear, addDays(today, 1));
 
   // 2. Injury recovery ticks
   const injured = await prisma.player.findMany({ where: { saveGameId, isInjured: true } });

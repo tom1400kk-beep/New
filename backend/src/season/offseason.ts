@@ -10,6 +10,7 @@ import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
 import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedIntensity, POSTSEASON_RIVALRY_THRESHOLD } from "../engine/rivalry";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
+import { generatePreseasonTournaments } from "./preseasonTournaments";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import {
@@ -641,11 +642,16 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   // ---- Next season schedule ----
   const nextSeasonYear = seasonYear + 1;
   await prisma.season.create({ data: { id: randomUUID(), saveGameId, year: nextSeasonYear } });
+
+  const nonConfWindowStart = new Date(Date.UTC(nextSeasonYear, 10, 4)); // Nov 4, matches schedule.ts
+  const d1TeamsForPreseason = currentTeams.filter((t) => t.division === "D1").map((t) => ({ id: t.id, prestige: t.prestige }));
+  const preseasonResult = await generatePreseasonTournaments(saveGameId, nextSeasonYear, d1TeamsForPreseason, nonConfWindowStart, rng);
+
   let schedule: ReturnType<typeof generateSeasonSchedule> = [];
   for (const div of ["D1", "D2", "D3"] as Division[]) {
     const divTeams = teams.filter((t) => t.division === div).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
     if (divTeams.length === 0) continue;
-    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, nextSeasonYear, rng));
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, nextSeasonYear, rng, div === "D1" ? preseasonResult : undefined));
   }
   const gameRows = schedule.map((g) => ({
     id: randomUUID(), saveGameId, seasonYear: nextSeasonYear, date: g.date,

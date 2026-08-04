@@ -17,7 +17,8 @@ export type TournamentType =
   | "NCAA_TOURNAMENT"
   | "NIT"
   | "D2_NATIONAL"
-  | "D3_NATIONAL";
+  | "D3_NATIONAL"
+  | "PRESEASON_INVITATIONAL";
 export type EventStatus = "PENDING" | "RESOLVED";
 
 // Division-specific roster / scholarship rules — this is where D1 vs D2 vs D3

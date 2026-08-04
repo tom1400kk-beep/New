@@ -14,6 +14,7 @@ import { randomFirstName, randomLastName } from "../engine/names";
 import { computeStandings, winPct } from "./standings";
 import { aggregateCareerStats, type CareerSeasonLine, type RawGameStatLine } from "../engine/careerStats";
 import { newId, type WorldState } from "./types";
+import { PRESEASON_EVENTS, type PreseasonEventDef } from "../engine/preseasonEvents";
 
 function noisy(rng: () => number, value: number, noise: number): number {
   return Math.round(clamp(value + randInt(rng, -noise, noise), 1, 99));
@@ -576,4 +577,103 @@ export function addWalkOn(state: WorldState, candidateId: string) {
   state.players.push(player);
   state.walkOnCandidates = state.walkOnCandidates.filter((c) => c.id !== candidateId);
   return player;
+}
+
+export interface PreseasonTournamentBoardEntry {
+  tournamentId: string;
+  name: string | null;
+  format: string | null;
+  tier: string | null;
+  field: { teamId: string; name: string; prestige: number }[];
+  userTeamIn: boolean;
+}
+
+function eventDefForTournamentName(name: string | null): PreseasonEventDef | undefined {
+  if (!name) return undefined;
+  return PRESEASON_EVENTS.find((e) => name === `${e.name} — ${e.location}`);
+}
+
+const TIER_RANK: Record<string, number> = { MAJOR: 0, MID: 1, SMALL: 2 };
+
+export function getPreseasonTournaments(state: WorldState): { editable: boolean; userDivision: string | null; tournaments: PreseasonTournamentBoardEntry[] } {
+  const userTeamId = state.save.coachTeamId;
+  const userDivision = userTeamId ? state.teams.find((t) => t.id === userTeamId)?.division ?? null : null;
+  const seasonYear = state.save.currentSeasonYear;
+  const tournaments = state.tournaments.filter((t) => t.seasonYear === seasonYear && t.type === "PRESEASON_INVITATIONAL");
+
+  const board = tournaments.map((t) => {
+    const games = state.games.filter((g) => g.tournamentId === t.id);
+    const fieldIds = [...new Set(games.flatMap((g) => [g.homeTeamId, g.awayTeamId]))];
+    const field = fieldIds
+      .map((id) => state.teams.find((tt) => tt.id === id))
+      .filter((tt): tt is NonNullable<typeof tt> => !!tt)
+      .sort((a, b) => b.prestige - a.prestige);
+    const eventDef = eventDefForTournamentName(t.name);
+    return {
+      tournamentId: t.id,
+      name: t.name,
+      format: eventDef?.format ?? null,
+      tier: eventDef?.tier ?? null,
+      field: field.map((f) => ({ teamId: f.id, name: f.name, prestige: f.prestige })),
+      userTeamIn: !!userTeamId && fieldIds.includes(userTeamId),
+    };
+  });
+
+  board.sort((a, b) => (TIER_RANK[a.tier ?? ""] ?? 3) - (TIER_RANK[b.tier ?? ""] ?? 3));
+
+  return { editable: state.save.currentPhase === "PRESEASON", userDivision, tournaments: board };
+}
+
+// Swaps a team's entire non-conference slate (including any preseason
+// tournament games) with another team's — safe at this point since PRESEASON
+// games are always unplayed, and it guarantees no orphaned or double-booked
+// dates since both teams simply trade places game-for-game.
+function swapNonConferenceSlates(state: WorldState, seasonYear: number, teamAId: string, teamBId: string): void {
+  for (const g of state.games) {
+    if (g.seasonYear !== seasonYear || g.isConference) continue;
+    if (g.homeTeamId !== teamAId && g.homeTeamId !== teamBId && g.awayTeamId !== teamAId && g.awayTeamId !== teamBId) continue;
+    const newHome = g.homeTeamId === teamAId ? teamBId : g.homeTeamId === teamBId ? teamAId : g.homeTeamId;
+    const newAway = g.awayTeamId === teamAId ? teamBId : g.awayTeamId === teamBId ? teamAId : g.awayTeamId;
+    g.homeTeamId = newHome;
+    g.awayTeamId = newAway;
+  }
+}
+
+export function joinPreseasonTournament(state: WorldState, tournamentId: string): { ok: true; swappedWithTeamId: string } {
+  if (!state.save.coachTeamId) throw new Error("No active team");
+  if (state.save.currentPhase !== "PRESEASON") throw new Error("Schedule can only be edited during the preseason");
+
+  const tournament = state.tournaments.find((t) => t.id === tournamentId);
+  if (!tournament || tournament.type !== "PRESEASON_INVITATIONAL") throw new Error("Not a preseason tournament for this save");
+
+  const games = state.games.filter((g) => g.tournamentId === tournamentId);
+  const fieldIds = [...new Set(games.flatMap((g) => [g.homeTeamId, g.awayTeamId]))];
+  if (fieldIds.includes(state.save.coachTeamId)) throw new Error("Already in this event");
+
+  const fieldTeams = fieldIds.map((id) => state.teams.find((t) => t.id === id)).filter((t): t is NonNullable<typeof t> => !!t);
+  const partner = [...fieldTeams].sort((a, b) => a.prestige - b.prestige)[0];
+  if (!partner) throw new Error("Event has no field to swap into");
+
+  swapNonConferenceSlates(state, state.save.currentSeasonYear, state.save.coachTeamId, partner.id);
+  return { ok: true, swappedWithTeamId: partner.id };
+}
+
+export function leavePreseasonTournament(state: WorldState): { ok: true; swappedWithTeamId: string } {
+  if (!state.save.coachTeamId) throw new Error("No active team");
+  if (state.save.currentPhase !== "PRESEASON") throw new Error("Schedule can only be edited during the preseason");
+
+  const seasonYear = state.save.currentSeasonYear;
+  const tournaments = state.tournaments.filter((t) => t.seasonYear === seasonYear && t.type === "PRESEASON_INVITATIONAL");
+  const assignedIds = new Set(
+    tournaments.flatMap((t) => state.games.filter((g) => g.tournamentId === t.id).flatMap((g) => [g.homeTeamId, g.awayTeamId])),
+  );
+  if (!assignedIds.has(state.save.coachTeamId)) throw new Error("Not currently in a preseason event");
+
+  const userTeam = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+  const unassigned = state.teams.filter((t) => t.division === userTeam.division && !assignedIds.has(t.id));
+  const partner = unassigned[Math.floor(Math.random() * unassigned.length)];
+  if (!partner) throw new Error("No open non-conference slate to swap into");
+
+  swapNonConferenceSlates(state, seasonYear, state.save.coachTeamId, partner.id);
+  return { ok: true, swappedWithTeamId: partner.id };
 }

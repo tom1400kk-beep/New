@@ -114,7 +114,7 @@ export default function SaveSelectPage() {
     try {
       const save = await api.createSave({ name, division, teamSchoolName, coachName, coachArchetype, coachBackground: null });
       setActiveSaveId(save.id);
-      navigate("/dashboard");
+      navigate("/edit-schedule");
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -156,7 +156,7 @@ export default function SaveSelectPage() {
         coachArchetype, coachBackground, playingCareer: playingCareerChoice(),
       });
       setActiveSaveId(save.id);
-      navigate("/dashboard");
+      navigate("/edit-schedule");
     } catch (e: any) {
       setError(e.message);
     } finally {

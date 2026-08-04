@@ -13,7 +13,8 @@ import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } fro
 import { seedPipeline } from "../engine/pipeline";
 import { generateADTraits } from "../engine/athleticDirector";
 import { TRADITIONAL_RIVALRY_CHANCE, traditionalIntensity, sortedPair } from "../engine/rivalry";
-import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow, type AthleticDirectorRow, type RivalryRow } from "./types";
+import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow, type AthleticDirectorRow, type RivalryRow, type TournamentRow } from "./types";
+import { generatePreseasonTournaments } from "./preseasonTournaments";
 
 export interface CreateSaveInput {
   saveName: string;
@@ -48,7 +49,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   const players: PlayerRow[] = [];
   const prospects: ProspectRow[] = [];
 
-  type PendingTeam = { id: string; conferenceId: string; division: Division };
+  type PendingTeam = { id: string; conferenceId: string; division: Division; prestige: number };
   const pendingTeams: PendingTeam[] = [];
   let chosenTeamId: string | null = null;
 
@@ -124,7 +125,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         arenaUpgradeRequestedThisSeason: false, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
-      pendingTeams.push({ id: teamId, conferenceId, division: div });
+      pendingTeams.push({ id: teamId, conferenceId, division: div, prestige });
 
       const rosterSize = DIVISION_RULES[div].rosterCap;
       const scholarshipLimit = DIVISION_RULES[div].scholarshipLimit;
@@ -213,17 +214,26 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     prospects.push(prospectFromGenerated(generateInternationalProspect(rng, seasonYear + 1)));
   }
 
+  // Preseason multi-team events (Maui Invitational, Battle 4 Atlantis, etc.)
+  // — D1-only, matching reality — claim their games and dates before the
+  // rest of the non-conference slate is generated around them.
+  const tournaments: TournamentRow[] = [];
+  const nonConfWindowStart = new Date(Date.UTC(seasonYear, 10, 4)); // Nov 4, matches schedule.ts
+  const d1TeamsForPreseason = pendingTeams.filter((t) => t.division === "D1").map((t) => ({ id: t.id, prestige: t.prestige }));
+  const preseasonGames: GameRow[] = [];
+  const preseasonResult = generatePreseasonTournaments({ tournaments, games: preseasonGames }, seasonYear, d1TeamsForPreseason, nonConfWindowStart, rng);
+
   let schedule: ScheduledGame[] = [];
   for (const d of ALL_DIVISIONS) {
     const divTeams = pendingTeams.filter((t) => t.division === d).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
     if (divTeams.length === 0) continue;
-    schedule = schedule.concat(generateSeasonSchedule(divTeams, d, seasonYear, rng));
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, d, seasonYear, rng, d === "D1" ? preseasonResult : undefined));
   }
-  const games: GameRow[] = schedule.map((g) => ({
+  const games: GameRow[] = [...preseasonGames, ...schedule.map((g) => ({
     id: newId(), seasonYear, date: g.date, homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId,
     homeScore: null, awayScore: null, attendance: null, isPlayed: false, isConference: g.isConference,
     tournamentId: null, round: null, bracketSlot: null,
-  }));
+  }))];
 
   return {
     save: {
@@ -232,7 +242,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     },
     conferences, teams, coaches, athleticDirectors, assistants: [], players, prospects, interests: [],
     transferInterests: [],
-    seasons: [{ id: newId(), year: seasonYear }], games, stats: [], tournaments: [], events: [], rivalries,
+    seasons: [{ id: newId(), year: seasonYear }], games, stats: [], tournaments, events: [], rivalries,
     walkOnCandidates: [],
   };
 }

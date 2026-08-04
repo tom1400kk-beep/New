@@ -421,6 +421,7 @@ model Tournament {
   saveGameId   String
   seasonYear   Int
   type         String
+  name         String? // human-readable event name/location, set only for PRESEASON_INVITATIONAL
   division     String
   conference   Conference? @relation(fields: [conferenceId], references: [id], onDelete: Cascade)
   conferenceId String?

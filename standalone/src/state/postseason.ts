@@ -43,7 +43,7 @@ export function startConferenceTournaments(state: WorldState, seasonYear: number
     const field = ranked.slice(0, fieldSize);
 
     const tournamentId = newId();
-    state.tournaments.push({ id: tournamentId, seasonYear, type: "CONFERENCE_TOURNAMENT", division, conferenceId: conf.id });
+    state.tournaments.push({ id: tournamentId, seasonYear, type: "CONFERENCE_TOURNAMENT", name: null, division, conferenceId: conf.id });
 
     const seeds = field.map((t, i) => ({ teamId: t.id, seed: i + 1 }));
     const matchups = buildFirstRound(seeds);
@@ -110,14 +110,14 @@ export function startNationalTournaments(state: WorldState, seasonYear: number, 
     });
 
     const ncaaId = newId();
-    state.tournaments.push({ id: ncaaId, seasonYear, type: "NCAA_TOURNAMENT", division, conferenceId: null });
+    state.tournaments.push({ id: ncaaId, seasonYear, type: "NCAA_TOURNAMENT", name: null, division, conferenceId: null });
     const seeds = seedField(mainField);
     createBracketGames(state, seasonYear, ncaaId, 1, buildFirstRound(seeds), startDate);
 
     const nitPoolAll = remaining.slice(0, 32);
     if (nitPoolAll.length >= 4) {
       const nitId = newId();
-      state.tournaments.push({ id: nitId, seasonYear, type: "NIT", division, conferenceId: null });
+      state.tournaments.push({ id: nitId, seasonYear, type: "NIT", name: null, division, conferenceId: null });
       const size = prevPowerOfTwo(nitPoolAll.length);
       const nitSeeds = nitPoolAll.slice(0, size).map((t, i) => ({ teamId: t.teamId, seed: i + 1 }));
       createBracketGames(state, seasonYear, nitId, 1, buildFirstRound(nitSeeds), startDate);
@@ -127,7 +127,7 @@ export function startNationalTournaments(state: WorldState, seasonYear: number, 
     const { field } = selectTournamentField(resumeTeams, 64);
     const size = prevPowerOfTwo(field.length);
     const tournamentId = newId();
-    state.tournaments.push({ id: tournamentId, seasonYear, type, division, conferenceId: null });
+    state.tournaments.push({ id: tournamentId, seasonYear, type, name: null, division, conferenceId: null });
     const seeds = field.slice(0, size).map((t, i) => ({ teamId: t.teamId, seed: i + 1 }));
     createBracketGames(state, seasonYear, tournamentId, 1, buildFirstRound(seeds), startDate);
   }

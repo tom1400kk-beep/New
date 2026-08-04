@@ -159,6 +159,7 @@ export default function DashboardPage() {
     if (!activeSaveId) return;
     await api.acceptJob(activeSaveId, teamId);
     await refresh();
+    navigate("/edit-schedule");
   }
 
   async function handleRequestRaise() {

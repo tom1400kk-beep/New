@@ -9,6 +9,7 @@ import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
+import { generatePreseasonTournaments } from "../season/preseasonTournaments";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
@@ -286,13 +287,20 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
     await prisma.prospect.createMany({ data: prospectRows.slice(i, i + chunkSize) });
   }
 
+  // Preseason multi-team events (Maui Invitational, Battle 4 Atlantis, etc.)
+  // — D1-only, matching reality — claim their games and dates before the
+  // rest of the non-conference slate is generated around them.
+  const nonConfWindowStart = new Date(Date.UTC(seasonYear, 10, 4)); // Nov 4, matches schedule.ts
+  const d1TeamsForPreseason = pendingTeams.filter((t) => t.division === "D1").map((t) => ({ id: t.id, prestige: t.prestige }));
+  const preseasonResult = await generatePreseasonTournaments(saveGame.id, seasonYear, d1TeamsForPreseason, nonConfWindowStart, rng);
+
   // Season schedule, generated separately per division so non-conference
   // pairings never cross divisions, then merged into one calendar.
   let schedule: ScheduledGame[] = [];
   for (const div of ALL_DIVISIONS) {
     const divTeams = pendingTeams.filter((t) => t.division === div).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
     if (divTeams.length === 0) continue;
-    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, seasonYear, rng));
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, seasonYear, rng, div === "D1" ? preseasonResult : undefined));
   }
   const gameRows = schedule.map((g) => ({
     id: randomUUID(),

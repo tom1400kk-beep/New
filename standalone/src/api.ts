@@ -60,6 +60,11 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
   for (const c of loaded.walkOnCandidates) {
     if (c.hometownCity === undefined) c.hometownCity = "";
   }
+  // Saves persisted before the preseason multi-team events feature won't
+  // have this field on existing tournament rows.
+  for (const t of loaded.tournaments) {
+    if (t.name === undefined) t.name = null;
+  }
   cache = loaded;
   return loaded;
 }
@@ -139,6 +144,20 @@ export const api = {
   pursueTransfer: async (saveId: string, playerId: string, points: number) => {
     const state = await ensureLoaded(saveId);
     const result = actions.pursueTransfer(state, playerId, points);
+    await persistence.persistSave(state);
+    return result;
+  },
+
+  getPreseasonTournaments: async (saveId: string) => actions.getPreseasonTournaments(await ensureLoaded(saveId)),
+  joinPreseasonTournament: async (saveId: string, tournamentId: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.joinPreseasonTournament(state, tournamentId);
+    await persistence.persistSave(state);
+    return result;
+  },
+  leavePreseasonTournament: async (saveId: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.leavePreseasonTournament(state);
     await persistence.persistSave(state);
     return result;
   },
