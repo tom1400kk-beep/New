@@ -478,9 +478,17 @@ export function runOffseason(state: WorldState): OffseasonResult {
     });
   }
 
-  // Next recruiting class
+  // Next recruiting class — sized off the division's actual roster cap
+  // (roughly a quarter of every roster graduating each year) with a healthy
+  // surplus, rather than a flat per-team constant that quietly under-supplied
+  // D2/D3's bigger 20-man rosters relative to D1's 15-man cap.
   const teamCount = state.teams.length;
-  for (let i = 0; i < Math.round(teamCount * 3); i++) {
+  const estimatedNeedPerTeam = rosterCap / 4;
+  const recruitingPoolTarget = Math.round(teamCount * estimatedNeedPerTeam * 1.6);
+  const hsCount = Math.round(recruitingPoolTarget * (3 / 4.4));
+  const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
+  const intlCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
+  for (let i = 0; i < hsCount; i++) {
     const p = generateHighSchoolProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity,
@@ -492,7 +500,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
-  for (let i = 0; i < Math.round(teamCount * 0.6); i++) {
+  for (let i = 0; i < jucoCount; i++) {
     const p = generateJucoProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity,
@@ -504,7 +512,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
     });
   }
-  for (let i = 0; i < Math.round(teamCount * 0.8); i++) {
+  for (let i = 0; i < intlCount; i++) {
     const p = generateInternationalProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity,

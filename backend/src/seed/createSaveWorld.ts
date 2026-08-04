@@ -253,11 +253,15 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
   await prisma.season.create({ data: { id: randomUUID(), saveGameId: saveGame.id, year: seasonYear } });
 
-  // Recruiting pool for the upcoming signing class
+  // Recruiting pool for the upcoming signing class — sized off the
+  // division's actual roster cap (see runOffseason's matching comment) so
+  // D2/D3's bigger rosters aren't quietly under-supplied relative to D1.
   const prospectRows: any[] = [];
-  const hsCount = Math.round(pendingTeams.length * 3);
-  const jucoCount = Math.round(pendingTeams.length * 0.6);
-  const internationalCount = Math.round(pendingTeams.length * 0.8);
+  const estimatedNeedPerTeam = DIVISION_RULES[division].rosterCap / 4;
+  const recruitingPoolTarget = Math.round(pendingTeams.length * estimatedNeedPerTeam * 1.6);
+  const hsCount = Math.round(recruitingPoolTarget * (3 / 4.4));
+  const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
+  const internationalCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
   for (let i = 0; i < hsCount; i++) {
     const p = generateHighSchoolProspect(rng, seasonYear + 1);
     prospectRows.push(prospectFromGenerated(saveGame.id, p));

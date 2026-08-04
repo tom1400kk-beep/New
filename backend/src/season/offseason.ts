@@ -532,9 +532,20 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   }
 
   // ---- Generate next recruiting class ----
+  // Sized off the division's actual roster cap (roughly a quarter of every
+  // roster graduating each year) rather than a flat per-team constant, with
+  // a healthy surplus on top — a flat multiplier tuned for D1's 15-man cap
+  // quietly under-supplied D2/D3's 20-man rosters. Split HS/JUCO/int'l in
+  // the same proportions as before.
   const teamCount = teams.length;
+  const estimatedNeedPerTeam = rosterCap / 4;
+  const recruitingPoolTarget = Math.round(teamCount * estimatedNeedPerTeam * 1.6);
+  const hsCount = Math.round(recruitingPoolTarget * (3 / 4.4));
+  const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
+  const intlCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
+
   const nextProspects: any[] = [];
-  for (let i = 0; i < Math.round(teamCount * 3); i++) {
+  for (let i = 0; i < hsCount; i++) {
     const p = generateHighSchoolProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
@@ -547,7 +558,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       prioritiesJson: JSON.stringify(p.priorities),
     });
   }
-  for (let i = 0; i < Math.round(teamCount * 0.6); i++) {
+  for (let i = 0; i < jucoCount; i++) {
     const p = generateJucoProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
@@ -560,7 +571,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       prioritiesJson: JSON.stringify(p.priorities),
     });
   }
-  for (let i = 0; i < Math.round(teamCount * 0.8); i++) {
+  for (let i = 0; i < intlCount; i++) {
     const p = generateInternationalProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,

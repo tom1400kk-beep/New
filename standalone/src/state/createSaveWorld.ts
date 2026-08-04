@@ -190,9 +190,14 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     }
   }
 
-  const hsCount = Math.round(pendingTeams.length * 3);
-  const jucoCount = Math.round(pendingTeams.length * 0.6);
-  const internationalCount = Math.round(pendingTeams.length * 0.8);
+  // Sized off the division's actual roster cap (see runOffseason's matching
+  // comment) so D2/D3's bigger rosters aren't quietly under-supplied
+  // relative to D1.
+  const estimatedNeedPerTeam = DIVISION_RULES[division].rosterCap / 4;
+  const recruitingPoolTarget = Math.round(pendingTeams.length * estimatedNeedPerTeam * 1.6);
+  const hsCount = Math.round(recruitingPoolTarget * (3 / 4.4));
+  const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
+  const internationalCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
   for (let i = 0; i < hsCount; i++) {
     prospects.push(prospectFromGenerated(generateHighSchoolProspect(rng, seasonYear + 1)));
   }
