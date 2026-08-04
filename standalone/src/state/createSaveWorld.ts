@@ -144,7 +144,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
           disciplineRating: p.ratings.disciplineRating, chemistryImpact: 0,
           eligibilityYearsLeft: p.eligibilityYearsLeft, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
           isSuspended: false, suspensionDaysLeft: 0,
-          onScholarship: i < scholarshipLimit,
+          onScholarship: i < scholarshipLimit, droppedForDiscipline: false,
         });
       });
     }

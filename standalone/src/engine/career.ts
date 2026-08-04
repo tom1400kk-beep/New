@@ -88,9 +88,6 @@ export function updatePrestige(
   const winPct = wins / games;
   const performanceScore = winPct * 100 + (madeTournament ? 8 : 0) + tournamentWins * 4;
   let delta = (performanceScore - currentPrestige) * 0.06;
-  // A Mid-Major Grinder has built a program up from nothing before — prestige
-  // climbs a bit faster for them when they're overperforming.
-  if (background === "MID_MAJOR_GRINDER" && delta > 0) delta *= 1.25;
   return Math.round(clamp(currentPrestige + delta, 5, 99));
 }
 

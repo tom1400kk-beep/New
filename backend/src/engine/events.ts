@@ -28,6 +28,7 @@ export interface EventEffects {
   playerCharacterDelta?: number;
   injuryWeeks?: number;
   removePlayer?: boolean; // player leaves team (transfer out) to no team in particular
+  removePlayerForDiscipline?: boolean; // like removePlayer, but joins the leaguewide discipline-drops signable pool
   transferToTeamId?: string; // player leaves for this specific team (e.g. an NIL poaching loss)
   suspensionDays?: number;
   legalityDelta?: number; // program off-court integrity reputation
@@ -325,8 +326,8 @@ const TEMPLATES: Template[] = [
           {
             id: "dismiss",
             label: "Dismiss them from the team",
-            description: "Cut ties entirely. Opens a scholarship spot, sends a clear message, and actually boosts your program's reputation for accountability — but you lose the player for good.",
-            effects: { removePlayer: true, chemistryDelta: 3, prestigeDelta: 2, hotSeatDelta: -3, legalityDelta: 3 },
+            description: "Cut ties entirely. Opens a scholarship spot, sends a clear message, and actually boosts your program's reputation for accountability — but you lose the player for good. They'll be signable by other programs.",
+            effects: { removePlayerForDiscipline: true, chemistryDelta: 3, prestigeDelta: 2, hotSeatDelta: -3, legalityDelta: 3 },
           },
         ],
       };

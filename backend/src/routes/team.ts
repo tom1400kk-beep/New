@@ -3,6 +3,9 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { computeStandings } from "../season/standings";
 import { sortedPair } from "../engine/rivalry";
+import { meetsLegalityBar } from "../engine/career";
+import { disciplineSigningReputationHit } from "../engine/disciplineDrops";
+import { clamp } from "../engine/rng";
 import { DIVISION_RULES, type Division } from "../types";
 
 export const teamRouter = Router();
@@ -53,6 +56,61 @@ teamRouter.post("/saves/:id/walkons/:candidateId/add", async (req, res) => {
   });
   await prisma.walkOnCandidate.delete({ where: { id: candidate.id } });
   res.json(player);
+});
+
+// Leaguewide, not team-scoped like walk-ons — these are players other
+// programs already cut loose, so any team (with the AD's blessing) can sign one.
+teamRouter.get("/saves/:id/discipline-drops", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  const players = await prisma.player.findMany({
+    where: { saveGameId: save.id, droppedForDiscipline: true, teamId: null },
+    orderBy: { disciplineRating: "asc" },
+  });
+  let rosterCount = 0;
+  let rosterCap = 0;
+  let adWouldAllowById = new Map<string, boolean>();
+  if (save.coachTeamId) {
+    const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { players: true, athleticDirector: true } });
+    rosterCount = team.players.length;
+    rosterCap = DIVISION_RULES[team.division as Division].rosterCap;
+    adWouldAllowById = new Map(
+      players.map((p) => [p.id, meetsLegalityBar(p.disciplineRating, team.academicReputation, team.athleticDirector?.integrityStandard)])
+    );
+  }
+  res.json({
+    players: players.map((p) => ({ ...p, adWouldAllow: adWouldAllowById.get(p.id) ?? null })),
+    rosterCount, rosterCap,
+  });
+});
+
+teamRouter.post("/saves/:id/discipline-drops/:playerId/sign", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (!save.coachTeamId) return res.status(400).json({ error: "No active team" });
+  const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { players: true, athleticDirector: true } });
+  const player = await prisma.player.findUnique({ where: { id: req.params.playerId } });
+  if (!player || !player.droppedForDiscipline || player.teamId) return res.status(404).json({ error: "Player not available" });
+
+  const rosterCap = DIVISION_RULES[team.division as Division].rosterCap;
+  if (team.players.length >= rosterCap) return res.status(400).json({ error: "Roster is already full" });
+
+  if (!meetsLegalityBar(player.disciplineRating, team.academicReputation, team.athleticDirector?.integrityStandard)) {
+    return res.status(400).json({
+      error: `Your AD won't sign off on this one — ${player.firstName} ${player.lastName}'s history is too much risk for what this program is willing to carry.`,
+    });
+  }
+
+  const rules = DIVISION_RULES[team.division as Division];
+  const scholarshipCount = team.players.filter((p) => p.onScholarship).length;
+  const onScholarship = rules.hasScholarships && scholarshipCount < rules.scholarshipLimit;
+  const reputationHit = disciplineSigningReputationHit(player.disciplineRating);
+
+  const updatedPlayer = await prisma.player.update({ where: { id: player.id }, data: { teamId: team.id, onScholarship } });
+  await prisma.team.update({
+    where: { id: team.id },
+    data: { academicReputation: Math.round(clamp(team.academicReputation - reputationHit, 5, 99)) },
+  });
+
+  res.json({ player: updatedPlayer, reputationHit });
 });
 
 teamRouter.get("/saves/:id/schedule", async (req, res) => {

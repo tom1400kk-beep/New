@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct } from "../engine/career";
+import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct, meetsLegalityBar } from "../engine/career";
+import { disciplineDismissalChance, disciplineSigningReputationHit } from "../engine/disciplineDrops";
 import { parsePipelineStates, decayPipeline, bumpPipelineState } from "../engine/pipeline";
 import { generateProspectPriorities } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
@@ -361,19 +362,69 @@ export async function runOffseason(saveGameId: string): Promise<{
     });
   }
 
+  const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
+  const currentRosterAll = await prisma.player.findMany({ where: { saveGameId, teamId: { not: null } } });
+
+  // ---- Discipline drops: a modest, ongoing trickle of players cut loose for
+  // accumulated off-court judgment issues (distinct from the ARREST event's
+  // own one-off "dismiss" choice) join a leaguewide pool other programs can
+  // sign — concentrated almost entirely on the real discipline-risk tail. Most
+  // get scooped up by AI programs willing to take the risk before the human
+  // coach ever sees the list; a program's own AD can veto too, so image-
+  // conscious schools mostly pass. What's left stays browsable. ----
+  const disciplineDismissedIds = new Set<string>();
+  for (const p of currentRosterAll) {
+    const ownerTeam = teams.find((t) => t.id === p.teamId);
+    if (rng() < disciplineDismissalChance(p.disciplineRating, ownerTeam?.headCoach?.archetype)) {
+      disciplineDismissedIds.add(p.id);
+      await prisma.player.update({
+        where: { id: p.id },
+        data: { teamId: null, droppedForDiscipline: true, previousSchool: teamNameById.get(p.teamId!) ?? null },
+      });
+    }
+  }
+  if (disciplineDismissedIds.size > 0) {
+    const rosterCounts = new Map<string, number>();
+    const scholarshipCounts = new Map<string, number>();
+    for (const t of teams) {
+      rosterCounts.set(t.id, currentRosterAll.filter((p) => p.teamId === t.id && !disciplineDismissedIds.has(p.id)).length);
+      scholarshipCounts.set(t.id, currentRosterAll.filter((p) => p.teamId === t.id && p.onScholarship && !disciplineDismissedIds.has(p.id)).length);
+    }
+    const pool = await prisma.player.findMany({ where: { saveGameId, droppedForDiscipline: true, teamId: null } });
+    for (const p of pool) {
+      if (rng() < 0.35) continue; // stays in the pool, unclaimed this cycle
+      const eligible = teams.filter((t) => {
+        if (t.isPlayerControlled) return false; // the human coach signs these deliberately, never auto-assigned
+        const rules = DIVISION_RULES[t.division as Division];
+        if ((rosterCounts.get(t.id) ?? 0) >= rules.rosterCap) return false;
+        return meetsLegalityBar(p.disciplineRating, t.academicReputation, t.athleticDirector?.integrityStandard);
+      });
+      if (eligible.length === 0) continue;
+      const team = eligible[Math.floor(rng() * eligible.length)];
+      const rules = DIVISION_RULES[team.division as Division];
+      const hasScholarshipRoom = rules.hasScholarships && (scholarshipCounts.get(team.id) ?? 0) < rules.scholarshipLimit;
+      await prisma.player.update({ where: { id: p.id }, data: { teamId: team.id, onScholarship: hasScholarshipRoom } });
+      await prisma.team.update({
+        where: { id: team.id },
+        data: { academicReputation: Math.round(clamp(team.academicReputation - disciplineSigningReputationHit(p.disciplineRating), 5, 99)) },
+      });
+      rosterCounts.set(team.id, (rosterCounts.get(team.id) ?? 0) + 1);
+      if (hasScholarshipRoom) scholarshipCounts.set(team.id, (scholarshipCounts.get(team.id) ?? 0) + 1);
+    }
+  }
+
   // ---- Transfer portal: departures free a roster spot and become public;
   // last season's departures resolve now via the same weighted-interest
   // lottery HS recruits use, off a full season of accumulated interest.
   // Landing a transfer builds a real connection to that school — the next
   // transfer portal player from there is easier to land as a result. ----
-  const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
   const priorPortalPlayers = await prisma.player.findMany({
     where: { saveGameId, inTransferPortal: true },
     include: { transferInterest: true },
   });
 
   const PORTAL_BASE_CHANCE = 0.05;
-  const currentRoster = await prisma.player.findMany({ where: { saveGameId, teamId: { not: null } } });
+  const currentRoster = currentRosterAll.filter((p) => !disciplineDismissedIds.has(p.id));
   const allCandidateTeams: PortalCandidateTeam[] = teams.map((t) => ({ teamId: t.id, division: t.division as Division, prestige: t.prestige }));
   const poachingInterestRows: { id: string; playerId: string; teamId: string; interestLevel: number }[] = [];
   for (const p of currentRoster) {

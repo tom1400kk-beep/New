@@ -7,6 +7,7 @@ import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
+import { disciplineSigningReputationHit } from "../engine/disciplineDrops";
 import type { Division } from "../types";
 import { DIVISION_RULES } from "../types";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
@@ -124,6 +125,7 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     characterRating: prospect.characterRating, scoring: prospect.scoring, threePoint: prospect.threePoint,
     finishing: prospect.finishing, playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
     starRating: prospect.starRating, priorities: parsePriorities(prospect.prioritiesJson),
+    source: prospect.source,
   };
 
   const teamInput: RecruitingTeamInput = {
@@ -244,7 +246,7 @@ export function pursueTransfer(state: WorldState, playerId: string, points: numb
     characterRating: player.characterRating, scoring: player.scoring, threePoint: player.threePoint,
     finishing: player.finishing, playmaking: player.playmaking, rebounding: player.rebounding, defense: player.defense,
     starRating: clamp(Math.round(overall / 20), 1, 5), priorities: parsePriorities(player.prioritiesJson),
-    previousSchool: player.previousSchool,
+    previousSchool: player.previousSchool, source: player.origin,
   };
 
   const teamInput: RecruitingTeamInput = {
@@ -350,6 +352,10 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
       if (effects.suspensionDays) { player.isSuspended = true; player.suspensionDaysLeft = effects.suspensionDays; }
       if (effects.transferToTeamId) {
         player.teamId = effects.transferToTeamId;
+        player.previousSchool = sourceTeamName;
+      } else if (effects.removePlayerForDiscipline) {
+        player.teamId = null;
+        player.droppedForDiscipline = true;
         player.previousSchool = sourceTeamName;
       } else if (effects.removePlayer) {
         player.teamId = null;
@@ -634,11 +640,41 @@ export function addWalkOn(state: WorldState, candidateId: string) {
     stamina: 60, potential: candidate.potential, characterRating: candidate.characterRating,
     disciplineRating: candidate.disciplineRating, chemistryImpact: 0,
     eligibilityYearsLeft: 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
-    isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
+    isSuspended: false, suspensionDaysLeft: 0, onScholarship: false, droppedForDiscipline: false,
   };
   state.players.push(player);
   state.walkOnCandidates = state.walkOnCandidates.filter((c) => c.id !== candidateId);
   return player;
+}
+
+export function signDisciplineDrop(state: WorldState, playerId: string) {
+  if (!state.save.coachTeamId) throw new Error("No active team");
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) throw new Error("Team not found");
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player || !player.droppedForDiscipline || player.teamId) throw new Error("Player not available");
+
+  const rosterCap = DIVISION_RULES[team.division as Division].rosterCap;
+  const rosterCount = state.players.filter((p) => p.teamId === team.id).length;
+  if (rosterCount >= rosterCap) throw new Error("Roster is already full");
+
+  const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+  if (!meetsLegalityBar(player.disciplineRating, team.academicReputation, ad?.integrityStandard)) {
+    throw new Error(
+      `Your AD won't sign off on this one — ${player.firstName} ${player.lastName}'s history is too much risk for what this program is willing to carry.`
+    );
+  }
+
+  const rules = DIVISION_RULES[team.division as Division];
+  const scholarshipCount = state.players.filter((p) => p.teamId === team.id && p.onScholarship).length;
+  const onScholarship = rules.hasScholarships && scholarshipCount < rules.scholarshipLimit;
+  const reputationHit = disciplineSigningReputationHit(player.disciplineRating);
+
+  player.teamId = team.id;
+  player.onScholarship = onScholarship;
+  team.academicReputation = Math.round(clamp(team.academicReputation - reputationHit, 5, 99));
+
+  return { player, reputationHit };
 }
 
 export interface PreseasonTournamentBoardEntry {

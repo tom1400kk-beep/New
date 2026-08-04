@@ -101,7 +101,7 @@ const BACKGROUND_LABELS: Record<string, string> = {
   HIGH_SCHOOL_COACH: "Former High School Coach",
   BLUE_BLOOD_ASSISTANT: "Longtime Blue-Blood Assistant",
   FORMER_PRO_PLAYER: "Former Pro Player",
-  MID_MAJOR_GRINDER: "Mid-Major Grinder",
+  JUCO_COACH: "Former JuCo Coach",
   ANALYTICS_COORDINATOR: "Analytics & Video Coordinator",
   INTERNATIONAL_SCOUT: "International Scouting Background",
 };

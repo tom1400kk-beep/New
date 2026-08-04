@@ -143,6 +143,13 @@ export const api = {
     await persistence.persistSave(state);
     return result;
   },
+  getDisciplineDrops: async (saveId: string) => queries.getDisciplineDrops(await ensureLoaded(saveId)),
+  signDisciplineDrop: async (saveId: string, playerId: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.signDisciplineDrop(state, playerId);
+    await persistence.persistSave(state);
+    return result;
+  },
   getSchedule: async (saveId: string) => queries.getSchedule(await ensureLoaded(saveId)),
   getStandings: async (saveId: string) => queries.getStandings(await ensureLoaded(saveId)),
   getKenPom: async (saveId: string) => queries.getKenPom(await ensureLoaded(saveId)),

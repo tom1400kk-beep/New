@@ -137,6 +137,7 @@ export interface PlayerRow {
   isSuspended: boolean;
   suspensionDaysLeft: number;
   onScholarship: boolean;
+  droppedForDiscipline: boolean;
 }
 
 export interface TransferInterestRow {

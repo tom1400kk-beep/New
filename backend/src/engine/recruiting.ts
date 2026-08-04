@@ -43,6 +43,7 @@ export interface RecruitingProspectInput {
   starRating: number;
   priorities: PriorityProfile;
   previousSchool?: string | null; // set for transfer portal players — the program they're leaving
+  source?: string; // ProspectSource: "HIGH_SCHOOL" | "JUCO" | "INTERNATIONAL"
 }
 
 export interface RecruitingTeamInput {
@@ -157,6 +158,9 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   }
   if (team.coachBackground === "BLUE_BLOOD_ASSISTANT" && prospect.starRating >= 4) {
     base *= 1.1; // "Big-Time Pedigree" — blue-chips recognize the résumé
+  }
+  if (team.coachBackground === "JUCO_COACH" && prospect.source === "JUCO") {
+    base *= 1.15; // "JUCO Pipeline" — knows that circuit better than anyone
   }
 
   // Recruiting pipeline: a persistent, per-coach connection strength for each

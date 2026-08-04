@@ -1,5 +1,6 @@
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct } from "../engine/career";
+import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct, meetsLegalityBar } from "../engine/career";
+import { disciplineDismissalChance, disciplineSigningReputationHit } from "../engine/disciplineDrops";
 import { parsePipelineStates, decayPipeline, bumpPipelineState } from "../engine/pipeline";
 import { generateProspectPriorities } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
@@ -330,12 +331,59 @@ export function runOffseason(state: WorldState): OffseasonResult {
     p.defense = Math.round(clamp(p.defense + growth, 15, 99));
   }
 
+  const teamNameById = new Map(state.teams.map((t) => [t.id, t.name]));
+
+  // Discipline drops: a modest, ongoing trickle of players cut loose for
+  // accumulated off-court judgment issues (distinct from the ARREST event's
+  // own one-off "dismiss" choice) join a leaguewide pool other programs can
+  // sign — concentrated almost entirely on the real discipline-risk tail. Most
+  // get scooped up by AI programs willing to take the risk before the human
+  // coach ever sees the list; a program's own AD can veto too, so image-
+  // conscious schools mostly pass. What's left stays browsable.
+  const rosterSnapshot = state.players.filter((p) => p.teamId);
+  for (const p of rosterSnapshot) {
+    const ownerTeam = state.teams.find((t) => t.id === p.teamId);
+    const ownerCoach = ownerTeam ? state.coaches.find((c) => c.id === ownerTeam.headCoachId) : undefined;
+    if (rng() < disciplineDismissalChance(p.disciplineRating, ownerCoach?.archetype)) {
+      p.previousSchool = teamNameById.get(p.teamId!) ?? null;
+      p.droppedForDiscipline = true;
+      p.teamId = null;
+    }
+  }
+  const disciplinePool = state.players.filter((p) => p.droppedForDiscipline && !p.teamId);
+  if (disciplinePool.length > 0) {
+    const rosterCounts = new Map<string, number>();
+    const scholarshipCounts = new Map<string, number>();
+    for (const t of state.teams) {
+      rosterCounts.set(t.id, state.players.filter((p) => p.teamId === t.id).length);
+      scholarshipCounts.set(t.id, state.players.filter((p) => p.teamId === t.id && p.onScholarship).length);
+    }
+    for (const p of disciplinePool) {
+      if (rng() < 0.35) continue; // stays in the pool, unclaimed this cycle
+      const eligible = state.teams.filter((t) => {
+        if (t.isPlayerControlled) return false; // the human coach signs these deliberately, never auto-assigned
+        const rules = DIVISION_RULES[t.division as Division];
+        if ((rosterCounts.get(t.id) ?? 0) >= rules.rosterCap) return false;
+        const ad = state.athleticDirectors.find((a) => a.id === t.athleticDirectorId);
+        return meetsLegalityBar(p.disciplineRating, t.academicReputation, ad?.integrityStandard);
+      });
+      if (eligible.length === 0) continue;
+      const team = eligible[Math.floor(rng() * eligible.length)];
+      const rules = DIVISION_RULES[team.division as Division];
+      const hasScholarshipRoom = rules.hasScholarships && (scholarshipCounts.get(team.id) ?? 0) < rules.scholarshipLimit;
+      p.teamId = team.id;
+      p.onScholarship = hasScholarshipRoom;
+      team.academicReputation = Math.round(clamp(team.academicReputation - disciplineSigningReputationHit(p.disciplineRating), 5, 99));
+      rosterCounts.set(team.id, (rosterCounts.get(team.id) ?? 0) + 1);
+      if (hasScholarshipRoom) scholarshipCounts.set(team.id, (scholarshipCounts.get(team.id) ?? 0) + 1);
+    }
+  }
+
   // Transfer portal: departures free a roster spot and become public; last
   // season's departures resolve now via the same weighted-interest lottery
   // HS recruits use, off a full season of accumulated interest. Landing a
   // transfer builds a real connection to that school — the next transfer
   // portal player from there is easier to land as a result.
-  const teamNameById = new Map(state.teams.map((t) => [t.id, t.name]));
   const priorPortalPlayers = state.players.filter((p) => p.inTransferPortal);
 
   const PORTAL_BASE_CHANCE = 0.05;
@@ -544,7 +592,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       potential: prospect.potential, characterRating: prospect.characterRating,
       disciplineRating: prospect.disciplineRating, chemistryImpact: 0,
       eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
-      isSuspended: false, suspensionDaysLeft: 0, onScholarship,
+      isSuspended: false, suspensionDaysLeft: 0, onScholarship, droppedForDiscipline: false,
     });
   }
 
@@ -641,7 +689,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
         chemistryImpact: 0, eligibilityYearsLeft: 4,
         inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0, injuryType: null,
-        isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
+        isSuspended: false, suspensionDaysLeft: 0, onScholarship: false, droppedForDiscipline: false,
       });
     }
   }

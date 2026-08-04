@@ -133,6 +133,7 @@ transfersRouter.post("/saves/:id/transfers/:playerId/pursue", async (req, res) =
     starRating: clamp(Math.round(overall / 20), 1, 5),
     priorities: parsePriorities(player.prioritiesJson),
     previousSchool: player.previousSchool,
+    source: player.origin,
   };
 
   const teamInput: RecruitingTeamInput = {

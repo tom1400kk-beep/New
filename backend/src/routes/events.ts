@@ -96,6 +96,10 @@ async function applyEffects(saveGameId: string, teamId: string | null, playerId:
       if (effects.transferToTeamId) {
         data.teamId = effects.transferToTeamId;
         data.previousSchool = sourceTeamName;
+      } else if (effects.removePlayerForDiscipline) {
+        data.teamId = null;
+        data.droppedForDiscipline = true;
+        data.previousSchool = sourceTeamName;
       } else if (effects.removePlayer) {
         data.teamId = null;
       }

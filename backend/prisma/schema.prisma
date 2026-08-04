@@ -255,6 +255,7 @@ model Player {
   isSuspended      Boolean  @default(false)
   suspensionDaysLeft Int    @default(0)
   onScholarship    Boolean  @default(true) // false = walk-on, no athletic aid
+  droppedForDiscipline Boolean @default(false) // cut by a previous program for off-court issues; teamId null while unsigned
 
   gameStats        PlayerGameStat[]
   transferInterest TransferInterest[]

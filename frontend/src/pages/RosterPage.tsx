@@ -58,7 +58,9 @@ export default function RosterPage() {
   const { activeSaveId } = useSave();
   const [players, setPlayers] = useState<any[]>([]);
   const [walkOns, setWalkOns] = useState<{ candidates: any[]; rosterCount: number; rosterCap: number }>({ candidates: [], rosterCount: 0, rosterCap: 0 });
+  const [disciplineDrops, setDisciplineDrops] = useState<{ players: any[]; rosterCount: number; rosterCap: number }>({ players: [], rosterCount: 0, rosterCap: 0 });
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [signingId, setSigningId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState("classYear");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
@@ -69,10 +71,14 @@ export default function RosterPage() {
   function loadWalkOns() {
     if (activeSaveId) api.getWalkOns(activeSaveId).then(setWalkOns);
   }
+  function loadDisciplineDrops() {
+    if (activeSaveId) api.getDisciplineDrops(activeSaveId).then(setDisciplineDrops);
+  }
 
   useEffect(() => {
     loadRoster();
     loadWalkOns();
+    loadDisciplineDrops();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSaveId]);
 
@@ -87,6 +93,20 @@ export default function RosterPage() {
       alert(err.message ?? "Could not add walk-on");
     } finally {
       setAddingId(null);
+    }
+  }
+
+  async function handleSignDrop(playerId: string) {
+    if (!activeSaveId) return;
+    setSigningId(playerId);
+    try {
+      await api.signDisciplineDrop(activeSaveId, playerId);
+      loadRoster();
+      loadDisciplineDrops();
+    } catch (err: any) {
+      alert(err.message ?? "Could not sign player");
+    } finally {
+      setSigningId(null);
     }
   }
 
@@ -112,6 +132,7 @@ export default function RosterPage() {
   }, [players, sortKey, sortDir]);
 
   const openSpots = walkOns.rosterCap - walkOns.rosterCount;
+  const dropOpenSpots = disciplineDrops.rosterCap - disciplineDrops.rosterCount;
 
   return (
     <div>
@@ -205,6 +226,52 @@ export default function RosterPage() {
                       disabled={openSpots <= 0 || addingId === c.id}
                     >
                       {addingId === c.id ? "Adding..." : "Add to Roster"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {disciplineDrops.players.length > 0 && (
+        <div className="card" style={{ overflowX: "auto", marginTop: "1rem" }}>
+          <h2>Discipline Drops</h2>
+          <p className="text-muted">
+            Players other programs cut loose for off-court issues, now available to any team. Signing one costs your
+            program a modest reputation hit and raises your own team's incident risk — some ADs won't sign off at all,
+            depending on how image-conscious the school is.
+            {" "}{dropOpenSpots > 0 ? `${dropOpenSpots} open roster spot${dropOpenSpots === 1 ? "" : "s"} out of ${disciplineDrops.rosterCap}.` : `Roster is full (${disciplineDrops.rosterCount}/${disciplineDrops.rosterCap}).`}
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th><th>Pos</th><th>Home</th><th>OVR</th><th>Discipline</th><th>Previous School</th><th>Your AD</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {disciplineDrops.players.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <button className="player-name-link" onClick={() => setSelectedPlayer(p)}>
+                      {p.firstName} {p.lastName}
+                    </button>
+                  </td>
+                  <td>{p.position}</td>
+                  <td>{homeLabel(p)}</td>
+                  <td>{overall(p)}</td>
+                  <td className={p.disciplineRating < 30 ? "text-bad" : ""}>{p.disciplineRating}</td>
+                  <td className="text-muted">{p.previousSchool ?? "—"}</td>
+                  <td className={p.adWouldAllow === false ? "text-bad" : p.adWouldAllow === true ? "text-good" : "text-muted"}>
+                    {p.adWouldAllow === false ? "Won't allow" : p.adWouldAllow === true ? "Will allow" : "—"}
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => handleSignDrop(p.id)}
+                      disabled={dropOpenSpots <= 0 || p.adWouldAllow === false || signingId === p.id}
+                    >
+                      {signingId === p.id ? "Signing..." : "Sign"}
                     </button>
                   </td>
                 </tr>

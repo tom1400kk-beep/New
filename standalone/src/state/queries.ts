@@ -1,6 +1,7 @@
 import { computeStandings } from "./standings";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
+import { meetsLegalityBar } from "../engine/career";
 import { sortedPair } from "../engine/rivalry";
 import { DIVISION_RULES, type Division } from "../types";
 import { computeKenPomRatings, type TeamGameBoxScore } from "../engine/kenpom";
@@ -69,6 +70,25 @@ export function getWalkOns(state: WorldState) {
   const rosterCount = state.players.filter((p) => p.teamId === teamId).length;
   const candidates = [...state.walkOnCandidates.filter((c) => c.teamId === teamId)].sort((a, b) => b.scoring - a.scoring);
   return { candidates, rosterCount, rosterCap: DIVISION_RULES[team.division as Division].rosterCap };
+}
+
+export function getDisciplineDrops(state: WorldState) {
+  const players = [...state.players.filter((p) => p.droppedForDiscipline && !p.teamId)]
+    .sort((a, b) => a.disciplineRating - b.disciplineRating);
+  let rosterCount = 0;
+  let rosterCap = 0;
+  let adWouldAllowById = new Map<string, boolean>();
+  if (state.save.coachTeamId) {
+    const team = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+    rosterCount = state.players.filter((p) => p.teamId === team.id).length;
+    rosterCap = DIVISION_RULES[team.division as Division].rosterCap;
+    const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+    adWouldAllowById = new Map(players.map((p) => [p.id, meetsLegalityBar(p.disciplineRating, team.academicReputation, ad?.integrityStandard)]));
+  }
+  return {
+    players: players.map((p) => ({ ...p, adWouldAllow: adWouldAllowById.get(p.id) ?? null })),
+    rosterCount, rosterCap,
+  };
 }
 
 export function getSchedule(state: WorldState) {

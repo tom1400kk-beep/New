@@ -32,6 +32,9 @@ export const api = {
   getWalkOns: (saveId: string) => request<any>(`/saves/${saveId}/walkons`),
   addWalkOn: (saveId: string, candidateId: string) =>
     request<any>(`/saves/${saveId}/walkons/${candidateId}/add`, { method: "POST" }),
+  getDisciplineDrops: (saveId: string) => request<any>(`/saves/${saveId}/discipline-drops`),
+  signDisciplineDrop: (saveId: string, playerId: string) =>
+    request<any>(`/saves/${saveId}/discipline-drops/${playerId}/sign`, { method: "POST" }),
   getSchedule: (saveId: string) => request<any[]>(`/saves/${saveId}/schedule`),
   getStandings: (saveId: string) => request<any>(`/saves/${saveId}/standings`),
   getKenPom: (saveId: string) => request<any[]>(`/saves/${saveId}/kenpom`),

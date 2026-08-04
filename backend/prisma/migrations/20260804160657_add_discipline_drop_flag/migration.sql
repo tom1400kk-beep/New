@@ -1,0 +1,50 @@
+-- RedefineTables
+PRAGMA defer_foreign_keys=ON;
+PRAGMA foreign_keys=OFF;
+CREATE TABLE "new_Player" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "saveGameId" TEXT NOT NULL,
+    "teamId" TEXT,
+    "firstName" TEXT NOT NULL,
+    "lastName" TEXT NOT NULL,
+    "position" TEXT NOT NULL,
+    "classYear" TEXT NOT NULL,
+    "heightInches" INTEGER NOT NULL,
+    "hometownState" TEXT NOT NULL,
+    "hometownCity" TEXT NOT NULL DEFAULT '',
+    "countryOfOrigin" TEXT,
+    "origin" TEXT NOT NULL DEFAULT 'HIGH_SCHOOL',
+    "scoring" INTEGER NOT NULL,
+    "threePoint" INTEGER NOT NULL,
+    "finishing" INTEGER NOT NULL,
+    "playmaking" INTEGER NOT NULL,
+    "rebounding" INTEGER NOT NULL,
+    "defense" INTEGER NOT NULL,
+    "athleticism" INTEGER NOT NULL,
+    "basketballIq" INTEGER NOT NULL,
+    "stamina" INTEGER NOT NULL,
+    "potential" INTEGER NOT NULL,
+    "characterRating" INTEGER NOT NULL,
+    "disciplineRating" INTEGER NOT NULL DEFAULT 65,
+    "chemistryImpact" INTEGER NOT NULL DEFAULT 0,
+    "eligibilityYearsLeft" INTEGER NOT NULL DEFAULT 4,
+    "inTransferPortal" BOOLEAN NOT NULL DEFAULT false,
+    "previousSchool" TEXT,
+    "prioritiesJson" TEXT NOT NULL DEFAULT '{}',
+    "isInjured" BOOLEAN NOT NULL DEFAULT false,
+    "injuryWeeksLeft" INTEGER NOT NULL DEFAULT 0,
+    "injuryType" TEXT,
+    "isSuspended" BOOLEAN NOT NULL DEFAULT false,
+    "suspensionDaysLeft" INTEGER NOT NULL DEFAULT 0,
+    "onScholarship" BOOLEAN NOT NULL DEFAULT true,
+    "droppedForDiscipline" BOOLEAN NOT NULL DEFAULT false,
+    CONSTRAINT "Player_saveGameId_fkey" FOREIGN KEY ("saveGameId") REFERENCES "SaveGame" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Player_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "Team" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+INSERT INTO "new_Player" ("athleticism", "basketballIq", "characterRating", "chemistryImpact", "classYear", "countryOfOrigin", "defense", "disciplineRating", "eligibilityYearsLeft", "finishing", "firstName", "heightInches", "hometownCity", "hometownState", "id", "inTransferPortal", "injuryType", "injuryWeeksLeft", "isInjured", "isSuspended", "lastName", "onScholarship", "origin", "playmaking", "position", "potential", "previousSchool", "prioritiesJson", "rebounding", "saveGameId", "scoring", "stamina", "suspensionDaysLeft", "teamId", "threePoint") SELECT "athleticism", "basketballIq", "characterRating", "chemistryImpact", "classYear", "countryOfOrigin", "defense", "disciplineRating", "eligibilityYearsLeft", "finishing", "firstName", "heightInches", "hometownCity", "hometownState", "id", "inTransferPortal", "injuryType", "injuryWeeksLeft", "isInjured", "isSuspended", "lastName", "onScholarship", "origin", "playmaking", "position", "potential", "previousSchool", "prioritiesJson", "rebounding", "saveGameId", "scoring", "stamina", "suspensionDaysLeft", "teamId", "threePoint" FROM "Player";
+DROP TABLE "Player";
+ALTER TABLE "new_Player" RENAME TO "Player";
+CREATE INDEX "Player_saveGameId_teamId_idx" ON "Player"("saveGameId", "teamId");
+CREATE INDEX "Player_saveGameId_inTransferPortal_idx" ON "Player"("saveGameId", "inTransferPortal");
+PRAGMA foreign_keys=ON;
+PRAGMA defer_foreign_keys=OFF;

@@ -120,6 +120,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     defense: prospect.defense,
     starRating: prospect.starRating,
     priorities: parsePriorities(prospect.prioritiesJson),
+    source: prospect.source,
   };
 
   const teamInput: RecruitingTeamInput = {

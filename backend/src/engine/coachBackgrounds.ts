@@ -7,7 +7,7 @@ export type CoachBackground =
   | "HIGH_SCHOOL_COACH"
   | "BLUE_BLOOD_ASSISTANT"
   | "FORMER_PRO_PLAYER"
-  | "MID_MAJOR_GRINDER"
+  | "JUCO_COACH"
   | "ANALYTICS_COORDINATOR"
   | "INTERNATIONAL_SCOUT";
 
@@ -46,12 +46,12 @@ export const COACH_BACKGROUNDS: BackgroundProfile[] = [
     perkDescription: "Locker room conflicts and transfer requests come up less often on his roster.",
   },
   {
-    key: "MID_MAJOR_GRINDER",
-    label: "Mid-Major Grinder",
-    description: "Clawed a small program up from nothing with grit and player development, not blue-chip talent.",
-    deltas: { developmentSkill: 6, offenseSkill: 3, defenseSkill: 3 },
-    perkLabel: "Program Builder",
-    perkDescription: "Prestige climbs a little faster when the team overperforms.",
+    key: "JUCO_COACH",
+    label: "Former JuCo Coach",
+    description: "Spent years coaching junior college ball, turning under-recruited talent into four-year contributors before making the jump.",
+    deltas: { developmentSkill: 8, recruitingSkill: 4 },
+    perkLabel: "JUCO Pipeline",
+    perkDescription: "Extra recruiting pull with junior college prospects.",
   },
   {
     key: "ANALYTICS_COORDINATOR",
