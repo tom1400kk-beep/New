@@ -178,10 +178,18 @@ export function generateSeasonSchedule(
 
   const nonConfPairings = buildNonConferencePairings(teams, nonConfNeeded, rng);
 
+  // Mirrors the real college calendar: non-conference play happens first
+  // (November into late December), then conference play takes over for the
+  // rest of the season, rather than the two interleaving randomly.
   const seasonStart = new Date(Date.UTC(seasonYear, 10, 4)); // Nov 4
+  const nonConfEnd = new Date(Date.UTC(seasonYear, 11, 30)); // Dec 30
+  const confStart = new Date(Date.UTC(seasonYear, 11, 31)); // Dec 31
   const seasonEnd = new Date(Date.UTC(seasonYear + 1, 1, 28)); // Feb 28
 
-  return assignDates([...confPairings, ...nonConfPairings], seasonStart, seasonEnd, rng);
+  const nonConfGames = assignDates(nonConfPairings, seasonStart, nonConfEnd, rng);
+  const confGames = assignDates(confPairings, confStart, seasonEnd, rng);
+
+  return [...nonConfGames, ...confGames].sort((a, b) => a.date.getTime() - b.date.getTime());
 }
 
 export function randomSeasonRng(seedBase: number) {
