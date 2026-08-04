@@ -44,6 +44,13 @@ export const api = {
       body: JSON.stringify({ points }),
     }),
 
+  getTransferBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/transfers`),
+  pursueTransfer: (saveId: string, playerId: string, points: number) =>
+    request<any>(`/saves/${saveId}/transfers/${playerId}/pursue`, {
+      method: "POST",
+      body: JSON.stringify({ points }),
+    }),
+
   getPendingEvents: (saveId: string) => request<any[]>(`/saves/${saveId}/events/pending`),
   resolveEvent: (saveId: string, eventId: string, optionId: string) =>
     request<any>(`/saves/${saveId}/events/${eventId}/resolve`, {

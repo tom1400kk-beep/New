@@ -5,6 +5,7 @@ import DashboardPage from "./pages/DashboardPage";
 import RosterPage from "./pages/RosterPage";
 import SchedulePage from "./pages/SchedulePage";
 import RecruitingPage from "./pages/RecruitingPage";
+import TransfersPage from "./pages/TransfersPage";
 import StandingsPage from "./pages/StandingsPage";
 
 function Shell() {
@@ -23,6 +24,7 @@ function Shell() {
             <NavLink to="/schedule">Schedule</NavLink>
             <NavLink to="/standings">Standings</NavLink>
             <NavLink to="/recruiting">Recruiting</NavLink>
+            <NavLink to="/transfers">Transfers</NavLink>
           </>
         )}
       </nav>
@@ -34,6 +36,7 @@ function Shell() {
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/standings" element={<StandingsPage />} />
           <Route path="/recruiting" element={<RecruitingPage />} />
+          <Route path="/transfers" element={<TransfersPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

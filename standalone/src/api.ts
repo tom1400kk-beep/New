@@ -39,8 +39,17 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
   // Saves persisted before the walk-on tryouts feature won't have this array
   // or the onScholarship field on existing players yet.
   if (!loaded.walkOnCandidates) loaded.walkOnCandidates = [];
+  // Saves persisted before the transfer portal feature won't have this array,
+  // the previousSchool/prioritiesJson fields on existing players, or the
+  // transferPipelineJson field on existing coaches yet.
+  if (!loaded.transferInterests) loaded.transferInterests = [];
   for (const p of loaded.players) {
     if (p.onScholarship === undefined) p.onScholarship = true;
+    if (p.previousSchool === undefined) p.previousSchool = null;
+    if (p.prioritiesJson === undefined) p.prioritiesJson = "{}";
+  }
+  for (const c of loaded.coaches) {
+    if (c.transferPipelineJson === undefined) c.transferPipelineJson = "{}";
   }
   cache = loaded;
   return loaded;
@@ -113,6 +122,14 @@ export const api = {
   pursueRecruit: async (saveId: string, prospectId: string, points: number) => {
     const state = await ensureLoaded(saveId);
     const result = actions.pursueRecruit(state, prospectId, points);
+    await persistence.persistSave(state);
+    return result;
+  },
+
+  getTransferBoard: async (saveId: string) => actions.getTransferBoard(await ensureLoaded(saveId)),
+  pursueTransfer: async (saveId: string, playerId: string, points: number) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.pursueTransfer(state, playerId, points);
     await persistence.persistSave(state);
     return result;
   },

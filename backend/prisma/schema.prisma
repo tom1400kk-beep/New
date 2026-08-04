@@ -79,6 +79,7 @@ model Team {
 
   players           Player[]
   prospectInterest  RecruitInterest[]
+  transferInterest  TransferInterest[]
   walkOnCandidates  WalkOnCandidate[]
   headCoach         Coach?   @relation("HeadCoach", fields: [headCoachId], references: [id])
   headCoachId       String?  @unique
@@ -121,6 +122,7 @@ model Coach {
 
   hometownState      String?  // where the coach grew up / played HS ball
   pipelineStatesJson String   @default("{}") // Record<state, 0-100> recruiting-connection strength; persists across job changes
+  transferPipelineJson String @default("{}") // Record<previousSchool, 0-100> — landing one transfer from a school makes the next one from there easier
 
   adRelationshipsJson String  @default("{}") // Record<athleticDirectorId, 0-100> — how ADs who've worked with this coach before remember them
 
@@ -220,6 +222,8 @@ model Player {
 
   eligibilityYearsLeft Int  @default(4)
   inTransferPortal Boolean  @default(false)
+  previousSchool   String?  // set when they entered the portal — the program they transferred from
+  prioritiesJson   String   @default("{}") // JSON-encoded PriorityProfile, generated when they enter the portal
   isInjured        Boolean  @default(false)
   injuryWeeksLeft  Int      @default(0)
   isSuspended      Boolean  @default(false)
@@ -227,8 +231,10 @@ model Player {
   onScholarship    Boolean  @default(true) // false = walk-on, no athletic aid
 
   gameStats        PlayerGameStat[]
+  transferInterest TransferInterest[]
 
   @@index([saveGameId, teamId])
+  @@index([saveGameId, inTransferPortal])
 }
 
 // ---------- Recruiting: HS + JUCO + international prospects, portal reuses Player.inTransferPortal ----------
@@ -284,6 +290,24 @@ model RecruitInterest {
   visitCompleted    Boolean  @default(false)
 
   @@unique([prospectId, teamId])
+}
+
+// Recruiting interest in an already-proven college player who has entered
+// the transfer portal — mirrors RecruitInterest but points at a Player
+// instead of a Prospect, since a transfer's true ratings are already known
+// (no scouting noise) and they're gone from the pool the moment they land.
+model TransferInterest {
+  id                String   @id @default(cuid())
+  player            Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  playerId          String
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId            String
+
+  interestLevel     Int      @default(0) // 0-100
+  pointsInvested    Int      @default(0)
+  offered           Boolean  @default(false)
+
+  @@unique([playerId, teamId])
 }
 
 // Walk-on tryout pool: local players and prospects who reached out on their

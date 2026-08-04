@@ -35,6 +35,7 @@ export interface RecruitingProspectInput {
   defense: number;
   starRating: number;
   priorities: PriorityProfile;
+  previousSchool?: string | null; // set for transfer portal players — the program they're leaving
 }
 
 export interface RecruitingTeamInput {
@@ -58,6 +59,7 @@ export interface RecruitingTeamInput {
   coachPipelineStates?: Record<string, number>;
   campusAtmosphere?: number; // 1-100, program culture/environment — a buzzing program is a real recruiting draw
   hasScholarshipOpen?: boolean; // explicitly false = this program is only offering a walk-on spot right now
+  coachTransferPipeline?: Record<string, number>; // per-school connection strength, built by landing transfers from that program
 }
 
 // Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
@@ -150,6 +152,14 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   }
   if (team.playedProDomestic && prospect.starRating >= 4) {
     base *= 1.05; // "Pro Pedigree" — a smaller nationwide blue-chip edge
+  }
+
+  // Transfer school pipeline: landing one transfer from a program builds a
+  // real connection there (a guy already in the building who can vouch for
+  // it) — the next transfer portal player from that same school is easier
+  // to land as a result.
+  if (team.coachTransferPipeline && prospect.previousSchool) {
+    base *= pipelineMultiplier(pipelineScore(team.coachTransferPipeline, prospect.previousSchool));
   }
 
   // A walk-on offer (no guaranteed aid) is a real tradeoff, not a footnote —

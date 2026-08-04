@@ -1,6 +1,7 @@
 import { computeStandings } from "./standings";
 import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct } from "../engine/career";
-import { parsePipelineStates, decayPipeline } from "../engine/pipeline";
+import { parsePipelineStates, decayPipeline, bumpPipelineState } from "../engine/pipeline";
+import { generateProspectPriorities } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
@@ -153,6 +154,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         legalityReputation: 75,
         hometownState: null as string | null,
         pipelineStatesJson: "{}",
+        transferPipelineJson: "{}",
         adRelationshipsJson: "{}",
         currentSalary: 300000,
         raiseRequestedThisSeason: false,
@@ -309,6 +311,26 @@ export function runOffseason(state: WorldState): OffseasonResult {
     p.defense = Math.round(clamp(p.defense + growth, 15, 99));
   }
 
+  // Transfer portal: departures free a roster spot and become public; last
+  // season's departures resolve now via the same weighted-interest lottery
+  // HS recruits use, off a full season of accumulated interest. Landing a
+  // transfer builds a real connection to that school — the next transfer
+  // portal player from there is easier to land as a result.
+  const teamNameById = new Map(state.teams.map((t) => [t.id, t.name]));
+  const priorPortalPlayers = state.players.filter((p) => p.inTransferPortal);
+
+  const PORTAL_BASE_CHANCE = 0.05;
+  for (const p of state.players) {
+    if (!p.teamId) continue;
+    const chance = clamp(PORTAL_BASE_CHANCE + (55 - p.characterRating) * 0.0015, 0.02, 0.16);
+    if (rng() < chance) {
+      p.previousSchool = teamNameById.get(p.teamId) ?? null;
+      p.inTransferPortal = true;
+      p.teamId = null;
+      p.prioritiesJson = JSON.stringify(generateProspectPriorities(rng));
+    }
+  }
+
   // Recruiting resolution: this year's class gets a small development nudge
   // from their senior season, then either signs with a team now or — for
   // D1-bound HS prospects only, ~25% of the time — commits a year early as a
@@ -326,6 +348,53 @@ export function runOffseason(state: WorldState): OffseasonResult {
     if (p.onScholarship) scholarshipCounts.set(p.teamId, (scholarshipCounts.get(p.teamId) ?? 0) + 1);
   }
   const hasRoom = (teamId: string) => (rosterCounts.get(teamId) ?? 0) < rosterCap;
+
+  // Resolve last season's portal entrants now that the season's worth of
+  // interest they accumulated (and this cycle's freed-up roster spots) are
+  // both known.
+  const coachTransferPipelines = new Map<string, Record<string, number>>();
+  for (const player of priorPortalPlayers) {
+    const playerInterest = state.transferInterests.filter((i) => i.playerId === player.id);
+    if (playerInterest.length === 0) continue;
+    const roomyInterest = playerInterest.filter((i) => hasRoom(i.teamId));
+    if (roomyInterest.length === 0) continue;
+    const weights = commitmentWeights(roomyInterest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
+    const total = weights.reduce((s, w) => s + w.weight, 0);
+    if (total <= 0) continue;
+    let r = rng() * total;
+    let winnerTeamId = weights[0]?.teamId;
+    for (const w of weights) {
+      r -= w.weight;
+      if (r <= 0) { winnerTeamId = w.teamId; break; }
+    }
+    if (!winnerTeamId) continue;
+
+    const onScholarship = DIVISION_RULES[division].hasScholarships && (scholarshipCounts.get(winnerTeamId) ?? 0) < DIVISION_RULES[division].scholarshipLimit;
+    rosterCounts.set(winnerTeamId, (rosterCounts.get(winnerTeamId) ?? 0) + 1);
+    if (onScholarship) scholarshipCounts.set(winnerTeamId, (scholarshipCounts.get(winnerTeamId) ?? 0) + 1);
+
+    player.teamId = winnerTeamId;
+    player.inTransferPortal = false;
+    player.onScholarship = onScholarship;
+
+    const winningTeam = state.teams.find((t) => t.id === winnerTeamId);
+    const winningCoach = winningTeam ? state.coaches.find((c) => c.id === winningTeam.headCoachId) : undefined;
+    if (winningCoach && player.previousSchool) {
+      const basePipeline = coachTransferPipelines.get(winningCoach.id) ?? parsePipelineStates(winningCoach.transferPipelineJson);
+      coachTransferPipelines.set(winningCoach.id, bumpPipelineState(basePipeline, player.previousSchool));
+    }
+  }
+  for (const [coachId, pipeline] of coachTransferPipelines) {
+    const coach = state.coaches.find((c) => c.id === coachId);
+    if (coach) coach.transferPipelineJson = JSON.stringify(pipeline);
+  }
+  // Anyone who didn't land anywhere this cycle leaves the league — mirrors
+  // how an unsigned HS senior simply fades off the board once their window
+  // passes — and their now-dead interest rows get cleared out either way.
+  for (const player of priorPortalPlayers) {
+    if (player.inTransferPortal) player.inTransferPortal = false;
+  }
+  state.transferInterests = state.transferInterests.filter((i) => !priorPortalPlayers.some((p) => p.id === i.playerId));
 
   const classToSign = state.prospects.filter((p) => p.graduationYear === seasonYear + 1);
   for (const prospect of classToSign) {
@@ -404,7 +473,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)),
       potential: prospect.potential, characterRating: prospect.characterRating,
       disciplineRating: prospect.disciplineRating, chemistryImpact: 0,
-      eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4, inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
+      eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0,
       isSuspended: false, suspensionDaysLeft: 0, onScholarship,
     });
   }
@@ -492,7 +561,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)), potential: p.ratings.potential,
         characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
         chemistryImpact: 0, eligibilityYearsLeft: 4,
-        inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
+        inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0,
         isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
       });
     }

@@ -153,6 +153,113 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
   return interest;
 }
 
+export interface TransferBoardEntry {
+  id: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+  classYear: string;
+  hometownState: string;
+  countryOfOrigin: string | null;
+  previousSchool: string | null;
+  eligibilityYearsLeft: number;
+  overall: number;
+  topPriorities: PriorityKey[];
+  pipelineScore: number | null;
+  scoring: number; threePoint: number; finishing: number; playmaking: number;
+  rebounding: number; defense: number; athleticism: number; basketballIq: number;
+  characterRating: number; disciplineRating: number;
+  interestLevel: number;
+  pointsInvested: number;
+  offered: boolean;
+}
+
+export function getTransferBoard(state: WorldState): TransferBoardEntry[] {
+  if (!state.save.coachTeamId) return [];
+  const teamId = state.save.coachTeamId;
+  const team = state.teams.find((t) => t.id === teamId);
+  const coach = team ? state.coaches.find((c) => c.id === team.headCoachId) : undefined;
+  const transferPipeline = parsePipelineStates(coach?.transferPipelineJson ?? "{}");
+
+  return state.players
+    .filter((p) => p.inTransferPortal)
+    .sort((a, b) => b.scoring - a.scoring)
+    .slice(0, 200)
+    .map((p) => {
+      const interest = state.transferInterests.find((i) => i.playerId === p.id && i.teamId === teamId);
+      return {
+        id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position, classYear: p.classYear,
+        hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, previousSchool: p.previousSchool,
+        eligibilityYearsLeft: p.eligibilityYearsLeft, overall: playerOverall(p),
+        topPriorities: topPriorities(parsePriorities(p.prioritiesJson), 3),
+        pipelineScore: p.previousSchool ? pipelineScore(transferPipeline, p.previousSchool) : null,
+        scoring: p.scoring, threePoint: p.threePoint, finishing: p.finishing, playmaking: p.playmaking,
+        rebounding: p.rebounding, defense: p.defense, athleticism: p.athleticism, basketballIq: p.basketballIq,
+        characterRating: p.characterRating, disciplineRating: p.disciplineRating,
+        interestLevel: interest?.interestLevel ?? 0, pointsInvested: interest?.pointsInvested ?? 0, offered: interest?.offered ?? false,
+      };
+    });
+}
+
+export function pursueTransfer(state: WorldState, playerId: string, points: number) {
+  if (!state.save.coachTeamId) throw new Error("No active team");
+  const spendRequested = Math.max(1, Math.min(50, points || 10));
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+  const coach = state.coaches.find((c) => c.id === team.headCoachId)!;
+  const player = state.players.find((p) => p.id === playerId)!;
+  if (!player.inTransferPortal) throw new Error("This player isn't in the transfer portal");
+  const assistants = state.assistants.filter((a) => a.teamId === team.id && a.role === "RECRUITING");
+  const bestAssistant = Math.max(0, ...assistants.map((a) => a.rating), 0);
+
+  const budget = weeklyRecruitingPoints(coach.recruitingSkill, bestAssistant);
+  const spend = Math.min(spendRequested, budget);
+
+  let interest = state.transferInterests.find((i) => i.playerId === playerId && i.teamId === team.id);
+  const pointsInvested = (interest?.pointsInvested ?? 0) + spend;
+
+  const standings = computeStandings(state, state.save.currentSeasonYear);
+  const record = standings.get(team.id);
+  const recentWinPct = record && record.wins + record.losses > 0 ? winPct(record) : team.prestige / 100;
+  const roster = state.players.filter((p) => p.teamId === team.id);
+
+  const overall = playerOverall(player);
+  const prospectInput: RecruitingProspectInput = {
+    position: player.position, hometownState: player.hometownState, countryOfOrigin: player.countryOfOrigin,
+    characterRating: player.characterRating, scoring: player.scoring, threePoint: player.threePoint,
+    finishing: player.finishing, playmaking: player.playmaking, rebounding: player.rebounding, defense: player.defense,
+    starRating: clamp(Math.round(overall / 20), 1, 5), priorities: parsePriorities(player.prioritiesJson),
+    previousSchool: player.previousSchool,
+  };
+
+  const teamInput: RecruitingTeamInput = {
+    state: team.state, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
+    academicReputation: team.academicReputation, internationalScoutingRating: team.internationalScoutingRating,
+    recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant, developmentSkill: coach.developmentSkill,
+    offenseSkill: coach.offenseSkill, defenseSkill: coach.defenseSkill, hotSeatLevel: coach.hotSeatLevel,
+    recentWinPct, roster: roster.map((p) => ({ position: p.position, overall: playerOverall(p), characterRating: p.characterRating })),
+    coachBackground: coach.background,
+    proCountry: coach.proCountry,
+    playedProDomestic: coach.proPath === "DOMESTIC_PRO",
+    coachPipelineStates: parsePipelineStates(coach.pipelineStatesJson),
+    campusAtmosphere: coach.campusAtmosphere,
+    hasScholarshipOpen: scholarshipOpen(team.division as Division, roster.filter((p) => p.onScholarship).length),
+    coachTransferPipeline: parsePipelineStates(coach.transferPipelineJson),
+  };
+
+  const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);
+
+  if (interest) {
+    interest.interestLevel = Math.round(gain);
+    interest.pointsInvested = pointsInvested;
+    interest.offered = true;
+  } else {
+    interest = { id: newId(), playerId, teamId: team.id, interestLevel: Math.round(gain), pointsInvested, offered: true };
+    state.transferInterests.push(interest);
+  }
+
+  return interest;
+}
+
 export function getPendingEvents(state: WorldState) {
   return state.events
     .filter((e) => e.status === "PENDING")
@@ -355,7 +462,7 @@ export function resignAndAccept(state: WorldState, teamId: string) {
     archetype: replacementArchetype, background: null as string | null,
     playedCollege: false, collegeTeamName: null as string | null, collegeState: null as string | null,
     proPath: "NONE", proCountry: null as string | null, legalityReputation: 75,
-    hometownState: null as string | null, pipelineStatesJson: "{}", adRelationshipsJson: "{}",
+    hometownState: null as string | null, pipelineStatesJson: "{}", transferPipelineJson: "{}", adRelationshipsJson: "{}",
     currentSalary: 300000, raiseRequestedThisSeason: false,
     teamPerception: 65, nationalPerception: 20, localPerception: 50, campusAtmosphere: 40,
     careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
@@ -451,7 +558,7 @@ export function addWalkOn(state: WorldState, candidateId: string) {
     athleticism: candidate.athleticism, basketballIq: candidate.basketballIq,
     stamina: 60, potential: candidate.potential, characterRating: candidate.characterRating,
     disciplineRating: candidate.disciplineRating, chemistryImpact: 0,
-    eligibilityYearsLeft: 4, inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
+    eligibilityYearsLeft: 4, inTransferPortal: false, previousSchool: null, prioritiesJson: "{}", isInjured: false, injuryWeeksLeft: 0,
     isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
   };
   state.players.push(player);

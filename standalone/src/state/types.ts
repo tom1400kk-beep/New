@@ -69,6 +69,7 @@ export interface CoachRow {
   legalityReputation: number;
   hometownState: string | null;
   pipelineStatesJson: string;
+  transferPipelineJson: string;
   adRelationshipsJson: string;
   currentSalary: number;
   raiseRequestedThisSeason: boolean;
@@ -116,11 +117,22 @@ export interface PlayerRow {
   chemistryImpact: number;
   eligibilityYearsLeft: number;
   inTransferPortal: boolean;
+  previousSchool: string | null;
+  prioritiesJson: string;
   isInjured: boolean;
   injuryWeeksLeft: number;
   isSuspended: boolean;
   suspensionDaysLeft: number;
   onScholarship: boolean;
+}
+
+export interface TransferInterestRow {
+  id: string;
+  playerId: string;
+  teamId: string;
+  interestLevel: number;
+  pointsInvested: number;
+  offered: boolean;
 }
 
 export interface WalkOnCandidateRow {
@@ -266,6 +278,7 @@ export interface WorldState {
   players: PlayerRow[];
   prospects: ProspectRow[];
   interests: RecruitInterestRow[];
+  transferInterests: TransferInterestRow[];
   seasons: SeasonRow[];
   games: GameRow[];
   stats: PlayerGameStatRow[];
