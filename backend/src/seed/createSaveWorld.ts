@@ -158,8 +158,9 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled });
 
       const rosterSize = DIVISION_RULES[division].rosterCap;
+      const scholarshipLimit = DIVISION_RULES[division].scholarshipLimit;
       const roster = generateRosterForTeam(rng, prestige, division, rosterSize, internationalScoutingRating);
-      for (const p of roster) {
+      roster.forEach((p, i) => {
         playerRows.push({
           id: randomUUID(),
           saveGameId: saveGame.id,
@@ -185,8 +186,9 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
           characterRating: p.ratings.characterRating,
           disciplineRating: p.ratings.disciplineRating,
           eligibilityYearsLeft: p.eligibilityYearsLeft,
+          onScholarship: i < scholarshipLimit,
         });
-      }
+      });
     }
   }
 
