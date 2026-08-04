@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 
-type Tab = "CONFERENCE" | "KENPOM" | "RPI" | "BRACKETOLOGY";
+type Tab = "CONFERENCE" | "AP_POLL" | "KENPOM" | "RPI" | "BRACKETOLOGY";
 const REGIONS = ["East", "West", "South", "Midwest"];
 
 export default function StandingsPage() {
   const { activeSaveId } = useSave();
   const [tab, setTab] = useState<Tab>("CONFERENCE");
   const [standings, setStandings] = useState<any>({ conferenceName: null, rows: [] });
+  const [apPoll, setApPoll] = useState<any>(null);
   const [kenpom, setKenpom] = useState<any[]>([]);
   const [rpi, setRpi] = useState<any[]>([]);
   const [bracket, setBracket] = useState<any>(null);
@@ -20,7 +21,10 @@ export default function StandingsPage() {
 
   useEffect(() => {
     if (!activeSaveId) return;
-    if (tab === "KENPOM" && kenpom.length === 0) {
+    if (tab === "AP_POLL" && !apPoll) {
+      setLoading(true);
+      api.getApPoll(activeSaveId).then(setApPoll).finally(() => setLoading(false));
+    } else if (tab === "KENPOM" && kenpom.length === 0) {
       setLoading(true);
       api.getKenPom(activeSaveId).then(setKenpom).finally(() => setLoading(false));
     } else if (tab === "RPI" && rpi.length === 0) {
@@ -38,6 +42,7 @@ export default function StandingsPage() {
       <h1>Standings</h1>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <button className={tab === "CONFERENCE" ? "" : "secondary"} onClick={() => setTab("CONFERENCE")}>Conference</button>
+        <button className={tab === "AP_POLL" ? "" : "secondary"} onClick={() => setTab("AP_POLL")}>AP Poll</button>
         <button className={tab === "KENPOM" ? "" : "secondary"} onClick={() => setTab("KENPOM")}>KenPom</button>
         <button className={tab === "RPI" ? "" : "secondary"} onClick={() => setTab("RPI")}>RPI</button>
         <button className={tab === "BRACKETOLOGY" ? "" : "secondary"} onClick={() => setTab("BRACKETOLOGY")}>Bracketology</button>
@@ -61,6 +66,35 @@ export default function StandingsPage() {
             </tbody>
           </table>
           {standings.rows.length === 0 && <p>No standings yet.</p>}
+        </div>
+      )}
+
+      {tab === "AP_POLL" && (
+        <div className="card" style={{ overflowX: "auto" }}>
+          <h3>AP Top 25{apPoll ? ` — ${apPoll.division}` : ""}</h3>
+          <p className="text-muted" style={{ fontSize: "0.85rem" }}>
+            {apPoll?.isPreview
+              ? "Preseason preview — the first official poll drops the first Monday of the season, and updates every Monday after that."
+              : apPoll?.weekOf
+                ? `Week of ${new Date(apPoll.weekOf).toLocaleDateString()} — updates every Monday.`
+                : "Updates every Monday."}
+          </p>
+          {loading && <p>Loading…</p>}
+          <table>
+            <thead>
+              <tr><th>Rank</th><th>Team</th><th>Record</th></tr>
+            </thead>
+            <tbody>
+              {apPoll?.rankings.map((r: any) => (
+                <tr key={r.teamId}>
+                  <td>{r.rank}</td>
+                  <td>{r.name}</td>
+                  <td className="text-muted">{r.wins}-{r.losses}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!loading && apPoll && apPoll.rankings.length === 0 && <p>No poll available yet.</p>}
         </div>
       )}
 

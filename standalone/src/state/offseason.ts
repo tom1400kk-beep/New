@@ -27,7 +27,7 @@ import { overall } from "../engine/simulate";
 import { evaluateRealignmentInvite, type RealignmentInvite } from "../engine/conferenceRealignment";
 import type { ClassYear, Division } from "../types";
 import { DIVISION_RULES } from "../types";
-import { newId, type WorldState, type RivalryRow, type GameEventRow } from "./types";
+import { newId, type WorldState, type RivalryRow, type GameEventRow, type CoachSeasonRecordRow } from "./types";
 
 const CLASS_PROGRESSION: Record<ClassYear, ClassYear | null> = { FR: "SO", SO: "JR", JR: "SR", SR: null, GR: null };
 
@@ -84,6 +84,21 @@ export function runOffseason(state: WorldState): OffseasonResult {
     if (!headCoach) continue;
     const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const { made, wins } = tournamentWinsForTeam(state, seasonYear, team.id);
+
+    // Per-season history: independent of the cumulative careerWins/Losses bump
+    // below, this is what lets a coach stats page answer "how'd I do at each
+    // stop" instead of only the career-total line.
+    const existingSeasonRecord = state.coachSeasonRecords.find((r) => r.coachId === headCoach.id && r.seasonYear === seasonYear);
+    const seasonRecordRow: CoachSeasonRecordRow = existingSeasonRecord ?? { id: newId(), coachId: headCoach.id, teamId: team.id, seasonYear, wins: 0, losses: 0, confWins: 0, confLosses: 0, madePostseason: false, postseasonWins: 0 };
+    seasonRecordRow.teamId = team.id;
+    seasonRecordRow.wins = record.wins;
+    seasonRecordRow.losses = record.losses;
+    seasonRecordRow.confWins = record.confWins;
+    seasonRecordRow.confLosses = record.confLosses;
+    seasonRecordRow.madePostseason = made;
+    seasonRecordRow.postseasonWins = wins;
+    if (!existingSeasonRecord) state.coachSeasonRecords.push(seasonRecordRow);
+
     const games = record.wins + record.losses || 1;
     const winPct = record.wins / games;
     const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);

@@ -2,6 +2,7 @@ import { playGames } from "./playGames";
 import { startConferenceTournaments, advanceTournamentRounds, startNationalTournaments } from "./postseason";
 import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason, type OffseasonResult } from "./offseason";
+import { updateApPollSnapshots } from "./apPoll";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { sortedPair } from "../engine/rivalry";
@@ -183,6 +184,12 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
   } else if (phase === "OFFSEASON") {
     if (state.save.coachTeamId) phase = "PRESEASON";
     else nextDate = today;
+  }
+
+  // AP Top 25: a fresh snapshot every Monday, frozen in between — matches how
+  // a real poll behaves, unlike KenPom/RPI which always reflect the latest game.
+  if (nextDate.getDay() === 1 && phase !== "OFFSEASON") {
+    updateApPollSnapshots(state, seasonYear, divisions, nextDate);
   }
 
   state.save.currentDate = nextDate;

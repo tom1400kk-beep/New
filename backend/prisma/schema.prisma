@@ -39,6 +39,8 @@ model SaveGame {
   gameEvents       GameEvent[]
   rivalries        Rivalry[]
   internationalTours InternationalTour[]
+  coachSeasonRecords CoachSeasonRecord[]
+  pollSnapshots      PollSnapshot[]
 }
 
 // ---------- League structure ----------
@@ -94,6 +96,7 @@ model Team {
   homeGames         Game[]   @relation("HomeTeam")
   awayGames         Game[]   @relation("AwayTeam")
   internationalTours InternationalTour[]
+  coachSeasonRecords CoachSeasonRecord[]
 
   @@index([saveGameId, division])
   @@index([conferenceId])
@@ -163,8 +166,49 @@ model Coach {
   yearsAtCurrentJob  Int      @default(0)
 
   team               Team?    @relation("HeadCoach")
+  seasonRecords      CoachSeasonRecord[]
 
   @@index([saveGameId])
+}
+
+// One row per coach per completed season — credited alongside the cumulative
+// careerWins/careerLosses bump in runOffseason, giving a queryable history of
+// which team a coach was at each year (careerWins/Losses alone can't answer
+// "stats per season" or "stats with a certain team" since a coach's Team
+// association only ever reflects who employs them *right now*).
+model CoachSeasonRecord {
+  id             String   @id @default(cuid())
+  saveGame       SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId     String
+  coach          Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  coachId        String
+  team           Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId         String
+  seasonYear     Int
+  wins           Int
+  losses         Int
+  confWins       Int
+  confLosses     Int
+  madePostseason Boolean  @default(false)
+  postseasonWins Int      @default(0)
+
+  @@unique([coachId, seasonYear])
+  @@index([saveGameId, coachId])
+}
+
+// A weekly snapshot (Monday) of a division's Top 25 — frozen between updates
+// rather than recomputed live like KenPom/RPI, matching how a real poll works.
+model PollSnapshot {
+  id           String   @id @default(cuid())
+  saveGame     SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId   String
+  seasonYear   Int
+  division     String
+  weekDate     DateTime
+  rankingsJson String // JSON array of {rank, teamId, wins, losses, score}
+
+  @@unique([saveGameId, seasonYear, division, weekDate])
+  @@index([saveGameId, seasonYear, division])
 }
 
 // ---------- Athletic Directors ----------

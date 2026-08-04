@@ -290,6 +290,32 @@ export interface RivalryRow {
   establishedYear: number;
 }
 
+// One row per coach per completed season — see backend schema comment on
+// CoachSeasonRecord for why careerWins/careerLosses alone can't answer
+// "stats per season" or "stats with a certain team".
+export interface CoachSeasonRecordRow {
+  id: string;
+  coachId: string;
+  teamId: string;
+  seasonYear: number;
+  wins: number;
+  losses: number;
+  confWins: number;
+  confLosses: number;
+  madePostseason: boolean;
+  postseasonWins: number;
+}
+
+// A weekly (Monday) snapshot of a division's Top 25 — frozen between updates,
+// unlike KenPom/RPI which are always computed live from current games.
+export interface PollSnapshotRow {
+  id: string;
+  seasonYear: number;
+  division: string;
+  weekDate: Date;
+  rankingsJson: string; // JSON array of {rank, teamId, wins, losses, score}
+}
+
 export interface WorldState {
   save: SaveGameRow;
   conferences: ConferenceRow[];
@@ -309,6 +335,8 @@ export interface WorldState {
   rivalries: RivalryRow[];
   walkOnCandidates: WalkOnCandidateRow[];
   internationalTours: InternationalTourRow[];
+  coachSeasonRecords: CoachSeasonRecordRow[];
+  pollSnapshots: PollSnapshotRow[];
 }
 
 export function newId(): string {

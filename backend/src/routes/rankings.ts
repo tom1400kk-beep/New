@@ -4,6 +4,8 @@ import { computeStandings } from "../season/standings";
 import { computeKenPomRatings, type TeamGameBoxScore } from "../engine/kenpom";
 import { computeRPI, type RPIGameResult } from "../engine/rpi";
 import { projectBracketology, type BracketTeamInput } from "../engine/bracketology";
+import { computeDivisionApPoll } from "../season/apPoll";
+import type { Division } from "../types";
 
 export const rankingsRouter = Router();
 
@@ -116,4 +118,32 @@ rankingsRouter.get("/saves/:id/bracketology", async (req, res) => {
     });
 
   res.json(projectBracketology(inputs));
+});
+
+// Top 25 for the user's own division — snapshotted every Monday (see
+// season/apPoll.ts). Falls back to a live, unpersisted preview if the save
+// hasn't hit its first Monday yet this season, so the page is never empty.
+rankingsRouter.get("/saves/:id/ap-poll", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  const userTeam = save.coachTeamId ? await prisma.team.findUnique({ where: { id: save.coachTeamId }, select: { division: true } }) : null;
+  const division = (userTeam?.division as Division | undefined) ?? "D1";
+
+  const teams = await prisma.team.findMany({ where: { saveGameId: save.id, division }, select: { id: true, name: true } });
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+
+  const latest = await prisma.pollSnapshot.findFirst({
+    where: { saveGameId: save.id, seasonYear: save.currentSeasonYear, division },
+    orderBy: { weekDate: "desc" },
+  });
+
+  const rankings = latest ? JSON.parse(latest.rankingsJson) : await computeDivisionApPoll(save.id, save.currentSeasonYear, division);
+
+  res.json({
+    division,
+    weekOf: latest?.weekDate ?? null,
+    isPreview: !latest,
+    rankings: rankings.map((r: { rank: number; teamId: string; wins: number; losses: number; score: number }) => ({
+      ...r, name: teamById.get(r.teamId)?.name ?? "—",
+    })),
+  });
 });

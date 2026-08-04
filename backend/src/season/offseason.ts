@@ -92,6 +92,23 @@ export async function runOffseason(saveGameId: string): Promise<{
     if (!team.headCoach) continue;
     const record = standings.get(team.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
     const { made, wins } = await tournamentWinsForTeam(saveGameId, seasonYear, team.id);
+
+    // Per-season history: independent of the cumulative careerWins/Losses bump
+    // below, this is what lets a coach stats page answer "how'd I do at each
+    // stop" instead of only the career-total line.
+    await prisma.coachSeasonRecord.upsert({
+      where: { coachId_seasonYear: { coachId: team.headCoach.id, seasonYear } },
+      create: {
+        id: randomUUID(), saveGameId, coachId: team.headCoach.id, teamId: team.id, seasonYear,
+        wins: record.wins, losses: record.losses, confWins: record.confWins, confLosses: record.confLosses,
+        madePostseason: made, postseasonWins: wins,
+      },
+      update: {
+        teamId: team.id, wins: record.wins, losses: record.losses, confWins: record.confWins, confLosses: record.confLosses,
+        madePostseason: made, postseasonWins: wins,
+      },
+    });
+
     const games = record.wins + record.losses || 1;
     const winPct = record.wins / games;
     const ad = team.athleticDirector;

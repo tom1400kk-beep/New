@@ -8,6 +8,7 @@ import { computeKenPomRatings, type TeamGameBoxScore } from "../engine/kenpom";
 import { computeRPI, type RPIGameResult } from "../engine/rpi";
 import { projectBracketology, type BracketTeamInput } from "../engine/bracketology";
 import { computeGameOdds, type OddsTeamInput } from "../engine/gameOdds";
+import { computeDivisionApPoll } from "./apPoll";
 import { overall, type SimPlayer } from "../engine/simulate";
 import { aggregateCareerStats, type RawGameStatLine } from "../engine/careerStats";
 import type { WorldState } from "./types";
@@ -249,6 +250,74 @@ export function getBracketology(state: WorldState) {
     });
 
   return projectBracketology(inputs);
+}
+
+// Top 25 for the user's own division — snapshotted every Monday (see
+// state/apPoll.ts). Falls back to a live, unpersisted preview if the save
+// hasn't hit its first Monday yet this season, so the page is never empty.
+export function getApPoll(state: WorldState) {
+  const userTeam = state.save.coachTeamId ? state.teams.find((t) => t.id === state.save.coachTeamId) : undefined;
+  const division = (userTeam?.division as Division | undefined) ?? "D1";
+  const seasonYear = state.save.currentSeasonYear;
+
+  const teams = state.teams.filter((t) => t.division === division);
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+
+  const snapshots = state.pollSnapshots.filter((p) => p.seasonYear === seasonYear && p.division === division);
+  const latest = snapshots.length > 0 ? snapshots.reduce((a, b) => (b.weekDate > a.weekDate ? b : a)) : undefined;
+
+  const rankings = latest ? JSON.parse(latest.rankingsJson) : computeDivisionApPoll(state, seasonYear, division);
+
+  return {
+    division,
+    weekOf: latest?.weekDate ?? null,
+    isPreview: !latest,
+    rankings: rankings.map((r: { rank: number; teamId: string; wins: number; losses: number; score: number }) => ({
+      ...r, name: teamById.get(r.teamId)?.name ?? "—",
+    })),
+  };
+}
+
+export function getCoachStats(state: WorldState) {
+  if (!state.save.coachTeamId) return null;
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) return null;
+  const coach = state.coaches.find((c) => c.id === team.headCoachId);
+  if (!coach) return null;
+
+  const seasonRecords = state.coachSeasonRecords
+    .filter((r) => r.coachId === coach.id)
+    .sort((a, b) => a.seasonYear - b.seasonYear);
+  const teamNameById = new Map(state.teams.map((t) => [t.id, t.name]));
+
+  const bySeason = seasonRecords.map((r) => ({
+    seasonYear: r.seasonYear,
+    teamId: r.teamId,
+    teamName: teamNameById.get(r.teamId) ?? "—",
+    wins: r.wins,
+    losses: r.losses,
+    confWins: r.confWins,
+    confLosses: r.confLosses,
+    madePostseason: r.madePostseason,
+    postseasonWins: r.postseasonWins,
+  }));
+
+  const byTeamMap = new Map<string, { teamId: string; teamName: string; seasons: number; wins: number; losses: number }>();
+  for (const r of seasonRecords) {
+    const existing = byTeamMap.get(r.teamId) ?? { teamId: r.teamId, teamName: teamNameById.get(r.teamId) ?? "—", seasons: 0, wins: 0, losses: 0 };
+    existing.seasons += 1;
+    existing.wins += r.wins;
+    existing.losses += r.losses;
+    byTeamMap.set(r.teamId, existing);
+  }
+  const byTeam = [...byTeamMap.values()].sort((a, b) => b.seasons - a.seasons);
+
+  return {
+    coachName: coach.name,
+    total: { wins: coach.careerWins, losses: coach.careerLosses },
+    bySeason,
+    byTeam,
+  };
 }
 
 export function getGamePreview(state: WorldState, gameId: string) {

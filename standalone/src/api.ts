@@ -155,6 +155,8 @@ export const api = {
   getKenPom: async (saveId: string) => queries.getKenPom(await ensureLoaded(saveId)),
   getRPI: async (saveId: string) => queries.getRPI(await ensureLoaded(saveId)),
   getBracketology: async (saveId: string) => queries.getBracketology(await ensureLoaded(saveId)),
+  getApPoll: async (saveId: string) => queries.getApPoll(await ensureLoaded(saveId)),
+  getCoachStats: async (saveId: string) => queries.getCoachStats(await ensureLoaded(saveId)),
   getRivalries: async (saveId: string) => queries.getRivalries(await ensureLoaded(saveId)),
 
   advance: async (saveId: string) => {

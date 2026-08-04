@@ -260,6 +260,8 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     seasons: [{ id: newId(), year: seasonYear }], games, stats: [], tournaments, events: [], rivalries,
     walkOnCandidates: [],
     internationalTours: [],
+    coachSeasonRecords: [],
+    pollSnapshots: [],
   };
 }
 

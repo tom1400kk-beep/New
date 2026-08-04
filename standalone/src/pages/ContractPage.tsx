@@ -99,12 +99,14 @@ export default function ContractPage() {
   const [marketLoading, setMarketLoading] = useState(false);
   const [arenaResult, setArenaResult] = useState<any>(null);
   const [upgradingArena, setUpgradingArena] = useState(false);
+  const [coachStats, setCoachStats] = useState<any>(null);
 
   async function refresh() {
     if (!activeSaveId) return;
     const d = await api.getDashboard(activeSaveId);
     setDash(d);
     setMarketOpen(false);
+    setCoachStats(await api.getCoachStats(activeSaveId));
   }
 
   useEffect(() => {
@@ -226,6 +228,64 @@ export default function ContractPage() {
           </div>
         </div>
       </div>
+
+      {coachStats && (
+        <div className="card" style={{ overflowX: "auto" }}>
+          <h3>Coaching History</h3>
+          <div className="stat-row">
+            <div className="stat-tile">
+              <div className="stat-label">Career Total</div>
+              <div className="stat-value">{coachStats.total.wins}-{coachStats.total.losses}</div>
+            </div>
+          </div>
+
+          {coachStats.byTeam.length > 0 && (
+            <>
+              <h4 style={{ marginTop: 16, marginBottom: 4 }}>By Team</h4>
+              <table>
+                <thead>
+                  <tr><th>Team</th><th>Seasons</th><th>Record</th></tr>
+                </thead>
+                <tbody>
+                  {coachStats.byTeam.map((t: any) => (
+                    <tr key={t.teamId}>
+                      <td>{t.teamName}</td>
+                      <td className="text-muted">{t.seasons}</td>
+                      <td className="text-muted">{t.wins}-{t.losses}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {coachStats.bySeason.length > 0 && (
+            <>
+              <h4 style={{ marginTop: 16, marginBottom: 4 }}>By Season</h4>
+              <table>
+                <thead>
+                  <tr><th>Season</th><th>Team</th><th>Record</th><th>Conference</th><th>Postseason</th></tr>
+                </thead>
+                <tbody>
+                  {[...coachStats.bySeason].reverse().map((s: any) => (
+                    <tr key={`${s.teamId}-${s.seasonYear}`}>
+                      <td>{s.seasonYear}</td>
+                      <td>{s.teamName}</td>
+                      <td className="text-muted">{s.wins}-{s.losses}</td>
+                      <td className="text-muted">{s.confWins}-{s.confLosses}</td>
+                      <td className="text-muted">{s.madePostseason ? `Made it, ${s.postseasonWins} win${s.postseasonWins === 1 ? "" : "s"}` : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {coachStats.bySeason.length === 0 && (
+            <p className="text-muted" style={{ marginTop: 12 }}>No completed seasons on record yet — this fills in after your first offseason.</p>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h3>How You're Viewed</h3>

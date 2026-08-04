@@ -4,6 +4,7 @@ import { playGames } from "./playGames";
 import { startConferenceTournaments, advanceTournamentRounds, startNationalTournaments } from "./postseason";
 import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason } from "./offseason";
+import { updateApPollSnapshots } from "./apPoll";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { sortedPair } from "../engine/rivalry";
@@ -233,6 +234,12 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
     } else {
       nextDate = today; // don't burn calendar days while the user is unemployed
     }
+  }
+
+  // AP Top 25: a fresh snapshot every Monday, frozen in between — matches how
+  // a real poll behaves, unlike KenPom/RPI which always reflect the latest game.
+  if (nextDate.getDay() === 1 && phase !== "OFFSEASON") {
+    await updateApPollSnapshots(saveGameId, seasonYear, divisions, nextDate);
   }
 
   await prisma.saveGame.update({ where: { id: saveGameId }, data: { currentDate: nextDate, currentPhase: phase } });
