@@ -61,7 +61,7 @@ savesRouter.post("/coach-offers", (req, res) => {
   }
 
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
-  const result = generateStartingJobOffers({ archetype, background, playingCareer: career }, allCandidates, rng, 3);
+  const result = generateStartingJobOffers({ archetype, background, playingCareer: career }, allCandidates, rng);
   res.json(result);
 });
 

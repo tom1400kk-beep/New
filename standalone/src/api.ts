@@ -74,7 +74,6 @@ export const api = {
       { archetype: data.coachArchetype as CoachArchetype, background: data.coachBackground as CoachBackground | null, playingCareer: data.playingCareer },
       allNationalTeams(),
       rng,
-      3,
     );
   },
 

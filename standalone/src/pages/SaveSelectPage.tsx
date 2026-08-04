@@ -59,6 +59,11 @@ export default function SaveSelectPage() {
   const [offers, setOffers] = useState<any[] | null>(null);
   const [offersReputation, setOffersReputation] = useState<number | null>(null);
   const [offersLoading, setOffersLoading] = useState(false);
+  const [offersFilter, setOffersFilter] = useState("");
+
+  const DIVISION_LABELS: Record<string, string> = {
+    D3: "NCAA Division III", D2: "NCAA Division II", D1: "NCAA Division I",
+  };
 
   useEffect(() => {
     api.listSaves().then((s) => {
@@ -360,16 +365,40 @@ export default function SaveSelectPage() {
             {offers && offers.length > 0 && (
               <div style={{ marginTop: 16 }}>
                 <p className="text-muted">
-                  Estimated starting reputation: {offersReputation}/100 — here's who's calling:
+                  Estimated starting reputation: {offersReputation}/100 — {offers.length} program{offers.length === 1 ? "" : "s"} calling.
+                  Most first-time coaches build up from D3; a real D1 shot takes an elite profile.
                 </p>
-                <div className="option-grid">
-                  {offers.map((o) => (
-                    <div key={`${o.division}-${o.school}`} className="option-card" onClick={() => !creating && acceptOffer(o)}>
-                      <div className="option-title">{o.school}</div>
-                      <div className="option-desc">{o.division} · {o.conference} · prestige {o.prestige}</div>
-                      <div className="option-perk">{creating ? "Starting career..." : "Accept & Start Career"}</div>
-                    </div>
-                  ))}
+                <p>
+                  <input
+                    placeholder="Filter by school or conference..."
+                    value={offersFilter}
+                    onChange={(e) => setOffersFilter(e.target.value)}
+                  />
+                </p>
+                <div style={{ maxHeight: 480, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px" }}>
+                  {(["D3", "D2", "D1"] as const).map((div) => {
+                    const group = offers.filter((o) =>
+                      o.division === div &&
+                      (!offersFilter || o.school.toLowerCase().includes(offersFilter.toLowerCase()) || o.conference.toLowerCase().includes(offersFilter.toLowerCase()))
+                    );
+                    if (group.length === 0) return null;
+                    return (
+                      <div key={div}>
+                        <div className="divider-row" style={{ marginTop: 8 }}>
+                          <strong>{DIVISION_LABELS[div]}</strong> <span className="text-muted">({group.length})</span>
+                        </div>
+                        <div className="option-grid">
+                          {group.map((o) => (
+                            <div key={`${o.division}-${o.school}`} className="option-card" onClick={() => !creating && acceptOffer(o)}>
+                              <div className="option-title">{o.school}</div>
+                              <div className="option-desc">{o.division} · {o.conference} · prestige {o.prestige}</div>
+                              <div className="option-perk">{creating ? "Starting career..." : "Accept & Start Career"}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

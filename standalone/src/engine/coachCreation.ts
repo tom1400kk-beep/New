@@ -30,45 +30,41 @@ export function estimateReputation(draft: CoachProfileDraft): number {
 }
 
 // Mirrors engine/career.ts's generateJobOffers logic (ceiling = reputation +
-// noise, take the best jobs under it) but works off the raw national school
-// list instead of live vacancies, since this runs before any world exists.
-// A brand-new coach has to earn their way up through the ranks — prestige
-// tiers are shared across divisions (a rough D1 school and a strong D3 one
-// can carry the same score), so gating purely on prestige let mediocre
-// first-time builds walk straight into a D1 job. Landing any D1 offer now
-// needs a genuinely elite creator build (archetype + background + playing
-// career reputation bonuses stacked together), and even then only the
-// weakest D1 programs are realistic — everyone else starts at D2/D3 and
-// climbs from there through actual coaching results.
+// noise) but works off the raw national school list instead of live
+// vacancies, since this runs before any world exists. First-time coaching
+// is D3 country — every program at that level is realistically in reach.
+// D2 takes a real (if modest) résumé to get a call from. D1 — even its
+// weakest program — takes a genuinely elite creator build (archetype +
+// background + playing career reputation bonuses stacked together).
+// Everyone else builds up to it the old-fashioned way, through results.
 const D1_REPUTATION_THRESHOLD = 65;
 const D1_PRESTIGE_CAP = 42;
+const D2_REPUTATION_THRESHOLD = 50;
+
+const DIVISION_ORDER: Record<Division, number> = { D3: 0, D2: 1, D1: 2 };
 
 export function generateStartingJobOffers(
   draft: CoachProfileDraft,
   allCandidates: CandidateJob[],
   rng: () => number,
-  maxOffers = 3,
 ): { reputation: number; offers: CandidateJob[] } {
   const reputation = estimateReputation(draft);
   const ceiling = clamp(reputation + randInt(rng, -5, 15), 0, 100);
 
-  const nonD1Eligible = allCandidates.filter((c) => c.division !== "D1" && c.prestige <= ceiling);
-  const offers = [...nonD1Eligible].sort((a, b) => b.prestige - a.prestige).slice(0, maxOffers);
+  const eligible = allCandidates.filter((c) => {
+    if (c.prestige > ceiling) return false;
+    if (c.division === "D1") return reputation >= D1_REPUTATION_THRESHOLD && c.prestige <= D1_PRESTIGE_CAP;
+    if (c.division === "D2") return reputation >= D2_REPUTATION_THRESHOLD;
+    return true; // D3 — always in reach once prestige clears the ceiling
+  });
 
-  // A capped-prestige D1 job would otherwise get crowded out of the sorted
-  // list by bigger, more prestigious D2/D3 programs, so an eligible coach's
-  // one realistic D1 shot is swapped in explicitly rather than left to
-  // compete on raw prestige — the rest of the offers stay the safer,
-  // higher-prestige lower-division options.
-  if (reputation >= D1_REPUTATION_THRESHOLD) {
-    const bestD1 = allCandidates
-      .filter((c) => c.division === "D1" && c.prestige <= Math.min(ceiling, D1_PRESTIGE_CAP))
-      .sort((a, b) => b.prestige - a.prestige)[0];
-    if (bestD1) {
-      if (offers.length < maxOffers) offers.push(bestD1);
-      else offers[offers.length - 1] = bestD1;
-    }
-  }
+  // D3 listed first and most plentiful, D2 next, D1 last and rarest — the
+  // full slate of every job this coach could realistically land, not just
+  // a handful of picks.
+  const offers = [...eligible].sort((a, b) => {
+    if (a.division !== b.division) return DIVISION_ORDER[a.division] - DIVISION_ORDER[b.division];
+    return b.prestige - a.prestige;
+  });
 
   return { reputation, offers };
 }
