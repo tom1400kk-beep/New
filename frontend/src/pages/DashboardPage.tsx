@@ -181,7 +181,12 @@ export default function DashboardPage() {
       navigate("/");
       return;
     }
-    refresh();
+    refresh().catch(() => {
+      // activeSaveId points at a save that no longer exists — clear it and
+      // bounce back to the save list instead of leaving the page stuck.
+      setActiveSaveId(null);
+      navigate("/");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSaveId]);
 

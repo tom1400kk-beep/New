@@ -28,7 +28,7 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 function Shell() {
-  const { activeSaveId } = useSave();
+  const { activeSaveId, setActiveSaveId } = useSave();
   const location = useLocation();
   const [hasTeam, setHasTeam] = useState(false);
   const [isPreseason, setIsPreseason] = useState(false);
@@ -47,6 +47,14 @@ function Shell() {
       if (d.save) {
         setSaveDate({ currentDate: d.save.currentDate, currentSeasonYear: d.save.currentSeasonYear, currentPhase: d.save.currentPhase });
       }
+    }).catch(() => {
+      // activeSaveId points at a save that no longer exists (e.g. deleted
+      // from another tab, or leftover from a previous browser session) —
+      // clear it instead of leaving every page stuck trying to load it.
+      setHasTeam(false);
+      setIsPreseason(false);
+      setSaveDate(null);
+      setActiveSaveId(null);
     });
   }, [activeSaveId, location.pathname]);
 

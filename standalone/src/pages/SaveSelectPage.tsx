@@ -27,7 +27,7 @@ const NO_PLAYING_CAREER = {
 
 export default function SaveSelectPage() {
   const navigate = useNavigate();
-  const { setActiveSaveId } = useSave();
+  const { activeSaveId, setActiveSaveId } = useSave();
 
   const [saves, setSaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -185,6 +185,10 @@ export default function SaveSelectPage() {
   async function removeSave(id: string) {
     await api.deleteSave(id);
     setSaves((prev) => prev.filter((s) => s.id !== id));
+    // Deleting the currently-active save would otherwise leave activeSaveId
+    // pointing at a save that no longer exists, causing every subsequent
+    // dashboard fetch to fail with "Save not found" until storage is cleared.
+    if (id === activeSaveId) setActiveSaveId(null);
   }
 
   return (
