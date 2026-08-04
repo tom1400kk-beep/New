@@ -1,4 +1,5 @@
 import { computeStandings } from "./standings";
+import { expectedWinPct } from "../engine/career";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { meetsLegalityBar } from "../engine/career";
@@ -536,4 +537,42 @@ export function getSeasonCalendar(state: WorldState) {
     currentDate: state.save.currentDate, currentPhase: state.save.currentPhase,
     milestones,
   };
+}
+
+// A league-wide "who's in danger" board — anyone hot enough to matter (or
+// riskier), plus the user's own team regardless, so they can always see
+// where they stand relative to everyone else actually on the hot seat.
+const HOT_SEAT_THRESHOLD = 25;
+const MAX_HOT_SEAT_ROWS = 50;
+
+export function getHotSeatBoard(state: WorldState) {
+  const standings = computeStandings(state, state.save.currentSeasonYear);
+
+  const rows = state.teams
+    .map((t) => {
+      const coach = state.coaches.find((c) => c.id === t.headCoachId);
+      if (!coach) return null;
+      const record = standings.get(t.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+      return {
+        teamId: t.id, teamName: t.name, division: t.division, state: t.state, prestige: t.prestige,
+        isUserTeam: t.id === state.save.coachTeamId,
+        coach: {
+          name: coach.name, archetype: coach.archetype, background: coach.background,
+          hotSeatLevel: coach.hotSeatLevel, yearsAtCurrentJob: coach.yearsAtCurrentJob,
+        },
+        record,
+        expectedWinPct: expectedWinPct(t.prestige),
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+
+  const eligible = rows.filter((r) => r.coach.hotSeatLevel >= HOT_SEAT_THRESHOLD || r.isUserTeam);
+  let board = eligible.sort((a, b) => b.coach.hotSeatLevel - a.coach.hotSeatLevel).slice(0, MAX_HOT_SEAT_ROWS);
+
+  const userRow = rows.find((r) => r.isUserTeam);
+  if (userRow && !board.some((r) => r.isUserTeam)) {
+    board = [...board, userRow].sort((a, b) => b.coach.hotSeatLevel - a.coach.hotSeatLevel);
+  }
+
+  return board;
 }

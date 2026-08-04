@@ -9,16 +9,18 @@ import { COACH_ARCHETYPES, type CoachArchetype } from "../engine/coachArchetypes
 import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrounds";
 import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
 import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
-import { meetsLegalityBar, expectedWinPct, generateJobOffers, type JobOpening } from "../engine/career";
+import { meetsLegalityBar, expectedWinPct, generateJobOffers, preferredArchetypeForOpening, type JobOpening, type CoachLocality } from "../engine/career";
 import { parseAdRelationships, adRelationshipScore, updateAdRelationship } from "../engine/athleticDirector";
 import { INTERNATIONAL_COUNTRIES } from "../engine/countries";
-import { mulberry32, clamp } from "../engine/rng";
+import { mulberry32, clamp, weightedPick } from "../engine/rng";
+import { weightedStateList } from "../engine/regions";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
 import { normalizeScholarshipsForDivision } from "../engine/conferenceRealignment";
 import { overall } from "../engine/simulate";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import { randomFirstName, randomLastName } from "../engine/names";
+import { parsePipelineStates, seedPipeline } from "../engine/pipeline";
 import type { Division } from "../types";
 
 export const savesRouter = Router();
@@ -158,6 +160,9 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
   const myCoach = await prisma.coach.findFirst({ where: { saveGameId: save.id, isPlayerControlled: true } });
   const myRelationships = myCoach ? parseAdRelationships(myCoach.adRelationshipsJson) : {};
+  const myLocality: CoachLocality = myCoach
+    ? { hometownState: myCoach.hometownState, collegeState: myCoach.collegeState, pipelineStates: parsePipelineStates(myCoach.pipelineStatesJson) }
+    : {};
 
   // When employed, the player's own team is excluded from its own market
   // listing, and its salary/state become the baseline the comparison fields
@@ -191,9 +196,13 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
     const openings: JobOpening[] = openTeams.map((t) => ({
       teamId: t.id, prestige: t.prestige, academicReputation: t.academicReputation,
       athleticDirectorId: t.athleticDirector?.id, integrityStandard: t.athleticDirector?.integrityStandard,
+      state: t.state, winFocus: t.athleticDirector?.winFocus, patience: t.athleticDirector?.patience,
     }));
     const reputation = myCoach?.reputation ?? 50;
-    const offers = generateJobOffers(reputation, reputation, openings, rng, 8, myCoach?.legalityReputation ?? 75, myRelationships, careerWinPct);
+    const offers = generateJobOffers(
+      reputation, reputation, openings, rng, 8, myCoach?.legalityReputation ?? 75, myRelationships, careerWinPct,
+      myLocality, myCoach?.archetype,
+    );
     const offerTeamIds = new Set(offers.map((o) => o.teamId));
     eligible = openTeams.filter((t) => offerTeamIds.has(t.id));
   }
@@ -203,6 +212,14 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
       const relScore = t.athleticDirector ? adRelationshipScore(myRelationships, t.athleticDirector.id) : null;
       const col = costOfLivingIndex(t.state);
       const currentCol = currentTeam ? costOfLivingIndex(currentTeam.state) : null;
+      // Locality/targeted-hire framing is informational regardless of which
+      // browsing mode produced this listing — a coach should be able to see
+      // "this is home" or "they want your profile specifically" either way.
+      const preferredArchetype = t.athleticDirector ? preferredArchetypeForOpening(t.athleticDirector.winFocus, t.athleticDirector.patience) : null;
+      const targetedHire = !!(preferredArchetype && myCoach?.archetype && preferredArchetype === myCoach.archetype);
+      const localTies: "hometown" | "college" | null =
+        myCoach?.hometownState && myCoach.hometownState === t.state ? "hometown" :
+        myCoach?.collegeState && myCoach.collegeState === t.state ? "college" : null;
       return {
         teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division,
         athleticDirector: t.athleticDirector ? {
@@ -211,6 +228,8 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
           loyalty: t.athleticDirector.loyalty, yearsAtCurrentJob: t.athleticDirector.yearsAtCurrentJob,
         } : null,
         adRemembersYou: relScore !== null && relScore >= 70,
+        targetedHire,
+        localTies,
         salary: t.baseSalary,
         state: t.state,
         costOfLivingIndex: col,
@@ -298,6 +317,7 @@ savesRouter.post("/saves/:id/resign-and-accept", async (req, res) => {
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
   const replacementArchetype = randomArchetype(rng);
   const replacementSkills = generateCoachSkills(rng, oldTeam.prestige, replacementArchetype);
+  const replacementHometownState = weightedPick(rng, weightedStateList());
 
   // Give the old program a fresh AI coach (mirrors the same replacement
   // pattern used when a coach is fired at the end of a season).
@@ -308,6 +328,7 @@ savesRouter.post("/saves/:id/resign-and-accept", async (req, res) => {
       offenseSkill: replacementSkills.offenseSkill, defenseSkill: replacementSkills.defenseSkill,
       recruitingSkill: replacementSkills.recruitingSkill, developmentSkill: replacementSkills.developmentSkill,
       reputation: replacementSkills.reputation, archetype: replacementArchetype,
+      hometownState: replacementHometownState, pipelineStatesJson: JSON.stringify(seedPipeline(replacementHometownState, null)),
       careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
     },
   });

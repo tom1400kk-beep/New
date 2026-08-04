@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct, meetsLegalityBar } from "../engine/career";
+import {
+  updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct, meetsLegalityBar,
+  preferredArchetypeForOpening, type CoachLocality,
+} from "../engine/career";
 import { disciplineDismissalChance, disciplineSigningReputationHit } from "../engine/disciplineDrops";
-import { parsePipelineStates, decayPipeline, bumpPipelineState } from "../engine/pipeline";
+import { parsePipelineStates, decayPipeline, bumpPipelineState, seedPipeline } from "../engine/pipeline";
 import { generateProspectPriorities, boostPriority } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { maybeGenerateNILPoachingEvent, type NILPoachingContext } from "../engine/nilPoaching";
@@ -21,7 +24,8 @@ import { POWERHOUSE_SCHOOL_NAMES, POWERHOUSE_D1_CLASS_CAP, capHighSchoolIfNeeded
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generatePreseasonTournaments, type PreseasonGenerationResult } from "./preseasonTournaments";
 import { generateDivisionInSeasonEvents } from "./inSeasonEvents";
-import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
+import { mulberry32, clamp, randNormal, randInt, weightedPick } from "../engine/rng";
+import { weightedStateList } from "../engine/regions";
 import { randomFirstName, randomLastName } from "../engine/names";
 import {
   commitmentWeights,
@@ -37,6 +41,17 @@ import { DIVISION_RULES } from "../types";
 const CLASS_PROGRESSION: Record<ClassYear, ClassYear | null> = {
   FR: "SO", SO: "JR", JR: "SR", SR: null, GR: null,
 };
+
+// How well an available coach's real ties (hometown, then alma mater) match
+// a given state — used to rank AI-vs-AI carousel candidates so a program
+// realistically favors "someone who already knows this place" among an
+// otherwise-similar field, the same idea generateJobOffers applies to the
+// player's own job market.
+function candidateLocalityFit(c: { hometownState: string | null; collegeState: string | null }, state: string): number {
+  if (c.hometownState === state) return 2;
+  if (c.collegeState === state) return 1;
+  return 0;
+}
 
 async function tournamentWinsForTeam(saveGameId: string, seasonYear: number, teamId: string): Promise<{ made: boolean; wins: number }> {
   const games = await prisma.game.findMany({
@@ -87,14 +102,22 @@ export async function runOffseason(saveGameId: string): Promise<{
   let userNewPrestige = 50;
   let userNewLegality = 75;
   let userNewAdRelationshipsJson = "{}";
+  let userLocality: CoachLocality = {};
+  let userArchetype: string | null = null;
   let jobOffers: { teamId: string; teamName: string; prestige: number }[] = [];
   let conferenceInvite: RealignmentInvite | null = null;
-  const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
+  const vacancies: { teamId: string; prestige: number; academicReputation: number; state: string }[] = [];
   const firedTeamIds = new Set<string>();
   // AI teams whose coach was just fired -- resolved after the main loop by
   // the coaching carousel below, which may hire them out to a different
   // program instead of just discarding them into a fresh random replacement.
-  const departingCoaches: { teamId: string; coachId: string; reputation: number; legalityReputation: number; priorPrestige: number }[] = [];
+  // Locality/archetype fields let that carousel (and the player's own job
+  // market below) realistically favor a coach's real ties and a program's
+  // specific preferred-hire profile instead of picking blind.
+  const departingCoaches: {
+    teamId: string; coachId: string; reputation: number; legalityReputation: number; priorPrestige: number;
+    archetype: string | null; hometownState: string | null; collegeState: string | null; pipelineStates: Record<string, number>;
+  }[] = [];
 
   for (const team of teams) {
     if (!team.headCoach) continue;
@@ -172,6 +195,12 @@ export async function runOffseason(saveGameId: string): Promise<{
       userNewPrestige = newPrestige;
       userNewLegality = newLegality;
       if (newAdRelationshipsJson) userNewAdRelationshipsJson = newAdRelationshipsJson;
+      userArchetype = team.headCoach.archetype;
+      userLocality = {
+        hometownState: team.headCoach.hometownState,
+        collegeState: team.headCoach.collegeState,
+        pipelineStates: parsePipelineStates(newPipelineJson ?? team.headCoach.pipelineStatesJson),
+      };
       if (fired) {
         userFired = true;
       } else {
@@ -189,12 +218,13 @@ export async function runOffseason(saveGameId: string): Promise<{
 
     if (fired) {
       firedTeamIds.add(team.id);
-      vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation });
+      vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation, state: team.state });
       if (team.headCoach.isPlayerControlled) {
         // Bench the user's coach (identity + career stats persist) rather than
         // overwriting them — a fresh AI coach takes over the vacated program.
         const replacementArchetype = randomArchetype(rng);
         const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
+        const replacementHometownState = weightedPick(rng, weightedStateList());
         const replacement = await prisma.coach.create({
           data: {
             id: randomUUID(), saveGameId, name: `${randomFirstName(rng)} ${randomLastName(rng)}`,
@@ -202,6 +232,7 @@ export async function runOffseason(saveGameId: string): Promise<{
             reputation: replacementSkillRoll.reputation, offenseSkill: replacementSkillRoll.offenseSkill,
             defenseSkill: replacementSkillRoll.defenseSkill, recruitingSkill: replacementSkillRoll.recruitingSkill,
             developmentSkill: replacementSkillRoll.developmentSkill, archetype: replacementArchetype, background: null,
+            hometownState: replacementHometownState, pipelineStatesJson: JSON.stringify(seedPipeline(replacementHometownState, null)),
             careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
           },
         });
@@ -227,6 +258,8 @@ export async function runOffseason(saveGameId: string): Promise<{
         });
         departingCoaches.push({
           teamId: team.id, coachId: team.headCoach.id, reputation: newReputation, legalityReputation: newLegality, priorPrestige: team.prestige,
+          archetype: team.headCoach.archetype, hometownState: team.headCoach.hometownState, collegeState: team.headCoach.collegeState,
+          pipelineStates: parsePipelineStates(team.headCoach.pipelineStatesJson),
         });
       }
     } else {
@@ -351,36 +384,66 @@ export async function runOffseason(saveGameId: string): Promise<{
       where: { id: { in: departingCoaches.map((v) => v.teamId) } },
       include: { athleticDirector: true },
     });
+    // headCoachId is unique on Team, so every departing team's slot must be
+    // cleared before the carousel can assign anyone else's fired coach into
+    // it — otherwise hiring coach Y (still shown as Team B's head coach in
+    // the DB, since Team B's own vacancy hasn't been resolved yet) into
+    // Team A trips the unique constraint. Same fix as the AD carousel above.
+    for (const { teamId } of departingCoaches) {
+      await prisma.team.update({ where: { id: teamId }, data: { headCoachId: null } });
+    }
     const candidatePool = [...departingCoaches].sort(() => rng() - 0.5);
     const claimedCoachIds = new Set<string>();
     const resolvedTeamIds = new Set<string>();
 
     for (const vacancy of departingCoaches) {
       const team = carouselTeams.find((t) => t.id === vacancy.teamId)!;
-      const candidateIndex = candidatePool.findIndex((c) =>
+      const eligible = candidatePool.filter((c) =>
         c.coachId !== vacancy.coachId && !claimedCoachIds.has(c.coachId) &&
         team.prestige <= clamp(c.reputation + 10, 0, 100) && team.prestige > c.priorPrestige - 15 &&
         meetsLegalityBar(c.legalityReputation, team.academicReputation, team.athleticDirector?.integrityStandard)
       );
-      if (candidateIndex !== -1 && rng() < 0.35) {
-        const hired = candidatePool[candidateIndex];
-        claimedCoachIds.add(hired.coachId);
+      if (eligible.length === 0) continue;
+
+      // A program with a specific profile in mind (win-focused AD wants a
+      // proven closer, a patient AD wants a program-builder) actively
+      // pursues the best-fitting available candidate and works harder to
+      // land them — mirrors how a real search sometimes has one guy in mind.
+      const preferredArchetype = preferredArchetypeForOpening(team.athleticDirector?.winFocus, team.athleticDirector?.patience);
+      const targetedCandidates = preferredArchetype ? eligible.filter((c) => c.archetype === preferredArchetype) : [];
+      const pool = targetedCandidates.length > 0 ? targetedCandidates : eligible;
+      const hireChance = targetedCandidates.length > 0 ? 0.6 : 0.35;
+
+      // Among the field this program is actually choosing from, rank by real
+      // ties to the state — a coach who's already local (or coached there in
+      // college) is the "easy sell" hire a program takes a chance on more
+      // readily than an equally-qualified total outsider.
+      const best = [...pool].sort((a, b) => candidateLocalityFit(b, team.state) - candidateLocalityFit(a, team.state))[0];
+
+      if (rng() < hireChance) {
+        claimedCoachIds.add(best.coachId);
         resolvedTeamIds.add(vacancy.teamId);
-        await prisma.team.update({ where: { id: vacancy.teamId }, data: { headCoachId: hired.coachId } });
-        await prisma.coach.update({ where: { id: hired.coachId }, data: { isPlayerControlled: false, hotSeatLevel: 0, yearsAtCurrentJob: 0 } });
+        await prisma.team.update({ where: { id: vacancy.teamId }, data: { headCoachId: best.coachId } });
+        await prisma.coach.update({ where: { id: best.coachId }, data: { isPlayerControlled: false, hotSeatLevel: 0, yearsAtCurrentJob: 0 } });
       }
     }
 
     for (const vacancy of departingCoaches) {
       if (resolvedTeamIds.has(vacancy.teamId)) continue; // already filled via the carousel above
       const team = carouselTeams.find((t) => t.id === vacancy.teamId)!;
-      const replacementArchetype = randomArchetype(rng);
+      // No candidate from the pool fit (or fit but wasn't landed) — the
+      // program still leans toward its preferred profile for a fresh hire
+      // when it has one, same idea as above but for a brand-new unknown.
+      const preferredArchetype = preferredArchetypeForOpening(team.athleticDirector?.winFocus, team.athleticDirector?.patience);
+      const replacementArchetype = preferredArchetype && rng() < 0.5 ? preferredArchetype : randomArchetype(rng);
       const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
+      const replacementHometownState = weightedPick(rng, weightedStateList());
       const replacementData = {
         name: `${randomFirstName(rng)} ${randomLastName(rng)}`, isPlayerControlled: false, hotSeatLevel: 0,
         reputation: replacementSkillRoll.reputation, offenseSkill: replacementSkillRoll.offenseSkill,
         defenseSkill: replacementSkillRoll.defenseSkill, recruitingSkill: replacementSkillRoll.recruitingSkill,
         developmentSkill: replacementSkillRoll.developmentSkill, archetype: replacementArchetype, background: null as string | null,
+        hometownState: replacementHometownState, pipelineStatesJson: JSON.stringify(seedPipeline(replacementHometownState, null)),
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       };
       if (claimedCoachIds.has(vacancy.coachId)) {
@@ -390,7 +453,10 @@ export async function runOffseason(saveGameId: string): Promise<{
         const fresh = await prisma.coach.create({ data: { id: randomUUID(), saveGameId, ...replacementData } });
         await prisma.team.update({ where: { id: vacancy.teamId }, data: { headCoachId: fresh.id } });
       } else {
+        // Reuse this coach's own row (identity/career stats carry over) —
+        // their team's headCoachId was cleared above, so it needs restoring.
         await prisma.coach.update({ where: { id: vacancy.coachId }, data: replacementData });
+        await prisma.team.update({ where: { id: vacancy.teamId }, data: { headCoachId: vacancy.coachId } });
       }
     }
   }
@@ -403,11 +469,17 @@ export async function runOffseason(saveGameId: string): Promise<{
     const openingTeams = await prisma.team.findMany({ where: { id: { in: openings.map((o) => o.teamId) } }, include: { athleticDirector: true } });
     const openingsWithAd = openings.map((o) => {
       const t = openingTeams.find((tt) => tt.id === o.teamId);
-      return { ...o, athleticDirectorId: t?.athleticDirector?.id, integrityStandard: t?.athleticDirector?.integrityStandard };
+      return {
+        ...o, athleticDirectorId: t?.athleticDirector?.id, integrityStandard: t?.athleticDirector?.integrityStandard,
+        winFocus: t?.athleticDirector?.winFocus, patience: t?.athleticDirector?.patience,
+      };
     });
     const maxOffers = userFired ? 3 : 2;
     const coachAdRelationships = parseAdRelationships(userNewAdRelationshipsJson);
-    const offers = generateJobOffers(userNewReputation, userNewPrestige, openingsWithAd, rng, maxOffers, userNewLegality, coachAdRelationships);
+    const offers = generateJobOffers(
+      userNewReputation, userNewPrestige, openingsWithAd, rng, maxOffers, userNewLegality, coachAdRelationships,
+      undefined, userLocality, userArchetype ?? undefined,
+    );
     if (offers.length > 0) {
       const offerTeams = await prisma.team.findMany({ where: { id: { in: offers.map((o) => o.teamId) } } });
       jobOffers = offerTeams.map((t) => ({ teamId: t.id, teamName: t.name, prestige: t.prestige }));

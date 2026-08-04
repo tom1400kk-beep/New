@@ -1,7 +1,10 @@
 import { computeStandings } from "./standings";
-import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct, meetsLegalityBar } from "../engine/career";
+import {
+  updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJobOffers, driftLegalityReputation, expectedWinPct, meetsLegalityBar,
+  preferredArchetypeForOpening, type CoachLocality,
+} from "../engine/career";
 import { disciplineDismissalChance, disciplineSigningReputationHit } from "../engine/disciplineDrops";
-import { parsePipelineStates, decayPipeline, bumpPipelineState } from "../engine/pipeline";
+import { parsePipelineStates, decayPipeline, bumpPipelineState, seedPipeline } from "../engine/pipeline";
 import { generateProspectPriorities, boostPriority } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { driftPerception } from "../engine/media";
@@ -15,7 +18,8 @@ import { POWERHOUSE_SCHOOL_NAMES, POWERHOUSE_D1_CLASS_CAP, capHighSchoolIfNeeded
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generatePreseasonTournaments } from "./preseasonTournaments";
 import { generateDivisionInSeasonEvents } from "./inSeasonEvents";
-import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
+import { mulberry32, clamp, randNormal, randInt, weightedPick } from "../engine/rng";
+import { weightedStateList } from "../engine/regions";
 import { randomFirstName, randomLastName } from "../engine/names";
 import {
   commitmentWeights,
@@ -34,6 +38,17 @@ import { DIVISION_RULES } from "../types";
 import { newId, type WorldState, type RivalryRow, type GameEventRow, type CoachSeasonRecordRow } from "./types";
 
 const CLASS_PROGRESSION: Record<ClassYear, ClassYear | null> = { FR: "SO", SO: "JR", JR: "SR", SR: null, GR: null };
+
+// How well an available coach's real ties (hometown, then alma mater) match
+// a given state — used to rank AI-vs-AI carousel candidates so a program
+// realistically favors "someone who already knows this place" among an
+// otherwise-similar field, the same idea generateJobOffers applies to the
+// player's own job market.
+function candidateLocalityFit(c: { hometownState: string | null; collegeState: string | null }, state: string): number {
+  if (c.hometownState === state) return 2;
+  if (c.collegeState === state) return 1;
+  return 0;
+}
 
 function tournamentWinsForTeam(state: WorldState, seasonYear: number, teamId: string): { made: boolean; wins: number } {
   const games = state.games.filter((g) => {
@@ -78,14 +93,22 @@ export function runOffseason(state: WorldState): OffseasonResult {
   let userNewPrestige = 50;
   let userNewLegality = 75;
   let userNewAdRelationshipsJson = "{}";
+  let userLocality: CoachLocality = {};
+  let userArchetype: string | null = null;
   let jobOffers: OffseasonResult["jobOffers"] = [];
   let conferenceInvite: RealignmentInvite | null = null;
-  const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
+  const vacancies: { teamId: string; prestige: number; academicReputation: number; state: string }[] = [];
   const firedTeamIds = new Set<string>();
   // AI teams whose coach was just fired -- resolved after the main loop by
   // the coaching carousel below, which may hire them out to a different
   // program instead of just discarding them into a fresh random replacement.
-  const departingCoaches: { teamId: string; coachId: string; reputation: number; legalityReputation: number; priorPrestige: number }[] = [];
+  // Locality/archetype fields let that carousel (and the player's own job
+  // market below) realistically favor a coach's real ties and a program's
+  // specific preferred-hire profile instead of picking blind.
+  const departingCoaches: {
+    teamId: string; coachId: string; reputation: number; legalityReputation: number; priorPrestige: number;
+    archetype: string | null; hometownState: string | null; collegeState: string | null; pipelineStates: Record<string, number>;
+  }[] = [];
 
   for (const team of state.teams) {
     const headCoach = state.coaches.find((c) => c.id === team.headCoachId);
@@ -162,6 +185,11 @@ export function runOffseason(state: WorldState): OffseasonResult {
       userNewPrestige = newPrestige;
       userNewLegality = newLegality;
       userNewAdRelationshipsJson = headCoach.adRelationshipsJson;
+      userArchetype = headCoach.archetype;
+      userLocality = {
+        hometownState: headCoach.hometownState, collegeState: headCoach.collegeState,
+        pipelineStates: parsePipelineStates(headCoach.pipelineStatesJson),
+      };
       if (fired) {
         userFired = true;
       } else {
@@ -179,12 +207,13 @@ export function runOffseason(state: WorldState): OffseasonResult {
 
     if (fired) {
       firedTeamIds.add(team.id);
-      vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation });
+      vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation, state: team.state });
       if (headCoach.isPlayerControlled) {
         // Bench the user's coach (identity + career stats persist) rather than
         // overwriting them — a fresh AI coach takes over the vacated program.
         const replacementArchetype = randomArchetype(rng);
         const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
+        const replacementHometownState = weightedPick(rng, weightedStateList());
         const replacement = {
           id: newId(), name: `${randomFirstName(rng)} ${randomLastName(rng)}`, isPlayerControlled: false, hotSeatLevel: 0,
           reputation: replacementSkillRoll.reputation, offenseSkill: replacementSkillRoll.offenseSkill,
@@ -192,7 +221,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
           developmentSkill: replacementSkillRoll.developmentSkill, archetype: replacementArchetype,
           background: null as string | null, playedCollege: false, collegeTeamName: null as string | null,
           collegeState: null as string | null, proPath: "NONE", proCountry: null as string | null,
-          legalityReputation: 75, hometownState: null as string | null, pipelineStatesJson: "{}",
+          legalityReputation: 75, hometownState: replacementHometownState, pipelineStatesJson: JSON.stringify(seedPipeline(replacementHometownState, null)),
           transferPipelineJson: "{}", adRelationshipsJson: "{}", currentSalary: 300000,
           raiseRequestedThisSeason: false, teamPerception: 65, nationalPerception: 20, localPerception: 50,
           campusAtmosphere: 40, careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
@@ -214,6 +243,8 @@ export function runOffseason(state: WorldState): OffseasonResult {
         headCoach.reputation = newReputation;
         departingCoaches.push({
           teamId: team.id, coachId: headCoach.id, reputation: newReputation, legalityReputation: newLegality, priorPrestige: team.prestige,
+          archetype: headCoach.archetype, hometownState: headCoach.hometownState, collegeState: headCoach.collegeState,
+          pipelineStates: parsePipelineStates(headCoach.pipelineStatesJson),
         });
       }
     } else {
@@ -315,6 +346,16 @@ export function runOffseason(state: WorldState): OffseasonResult {
   // re-hiring runs through generateJobOffers below, which has its own
   // reputation/legality/AD-relationship-aware logic.
   if (departingCoaches.length > 0) {
+    // headCoachId must stay unique per coach, so every departing team's slot
+    // is cleared before the carousel can assign anyone else's fired coach
+    // into it — otherwise hiring coach Y (still shown as Team B's head coach,
+    // since Team B's own vacancy hasn't been resolved yet) into Team A would
+    // leave two teams pointing at the same coach. Same fix as the AD
+    // carousel above.
+    for (const vacancy of departingCoaches) {
+      const team = state.teams.find((t) => t.id === vacancy.teamId);
+      if (team) team.headCoachId = null as unknown as string;
+    }
     const candidatePool = [...departingCoaches].sort(() => rng() - 0.5);
     const claimedCoachIds = new Set<string>();
     const resolvedTeamIds = new Set<string>();
@@ -322,17 +363,33 @@ export function runOffseason(state: WorldState): OffseasonResult {
     for (const vacancy of departingCoaches) {
       const team = state.teams.find((t) => t.id === vacancy.teamId)!;
       const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
-      const candidateIndex = candidatePool.findIndex((c) =>
+      const eligible = candidatePool.filter((c) =>
         c.coachId !== vacancy.coachId && !claimedCoachIds.has(c.coachId) &&
         team.prestige <= clamp(c.reputation + 10, 0, 100) && team.prestige > c.priorPrestige - 15 &&
         meetsLegalityBar(c.legalityReputation, team.academicReputation, ad?.integrityStandard)
       );
-      if (candidateIndex !== -1 && rng() < 0.35) {
-        const hired = candidatePool[candidateIndex];
-        claimedCoachIds.add(hired.coachId);
+      if (eligible.length === 0) continue;
+
+      // A program with a specific profile in mind (win-focused AD wants a
+      // proven closer, a patient AD wants a program-builder) actively
+      // pursues the best-fitting available candidate and works harder to
+      // land them — mirrors how a real search sometimes has one guy in mind.
+      const preferredArchetype = preferredArchetypeForOpening(ad?.winFocus, ad?.patience);
+      const targetedCandidates = preferredArchetype ? eligible.filter((c) => c.archetype === preferredArchetype) : [];
+      const pool = targetedCandidates.length > 0 ? targetedCandidates : eligible;
+      const hireChance = targetedCandidates.length > 0 ? 0.6 : 0.35;
+
+      // Among the field this program is actually choosing from, rank by real
+      // ties to the state — a coach who's already local (or coached there in
+      // college) is the "easy sell" hire a program takes a chance on more
+      // readily than an equally-qualified total outsider.
+      const best = [...pool].sort((a, b) => candidateLocalityFit(b, team.state) - candidateLocalityFit(a, team.state))[0];
+
+      if (rng() < hireChance) {
+        claimedCoachIds.add(best.coachId);
         resolvedTeamIds.add(vacancy.teamId);
-        team.headCoachId = hired.coachId;
-        const hiredCoach = state.coaches.find((c) => c.id === hired.coachId)!;
+        team.headCoachId = best.coachId;
+        const hiredCoach = state.coaches.find((c) => c.id === best.coachId)!;
         hiredCoach.isPlayerControlled = false;
         hiredCoach.hotSeatLevel = 0;
         hiredCoach.yearsAtCurrentJob = 0;
@@ -342,14 +399,22 @@ export function runOffseason(state: WorldState): OffseasonResult {
     for (const vacancy of departingCoaches) {
       if (resolvedTeamIds.has(vacancy.teamId)) continue; // already filled via the carousel above
       const team = state.teams.find((t) => t.id === vacancy.teamId)!;
-      const replacementArchetype = randomArchetype(rng);
+      const ad = state.athleticDirectors.find((a) => a.id === team.athleticDirectorId);
+      // No candidate from the pool fit (or fit but wasn't landed) — the
+      // program still leans toward its preferred profile for a fresh hire
+      // when it has one, same idea as above but for a brand-new unknown.
+      const preferredArchetype = preferredArchetypeForOpening(ad?.winFocus, ad?.patience);
+      const replacementArchetype = preferredArchetype && rng() < 0.5 ? preferredArchetype : randomArchetype(rng);
       const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
+      const replacementHometownState = weightedPick(rng, weightedStateList());
       const replacementData = {
         name: `${randomFirstName(rng)} ${randomLastName(rng)}`, isPlayerControlled: false, hotSeatLevel: 0,
         reputation: replacementSkillRoll.reputation, offenseSkill: replacementSkillRoll.offenseSkill,
         defenseSkill: replacementSkillRoll.defenseSkill, recruitingSkill: replacementSkillRoll.recruitingSkill,
         developmentSkill: replacementSkillRoll.developmentSkill, archetype: replacementArchetype,
-        background: null as string | null, careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
+        background: null as string | null,
+        hometownState: replacementHometownState, pipelineStatesJson: JSON.stringify(seedPipeline(replacementHometownState, null)),
+        careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       };
       if (claimedCoachIds.has(vacancy.coachId)) {
         // Our own just-fired coach got scooped up by another program in the
@@ -357,16 +422,19 @@ export function runOffseason(state: WorldState): OffseasonResult {
         // brand-new coach rather than reusing (and corrupting) that identity.
         const fresh = {
           id: newId(), playedCollege: false, collegeTeamName: null as string | null, collegeState: null as string | null,
-          proPath: "NONE", proCountry: null as string | null, legalityReputation: 75, hometownState: null as string | null,
-          pipelineStatesJson: "{}", transferPipelineJson: "{}", adRelationshipsJson: "{}", currentSalary: 300000,
+          proPath: "NONE", proCountry: null as string | null, legalityReputation: 75,
+          transferPipelineJson: "{}", adRelationshipsJson: "{}", currentSalary: 300000,
           raiseRequestedThisSeason: false, teamPerception: 65, nationalPerception: 20, localPerception: 50, campusAtmosphere: 40,
           ...replacementData,
         };
         state.coaches.push(fresh);
         team.headCoachId = fresh.id;
       } else {
+        // Reuse this coach's own row (identity/career stats carry over) —
+        // their team's headCoachId was cleared above, so it needs restoring.
         const original = state.coaches.find((c) => c.id === vacancy.coachId)!;
         Object.assign(original, replacementData);
+        team.headCoachId = vacancy.coachId;
       }
     }
   }
@@ -377,11 +445,14 @@ export function runOffseason(state: WorldState): OffseasonResult {
       .map((v) => {
         const t = state.teams.find((tt) => tt.id === v.teamId);
         const ad = t ? state.athleticDirectors.find((a) => a.id === t.athleticDirectorId) : undefined;
-        return { ...v, athleticDirectorId: ad?.id, integrityStandard: ad?.integrityStandard };
+        return { ...v, athleticDirectorId: ad?.id, integrityStandard: ad?.integrityStandard, winFocus: ad?.winFocus, patience: ad?.patience };
       });
     const maxOffers = userFired ? 3 : 2;
     const coachAdRelationships = parseAdRelationships(userNewAdRelationshipsJson);
-    const offers = generateJobOffers(userNewReputation, userNewPrestige, openings, rng, maxOffers, userNewLegality, coachAdRelationships);
+    const offers = generateJobOffers(
+      userNewReputation, userNewPrestige, openings, rng, maxOffers, userNewLegality, coachAdRelationships,
+      undefined, userLocality, userArchetype ?? undefined,
+    );
     if (offers.length > 0) {
       jobOffers = offers.map((o) => {
         const t = state.teams.find((tt) => tt.id === o.teamId)!;

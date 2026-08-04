@@ -45,6 +45,7 @@ export const api = {
   getCoachStats: (saveId: string) => request<any>(`/saves/${saveId}/coach-stats`),
   getRivalries: (saveId: string) => request<any[]>(`/saves/${saveId}/rivalries`),
   getSeasonCalendar: (saveId: string) => request<any>(`/saves/${saveId}/calendar`),
+  getHotSeatBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/hot-seat`),
   advance: (saveId: string) => request<any>(`/saves/${saveId}/advance`, { method: "POST" }),
 
   getRecruitingBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/recruiting`),

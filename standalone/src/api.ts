@@ -160,6 +160,7 @@ export const api = {
   getCoachStats: async (saveId: string) => queries.getCoachStats(await ensureLoaded(saveId)),
   getRivalries: async (saveId: string) => queries.getRivalries(await ensureLoaded(saveId)),
   getSeasonCalendar: async (saveId: string) => queries.getSeasonCalendar(await ensureLoaded(saveId)),
+  getHotSeatBoard: async (saveId: string) => queries.getHotSeatBoard(await ensureLoaded(saveId)),
 
   advance: async (saveId: string) => {
     const state = await ensureLoaded(saveId);

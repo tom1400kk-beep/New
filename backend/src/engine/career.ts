@@ -1,4 +1,5 @@
 import { clamp, randInt } from "./rng";
+import type { CoachArchetype } from "./coachArchetypes";
 
 // Higher-prestige jobs come with higher win expectations from the AD — this
 // is what makes the hot seat meaningful (going 18-13 is fine at a low-major,
@@ -97,6 +98,39 @@ export interface JobOpening {
   academicReputation?: number;
   athleticDirectorId?: string;
   integrityStandard?: number;
+  state?: string; // team's home state — drives locality-aware offer generation below
+  winFocus?: number; // AD trait, used to infer this program's preferred-hire profile
+  patience?: number; // AD trait, used to infer this program's preferred-hire profile
+  targetedHire?: boolean; // set on the returned offer when this program specifically wants this coach's profile
+}
+
+// A coach's real ties to a state — hometown, alma mater, or a recruiting
+// pipeline built up over a career — make a local job meaningfully easier to
+// land than a same-prestige job somewhere with no connection at all. Mirrors
+// how actual coaching searches lean on "who already knows this place."
+export interface CoachLocality {
+  hometownState?: string | null;
+  collegeState?: string | null;
+  pipelineStates?: Record<string, number>;
+}
+
+function localityBonus(opening: JobOpening, locality?: CoachLocality): number {
+  if (!locality || !opening.state) return 0;
+  if (locality.hometownState && locality.hometownState === opening.state) return 18;
+  if (locality.collegeState && locality.collegeState === opening.state) return 10;
+  const score = locality.pipelineStates?.[opening.state];
+  if (score === undefined) return 0;
+  return clamp((score - 50) * 0.24, 0, 12);
+}
+
+// Some programs know exactly what they want rather than taking whoever's
+// reachable: a win-obsessed AD wants a proven closer on the recruiting trail
+// right now, a patient one is fine investing in a program-builder for the
+// long haul. Most jobs have no strong preference either way.
+export function preferredArchetypeForOpening(winFocus?: number, patience?: number): CoachArchetype | null {
+  if (winFocus !== undefined && winFocus >= 70) return "RECRUITER";
+  if (patience !== undefined && patience >= 70) return "PROGRAM_BUILDER";
+  return null;
 }
 
 // A coach's reputation determines the ceiling of jobs realistically offered
@@ -119,19 +153,32 @@ export function generateJobOffers(
   legalityReputation = 75,
   coachAdRelationships: Record<string, number> = {},
   careerWinPct?: number,
+  coachLocality?: CoachLocality,
+  coachArchetype?: string,
 ): JobOpening[] {
   const trackRecordAdjust = careerWinPct !== undefined ? clamp((careerWinPct - 0.5) * 40, -20, 20) : 0;
   const ceiling = clamp(reputation + trackRecordAdjust + randInt(rng, -5, 15), 0, 100);
-  const eligible = openings.filter((o) => {
+
+  const scored = openings.map((o) => {
+    const locBonus = localityBonus(o, coachLocality);
+    const preferredArchetype = preferredArchetypeForOpening(o.winFocus, o.patience);
+    const targeted = !!(preferredArchetype && coachArchetype && preferredArchetype === coachArchetype);
+    return { o, locBonus, targeted };
+  });
+
+  const eligible = scored.filter(({ o, locBonus, targeted }) => {
     const relScore = o.athleticDirectorId ? coachAdRelationships[o.athleticDirectorId] ?? 50 : 50;
     if (relScore <= 30) return false; // bad blood — this AD won't bring them back
     if (o.academicReputation !== undefined && !meetsLegalityBar(legalityReputation, o.academicReputation, o.integrityStandard)) return false;
-    const effectiveCeiling = relScore >= 70 ? ceiling + 10 : ceiling;
+    let effectiveCeiling = relScore >= 70 ? ceiling + 10 : ceiling;
+    effectiveCeiling += locBonus;
+    if (targeted) effectiveCeiling += 15; // they specifically want this coach — willing to stretch for them
     if (o.prestige > effectiveCeiling || o.prestige <= currentPrestige - 10) return false;
     return true;
   });
-  const sorted = [...eligible].sort((a, b) => b.prestige - a.prestige);
-  if (sorted.length > 0) return sorted.slice(0, maxOffers);
+  const sorted = [...eligible].sort((a, b) =>
+    (b.o.prestige + b.locBonus * 0.4 + (b.targeted ? 6 : 0)) - (a.o.prestige + a.locBonus * 0.4 + (a.targeted ? 6 : 0)));
+  if (sorted.length > 0) return sorted.slice(0, maxOffers).map(({ o, targeted }) => ({ ...o, targetedHire: targeted }));
   if (openings.length === 0) return [];
 
   // Guaranteed floor: a real coaching search never leaves someone with

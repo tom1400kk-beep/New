@@ -12,6 +12,7 @@ import TransfersPage from "./pages/TransfersPage";
 import StandingsPage from "./pages/StandingsPage";
 import ContractPage from "./pages/ContractPage";
 import CalendarPage from "./pages/CalendarPage";
+import HotSeatPage from "./pages/HotSeatPage";
 
 function fmtDate(d: string | Date) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -73,6 +74,7 @@ function Shell() {
             <NavLink to="/recruiting">Recruiting</NavLink>
             <NavLink to="/transfers">Transfers</NavLink>
             <NavLink to="/calendar">Calendar</NavLink>
+            <NavLink to="/hot-seat">Hot Seat</NavLink>
           </>
         )}
       </nav>
@@ -88,6 +90,7 @@ function Shell() {
           <Route path="/recruiting" element={<RecruitingPage />} />
           <Route path="/transfers" element={<TransfersPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
+          <Route path="/hot-seat" element={<HotSeatPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

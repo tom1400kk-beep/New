@@ -11,6 +11,7 @@ import { internationalTourRouter } from "./routes/internationalTour";
 import { gamePreviewRouter } from "./routes/gamePreview";
 import { coachStatsRouter } from "./routes/coachStats";
 import { calendarRouter } from "./routes/calendar";
+import { hotSeatRouter } from "./routes/hotSeat";
 
 const app = express();
 app.use(cors());
@@ -27,6 +28,7 @@ app.use("/api", internationalTourRouter);
 app.use("/api", gamePreviewRouter);
 app.use("/api", coachStatsRouter);
 app.use("/api", calendarRouter);
+app.use("/api", hotSeatRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

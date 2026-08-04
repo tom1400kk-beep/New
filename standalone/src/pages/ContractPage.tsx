@@ -391,6 +391,9 @@ export default function ContractPage() {
                   </span>
                 )}
                 {o.adRemembersYou && <span className="text-good"> — remembers you well from a previous job together</span>}
+                {o.targetedHire && <span className="text-good"> — they want you specifically for this job</span>}
+                {o.localTies === "hometown" && <span className="text-muted"> — your hometown</span>}
+                {o.localTies === "college" && <span className="text-muted"> — where you played college ball</span>}
                 {" "}
                 <button onClick={() => resignAndAccept(o.teamId)}>Leave for This Job</button>
               </div>

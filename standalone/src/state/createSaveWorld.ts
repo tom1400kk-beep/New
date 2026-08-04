@@ -2,7 +2,8 @@ import type { Division } from "../types";
 import { DIVISION_RULES } from "../types";
 import { loadLeagueData, prestigeTierToScore } from "./leagueData";
 import { toStateAbbr } from "./stateAbbr";
-import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
+import { mulberry32, clamp, randNormal, randInt, weightedPick } from "../engine/rng";
+import { weightedStateList } from "../engine/regions";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { capHighSchoolIfNeeded } from "../engine/highSchools";
@@ -83,10 +84,16 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       const isPlayerControlled = div === division && member.school === teamSchoolName;
       if (isPlayerControlled) chosenTeamId = teamId;
       const baseSalary = salaryForTeam(rng, prestige, div);
+      const state = toStateAbbr(member.state);
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
       const skills = generateCoachSkills(rng, prestige, archetype, isPlayerControlled ? combinedExtraDeltas : undefined);
+      // AI coaches get a real (weighted-random, same hotbed distribution as
+      // recruits) hometown too, not just the player — otherwise there's no
+      // locality signal at all for AI-vs-AI hiring or the player's own job
+      // market to realistically favor local ties for.
+      const aiHometownState = weightedPick(rng, weightedStateList());
       coaches.push({
         id: coachId,
         name: isPlayerControlled ? coachName : `${randomFirstName(rng)} ${randomLastName(rng)}`,
@@ -105,8 +112,8 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         proPath: isPlayerControlled ? playingCareer.proPath : "NONE",
         proCountry: isPlayerControlled ? playingCareer.proCountry : null,
         legalityReputation: 75,
-        hometownState: isPlayerControlled ? playingCareer.hometownState : null,
-        pipelineStatesJson: isPlayerControlled ? initialPipelineJson : "{}",
+        hometownState: isPlayerControlled ? playingCareer.hometownState : aiHometownState,
+        pipelineStatesJson: isPlayerControlled ? initialPipelineJson : JSON.stringify(seedPipeline(aiHometownState, null)),
         transferPipelineJson: "{}",
         adRelationshipsJson: "{}",
         currentSalary: isPlayerControlled ? baseSalary : 300000, raiseRequestedThisSeason: false,
@@ -125,7 +132,6 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       }
       const academicReputation = academicReputationForTeam(rng, prestige);
       const venueCapacity = venueCapacityForTeam(rng, prestige, div);
-      const state = toStateAbbr(member.state);
 
       const adId = newId();
       athleticDirectors.push({

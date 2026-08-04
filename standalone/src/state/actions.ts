@@ -1,9 +1,10 @@
 import { computeInterestGain, weeklyRecruitingPoints, type RecruitingProspectInput, type RecruitingTeamInput } from "../engine/recruiting";
 import { PRIORITY_KEYS, topPriorities, type PriorityKey, type PriorityProfile } from "../engine/priorities";
-import { clamp, randInt, mulberry32 } from "../engine/rng";
+import { clamp, randInt, mulberry32, weightedPick } from "../engine/rng";
+import { weightedStateList } from "../engine/regions";
 import type { EventEffects, EventOption } from "../engine/events";
-import { meetsLegalityBar, expectedWinPct, generateJobOffers, type JobOpening } from "../engine/career";
-import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
+import { meetsLegalityBar, expectedWinPct, generateJobOffers, preferredArchetypeForOpening, type JobOpening, type CoachLocality } from "../engine/career";
+import { parsePipelineStates, pipelineScore, bumpPipelineState, seedPipeline } from "../engine/pipeline";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
@@ -380,6 +381,9 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
 export function getJobOffers(state: WorldState) {
   const myCoach = state.coaches.find((c) => c.isPlayerControlled);
   const myRelationships = myCoach ? parseAdRelationships(myCoach.adRelationshipsJson) : {};
+  const myLocality: CoachLocality = myCoach
+    ? { hometownState: myCoach.hometownState, collegeState: myCoach.collegeState, pipelineStates: parsePipelineStates(myCoach.pipelineStatesJson) }
+    : {};
   const currentTeam = state.save.coachTeamId ? state.teams.find((t) => t.id === state.save.coachTeamId) : undefined;
   const currentCol = currentTeam ? costOfLivingIndex(currentTeam.state) : null;
 
@@ -410,10 +414,16 @@ export function getJobOffers(state: WorldState) {
     const careerWinPct = gamesCoached > 0 ? (myCoach!.careerWins / gamesCoached) : undefined;
     const openings: JobOpening[] = aiCoachedTeams.map((t) => {
       const ad = state.athleticDirectors.find((a) => a.id === t.athleticDirectorId);
-      return { teamId: t.id, prestige: t.prestige, academicReputation: t.academicReputation, athleticDirectorId: ad?.id, integrityStandard: ad?.integrityStandard };
+      return {
+        teamId: t.id, prestige: t.prestige, academicReputation: t.academicReputation,
+        athleticDirectorId: ad?.id, integrityStandard: ad?.integrityStandard, state: t.state, winFocus: ad?.winFocus, patience: ad?.patience,
+      };
     });
     const reputation = myCoach?.reputation ?? 50;
-    const offers = generateJobOffers(reputation, reputation, openings, rng, 8, myCoach?.legalityReputation ?? 75, myRelationships, careerWinPct);
+    const offers = generateJobOffers(
+      reputation, reputation, openings, rng, 8, myCoach?.legalityReputation ?? 75, myRelationships, careerWinPct,
+      myLocality, myCoach?.archetype,
+    );
     const offerTeamIds = new Set(offers.map((o) => o.teamId));
     eligibleTeams = aiCoachedTeams.filter((t) => offerTeamIds.has(t.id));
   }
@@ -422,6 +432,14 @@ export function getJobOffers(state: WorldState) {
     .map((t) => ({ team: t, ad: state.athleticDirectors.find((a) => a.id === t.athleticDirectorId) }))
     .map(({ team, ad }) => {
       const col = costOfLivingIndex(team.state);
+      // Locality/targeted-hire framing is informational regardless of which
+      // browsing mode produced this listing — a coach should be able to see
+      // "this is home" or "they want your profile specifically" either way.
+      const preferredArchetype = ad ? preferredArchetypeForOpening(ad.winFocus, ad.patience) : null;
+      const targetedHire = !!(preferredArchetype && myCoach?.archetype && preferredArchetype === myCoach.archetype);
+      const localTies: "hometown" | "college" | null =
+        myCoach?.hometownState && myCoach.hometownState === team.state ? "hometown" :
+        myCoach?.collegeState && myCoach.collegeState === team.state ? "college" : null;
       return {
         teamId: team.id, teamName: team.name, prestige: team.prestige, division: team.division,
         athleticDirector: ad ? {
@@ -429,6 +447,8 @@ export function getJobOffers(state: WorldState) {
           integrityStandard: ad.integrityStandard, loyalty: ad.loyalty, yearsAtCurrentJob: ad.yearsAtCurrentJob,
         } : null,
         adRemembersYou: ad ? adRelationshipScore(myRelationships, ad.id) >= 70 : false,
+        targetedHire,
+        localTies,
         salary: team.baseSalary,
         state: team.state,
         costOfLivingIndex: col,
@@ -520,6 +540,7 @@ export function resignAndAccept(state: WorldState, teamId: string) {
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
   const replacementArchetype = randomArchetype(rng);
   const replacementSkills = generateCoachSkills(rng, oldTeam.prestige, replacementArchetype);
+  const replacementHometownState = weightedPick(rng, weightedStateList());
 
   // Give the old program a fresh AI coach (mirrors the same replacement
   // pattern used when a coach is fired at the end of a season).
@@ -531,7 +552,8 @@ export function resignAndAccept(state: WorldState, teamId: string) {
     archetype: replacementArchetype, background: null as string | null,
     playedCollege: false, collegeTeamName: null as string | null, collegeState: null as string | null,
     proPath: "NONE", proCountry: null as string | null, legalityReputation: 75,
-    hometownState: null as string | null, pipelineStatesJson: "{}", transferPipelineJson: "{}", adRelationshipsJson: "{}",
+    hometownState: replacementHometownState, pipelineStatesJson: JSON.stringify(seedPipeline(replacementHometownState, null)),
+    transferPipelineJson: "{}", adRelationshipsJson: "{}",
     currentSalary: 300000, raiseRequestedThisSeason: false,
     teamPerception: 65, nationalPerception: 20, localPerception: 50, campusAtmosphere: 40,
     careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
