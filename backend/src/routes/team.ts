@@ -115,7 +115,8 @@ teamRouter.post("/saves/:id/discipline-drops/:playerId/sign", async (req, res) =
 
 teamRouter.get("/saves/:id/schedule", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  if (!save.coachTeamId) return res.json([]);
+  if (!save.coachTeamId) return res.json({ teamName: null, games: [] });
+  const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, select: { name: true } });
   const games = await prisma.game.findMany({
     where: {
       saveGameId: save.id,
@@ -132,11 +133,14 @@ teamRouter.get("/saves/:id/schedule", async (req, res) => {
   for (const r of rivalries) {
     rivalIntensityByOpponent.set(r.teamAId === save.coachTeamId ? r.teamBId : r.teamAId, r.intensity);
   }
-  res.json(games.map((g) => {
-    const opponentId = g.homeTeamId === save.coachTeamId ? g.awayTeamId : g.homeTeamId;
+  const gamesOut = games.map((g) => {
+    const isHome = g.homeTeamId === save.coachTeamId;
+    const opponentId = isHome ? g.awayTeamId : g.homeTeamId;
+    const opponent = isHome ? g.awayTeam : g.homeTeam;
     const rivalryIntensity = rivalIntensityByOpponent.get(opponentId);
-    return { ...g, isRivalry: rivalryIntensity !== undefined, rivalryIntensity: rivalryIntensity ?? null };
-  }));
+    return { ...g, isHome, opponentName: opponent.name, isRivalry: rivalryIntensity !== undefined, rivalryIntensity: rivalryIntensity ?? null };
+  });
+  res.json({ teamName: team.name, games: gamesOut });
 });
 
 teamRouter.get("/saves/:id/rivalries", async (req, res) => {

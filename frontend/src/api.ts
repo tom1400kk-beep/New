@@ -35,7 +35,7 @@ export const api = {
   getDisciplineDrops: (saveId: string) => request<any>(`/saves/${saveId}/discipline-drops`),
   signDisciplineDrop: (saveId: string, playerId: string) =>
     request<any>(`/saves/${saveId}/discipline-drops/${playerId}/sign`, { method: "POST" }),
-  getSchedule: (saveId: string) => request<any[]>(`/saves/${saveId}/schedule`),
+  getSchedule: (saveId: string) => request<any>(`/saves/${saveId}/schedule`),
   getStandings: (saveId: string) => request<any>(`/saves/${saveId}/standings`),
   getKenPom: (saveId: string) => request<any[]>(`/saves/${saveId}/kenpom`),
   getRPI: (saveId: string) => request<any[]>(`/saves/${saveId}/rpi`),
@@ -62,8 +62,8 @@ export const api = {
   getPreseasonTournaments: (saveId: string) => request<any>(`/saves/${saveId}/preseason-tournaments`),
   joinPreseasonTournament: (saveId: string, tournamentId: string) =>
     request<any>(`/saves/${saveId}/preseason-tournaments/${tournamentId}/join`, { method: "POST" }),
-  leavePreseasonTournament: (saveId: string) =>
-    request<any>(`/saves/${saveId}/preseason-tournaments/leave`, { method: "POST" }),
+  leavePreseasonTournament: (saveId: string, tournamentId: string) =>
+    request<any>(`/saves/${saveId}/preseason-tournaments/${tournamentId}/leave`, { method: "POST" }),
 
   getInternationalTour: (saveId: string) => request<any>(`/saves/${saveId}/international-tour`),
   bookInternationalTour: (saveId: string, country: string) =>

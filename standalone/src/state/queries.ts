@@ -93,29 +93,34 @@ export function getDisciplineDrops(state: WorldState) {
 }
 
 export function getSchedule(state: WorldState) {
-  if (!state.save.coachTeamId) return [];
+  if (!state.save.coachTeamId) return { teamName: null, games: [] };
   const teamId = state.save.coachTeamId;
+  const teamName = state.teams.find((t) => t.id === teamId)?.name ?? null;
   const rivalIntensityByOpponent = new Map<string, number>();
   for (const r of state.rivalries) {
     if (!r.active) continue;
     if (r.teamAId === teamId) rivalIntensityByOpponent.set(r.teamBId, r.intensity);
     else if (r.teamBId === teamId) rivalIntensityByOpponent.set(r.teamAId, r.intensity);
   }
-  return state.games
+  const games = state.games
     .filter((g) => g.seasonYear === state.save.currentSeasonYear && (g.homeTeamId === teamId || g.awayTeamId === teamId))
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .map((g) => {
-      const opponentId = g.homeTeamId === teamId ? g.awayTeamId : g.homeTeamId;
+      const isHome = g.homeTeamId === teamId;
+      const opponentId = isHome ? g.awayTeamId : g.homeTeamId;
       const rivalryIntensity = rivalIntensityByOpponent.get(opponentId);
       return {
         ...g,
         homeTeam: state.teams.find((t) => t.id === g.homeTeamId)!,
         awayTeam: state.teams.find((t) => t.id === g.awayTeamId)!,
         tournament: g.tournamentId ? state.tournaments.find((t) => t.id === g.tournamentId) ?? null : null,
+        isHome,
+        opponentName: state.teams.find((t) => t.id === opponentId)?.name ?? "",
         isRivalry: rivalryIntensity !== undefined,
         rivalryIntensity: rivalryIntensity ?? null,
       };
     });
+  return { teamName, games };
 }
 
 export function getRivalries(state: WorldState) {

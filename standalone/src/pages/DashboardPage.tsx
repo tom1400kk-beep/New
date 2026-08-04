@@ -377,7 +377,7 @@ export default function DashboardPage() {
         <h3>Next Game</h3>
         {nextGame ? (
           <button className="player-name-link" style={{ fontSize: "1rem" }} disabled={previewLoading} onClick={() => openPreview(nextGame.id)}>
-            {fmtDate(nextGame.date)}: {nextGame.homeTeam.name} vs {nextGame.awayTeam.name}
+            {fmtDate(nextGame.date)}: {nextGame.homeTeamId === team.id ? "vs" : "@"} {nextGame.homeTeamId === team.id ? nextGame.awayTeam.name : nextGame.homeTeam.name}
             {nextGame.tournament ? ` (${nextGame.tournament.type.replace(/_/g, " ")})` : nextGame.isConference ? " (Conference)" : ""}
           </button>
         ) : (

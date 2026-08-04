@@ -717,6 +717,7 @@ export interface PreseasonTournamentBoardEntry {
   field: { teamId: string; name: string; prestige: number }[];
   userTeamIn: boolean;
   eligible: boolean;
+  canDecline: boolean;
 }
 
 function eventDefForTournamentName(name: string | null): PreseasonEventDef | undefined {
@@ -765,6 +766,7 @@ export function getPreseasonTournaments(state: WorldState): { editable: boolean;
       .sort((a, b) => b.prestige - a.prestige);
     const eventDef = eventDefForTournamentName(t.name);
     const { name, location } = splitNameLocation(t.name);
+    const minDate = games.length > 0 ? Math.min(...games.map((g) => g.date.getTime())) : Infinity;
     return {
       tournamentId: t.id,
       name,
@@ -774,21 +776,43 @@ export function getPreseasonTournaments(state: WorldState): { editable: boolean;
       field: field.map((f) => ({ teamId: f.id, name: f.name, prestige: f.prestige })),
       userTeamIn: !!userTeamId && fieldIds.includes(userTeamId),
       eligible: userTeam ? isPrestigeEligible(userTeam.prestige, field) : false,
+      minDate,
     };
   });
 
-  board.sort((a, b) => (TIER_RANK[a.tier ?? ""] ?? 3) - (TIER_RANK[b.tier ?? ""] ?? 3));
+  // D1 teams are auto-assigned to at most one curated invitational and can
+  // freely leave it; D2/D3 teams are auto-assigned to one or (occasionally)
+  // two procedurally generated events, and only the later-dated of the two
+  // — a bonus slot, not their primary placement — can be declined.
+  let declinableTournamentId: string | null = null;
+  if (userTeam && userTeam.division !== "D1") {
+    const mine = board.filter((t) => t.userTeamIn).sort((a, b) => a.minDate - b.minDate);
+    if (mine.length > 1) declinableTournamentId = mine[mine.length - 1].tournamentId;
+  }
 
-  return { editable: state.save.currentPhase === "PRESEASON", userDivision: userTeam?.division ?? null, tournaments: board };
+  const boardOut: PreseasonTournamentBoardEntry[] = board.map(({ minDate, ...rest }) => ({
+    ...rest,
+    canDecline: userTeam?.division === "D1" ? rest.userTeamIn : rest.tournamentId === declinableTournamentId,
+  }));
+
+  boardOut.sort((a, b) => (TIER_RANK[a.tier ?? ""] ?? 3) - (TIER_RANK[b.tier ?? ""] ?? 3));
+
+  return { editable: state.save.currentPhase === "PRESEASON", userDivision: userTeam?.division ?? null, tournaments: boardOut };
 }
 
-// Swaps a team's entire non-conference slate (including any preseason
-// tournament games) with another team's — safe at this point since PRESEASON
-// games are always unplayed, and it guarantees no orphaned or double-booked
-// dates since both teams simply trade places game-for-game.
-function swapNonConferenceSlates(state: WorldState, seasonYear: number, teamAId: string, teamBId: string): void {
+// Swaps a team's non-conference slate (including any preseason tournament
+// games) with another team's — safe at this point since PRESEASON games are
+// always unplayed, and it guarantees no orphaned or double-booked dates
+// since both teams simply trade places game-for-game. When a team has two
+// in-season events (D2/D3 only), excludeTournamentId keeps the OTHER
+// (non-declined) event's games out of the swap entirely, so declining a
+// bonus second event never disturbs the team's primary placement.
+function swapNonConferenceSlates(
+  state: WorldState, seasonYear: number, teamAId: string, teamBId: string, excludeTournamentId?: string | null,
+): void {
   for (const g of state.games) {
     if (g.seasonYear !== seasonYear || g.isConference) continue;
+    if (excludeTournamentId && g.tournamentId === excludeTournamentId) continue;
     if (g.homeTeamId !== teamAId && g.homeTeamId !== teamBId && g.awayTeamId !== teamAId && g.awayTeamId !== teamBId) continue;
     const newHome = g.homeTeamId === teamAId ? teamBId : g.homeTeamId === teamBId ? teamAId : g.homeTeamId;
     const newAway = g.awayTeamId === teamAId ? teamBId : g.awayTeamId === teamBId ? teamAId : g.awayTeamId;
@@ -814,6 +838,9 @@ export function joinPreseasonTournament(state: WorldState, tournamentId: string)
   if (tournament.division !== userTeam.division) {
     throw new Error("That event isn't at your division");
   }
+  if (userTeam.division !== "D1") {
+    throw new Error("D2/D3 in-season events are auto-assigned — only a bonus second event, if offered, can be declined.");
+  }
   if (!isPrestigeEligible(userTeam.prestige, fieldTeams)) {
     throw new Error("Your program isn't competitive enough to draw an invite to this event");
   }
@@ -825,23 +852,51 @@ export function joinPreseasonTournament(state: WorldState, tournamentId: string)
   return { ok: true, swappedWithTeamId: partner.id };
 }
 
-export function leavePreseasonTournament(state: WorldState): { ok: true; swappedWithTeamId: string } {
+// D1: leaves a team's one auto-assigned invitational, freely, same as
+// always. D2/D3: declines one of a team's auto-assigned in-season events —
+// but only the later-dated of two (the bonus slot); a team's sole/primary
+// event is mandatory and this throws if asked to decline it.
+export function leavePreseasonTournament(state: WorldState, tournamentId: string): { ok: true; swappedWithTeamId: string } {
   if (!state.save.coachTeamId) throw new Error("No active team");
   if (state.save.currentPhase !== "PRESEASON") throw new Error("Schedule can only be edited during the preseason");
 
   const seasonYear = state.save.currentSeasonYear;
+  const tournament = state.tournaments.find((t) => t.id === tournamentId);
+  if (!tournament || tournament.type !== "PRESEASON_INVITATIONAL") throw new Error("Not a preseason tournament for this save");
+
+  const games = state.games.filter((g) => g.tournamentId === tournamentId);
+  const fieldIds = [...new Set(games.flatMap((g) => [g.homeTeamId, g.awayTeamId]))];
+  if (!fieldIds.includes(state.save.coachTeamId)) throw new Error("Not currently in this event");
+
+  const userTeam = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+
+  let excludeTournamentId: string | null = null;
+  if (userTeam.division !== "D1") {
+    const mine = state.tournaments
+      .filter((t) => t.seasonYear === seasonYear && t.type === "PRESEASON_INVITATIONAL" && t.division === userTeam.division)
+      .map((t) => {
+        const tGames = state.games.filter((g) => g.tournamentId === t.id);
+        const fIds = new Set(tGames.flatMap((g) => [g.homeTeamId, g.awayTeamId]));
+        return { id: t.id, inIt: fIds.has(state.save.coachTeamId!), minDate: tGames.length ? Math.min(...tGames.map((g) => g.date.getTime())) : Infinity };
+      })
+      .filter((t) => t.inIt)
+      .sort((a, b) => a.minDate - b.minDate);
+    const declinable = mine.length > 1 ? mine[mine.length - 1].id : null;
+    if (tournamentId !== declinable) {
+      throw new Error("This is your primary in-season event — it's auto-assigned and can't be declined. Only a bonus second event can be.");
+    }
+    excludeTournamentId = mine.find((t) => t.id !== tournamentId)?.id ?? null;
+  }
+
   const tournaments = state.tournaments.filter((t) => t.seasonYear === seasonYear && t.type === "PRESEASON_INVITATIONAL");
   const assignedIds = new Set(
     tournaments.flatMap((t) => state.games.filter((g) => g.tournamentId === t.id).flatMap((g) => [g.homeTeamId, g.awayTeamId])),
   );
-  if (!assignedIds.has(state.save.coachTeamId)) throw new Error("Not currently in a preseason event");
-
-  const userTeam = state.teams.find((t) => t.id === state.save.coachTeamId)!;
   const unassigned = state.teams.filter((t) => t.division === userTeam.division && !assignedIds.has(t.id));
   const partner = unassigned[Math.floor(Math.random() * unassigned.length)];
   if (!partner) throw new Error("No open non-conference slate to swap into");
 
-  swapNonConferenceSlates(state, seasonYear, state.save.coachTeamId, partner.id);
+  swapNonConferenceSlates(state, seasonYear, state.save.coachTeamId, partner.id, excludeTournamentId);
   return { ok: true, swappedWithTeamId: partner.id };
 }
 

@@ -16,13 +16,18 @@ function Shell() {
   const { activeSaveId } = useSave();
   const location = useLocation();
   const [hasTeam, setHasTeam] = useState(false);
+  const [isPreseason, setIsPreseason] = useState(false);
 
   useEffect(() => {
     if (!activeSaveId) {
       setHasTeam(false);
+      setIsPreseason(false);
       return;
     }
-    api.getDashboard(activeSaveId).then((d) => setHasTeam(!!d.team));
+    api.getDashboard(activeSaveId).then((d) => {
+      setHasTeam(!!d.team);
+      setIsPreseason(d.save?.currentPhase === "PRESEASON");
+    });
   }, [activeSaveId, location.pathname]);
 
   return (
@@ -38,7 +43,7 @@ function Shell() {
             <NavLink to="/contract">Contract</NavLink>
             <NavLink to="/roster">Roster</NavLink>
             <NavLink to="/schedule">Schedule</NavLink>
-            <NavLink to="/edit-schedule">Edit Schedule</NavLink>
+            {isPreseason && <NavLink to="/edit-schedule">Edit Schedule</NavLink>}
             <NavLink to="/standings">Standings</NavLink>
             <NavLink to="/recruiting">Recruiting</NavLink>
             <NavLink to="/transfers">Transfers</NavLink>

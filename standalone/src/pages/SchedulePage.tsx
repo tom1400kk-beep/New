@@ -8,15 +8,16 @@ function fmtAttendance(n: number) {
 
 export default function SchedulePage() {
   const { activeSaveId } = useSave();
+  const [teamName, setTeamName] = useState<string | null>(null);
   const [games, setGames] = useState<any[]>([]);
 
   useEffect(() => {
-    if (activeSaveId) api.getSchedule(activeSaveId).then(setGames);
+    if (activeSaveId) api.getSchedule(activeSaveId).then((data) => { setTeamName(data.teamName); setGames(data.games); });
   }, [activeSaveId]);
 
   return (
     <div>
-      <h1>Schedule</h1>
+      <h1>{teamName ? `${teamName} Schedule` : "Schedule"}</h1>
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead>
@@ -27,7 +28,7 @@ export default function SchedulePage() {
               <tr key={g.id} style={g.isRivalry ? { background: "rgba(220, 80, 40, 0.1)" } : undefined}>
                 <td>{new Date(g.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</td>
                 <td>
-                  {g.homeTeam.name} vs {g.awayTeam.name}
+                  {g.isHome ? "vs" : "@"} {g.opponentName}
                   {g.isRivalry && <span className="text-bad" title={`Rivalry intensity ${g.rivalryIntensity}/100`}> 🔥 Rivalry</span>}
                 </td>
                 <td>

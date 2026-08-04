@@ -139,11 +139,11 @@ function PreseasonTournamentsSection() {
     }
   }
 
-  async function leave() {
+  async function leave(tournamentId: string) {
     if (!activeSaveId || busy) return;
     setBusy(true);
     try {
-      await api.leavePreseasonTournament(activeSaveId);
+      await api.leavePreseasonTournament(activeSaveId, tournamentId);
       await refresh();
     } finally {
       setBusy(false);
@@ -156,32 +156,36 @@ function PreseasonTournamentsSection() {
     return <p className="text-muted">Pick a team to see this season's non-conference events.</p>;
   }
 
-  const current = data.tournaments.find((t: any) => t.userTeamIn);
+  const isD1 = data.userDivision === "D1";
+  const mine = data.tournaments.filter((t: any) => t.userTeamIn);
 
   return (
     <div>
       <p className="text-muted">
-        {data.userDivision === "D1"
+        {isD1
           ? "Pick a preseason multi-team event for your non-conference slate. Joining swaps your entire early-season schedule with the invite you're replacing — same dates, same opponents-for-opponents. You'll only draw a bid from events your program's prestige can realistically compete in."
-          : "This season's in-season tip-off classics, Thanksgiving events, and holiday showcases — hosted by member schools or at neutral sites, kept regionally realistic so nobody's flying across the country for a non-conference game. Joining swaps your entire early-season schedule with the invite you're replacing."}
+          : "Your team is auto-assigned to this season's in-season tip-off classics, Thanksgiving events, and holiday showcases — hosted by member schools or at neutral sites, kept regionally realistic so nobody's flying across the country for a non-conference game. If your program is offered a bonus second event, you can decline it below; your primary event is set and can't be changed."}
         {!data.editable && " The schedule locks once the season begins, so this is read-only now."}
       </p>
 
-      {current && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <strong>Currently in:</strong> {current.name}
-          {data.editable && (
-            <button className="secondary" style={{ marginLeft: 12 }} disabled={busy} onClick={leave}>
-              Leave Event
+      {mine.map((t: any) => (
+        <div className="card" key={t.tournamentId} style={{ marginBottom: 16 }}>
+          <strong>{isD1 ? "Currently in:" : "Assigned to:"}</strong> {t.name}
+          {data.editable && t.canDecline && (
+            <button className="secondary" style={{ marginLeft: 12 }} disabled={busy} onClick={() => leave(t.tournamentId)}>
+              {isD1 ? "Leave Event" : "Decline Bonus Event"}
             </button>
           )}
+          {!isD1 && !t.canDecline && (
+            <span className="text-muted" style={{ marginLeft: 12 }}>(primary event — auto-assigned)</span>
+          )}
         </div>
-      )}
+      ))}
 
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead>
-            <tr><th>Event</th><th>Location</th><th>Tier</th><th>Format</th><th>Field</th><th></th></tr>
+            <tr><th>Event</th><th>Location</th><th>Tier</th><th>Format</th><th>Field</th>{isD1 && <th></th>}</tr>
           </thead>
           <tbody>
             {data.tournaments.map((t: any) => (
@@ -193,19 +197,21 @@ function PreseasonTournamentsSection() {
                 <td className="text-muted" style={{ maxWidth: 420 }}>
                   <strong>({t.field.length} teams)</strong> {t.field.map((f: any) => f.name).join(", ")}
                 </td>
-                <td>
-                  {data.editable && !t.userTeamIn && (
-                    t.eligible ? (
-                      <button className="secondary" disabled={busy} onClick={() => join(t.tournamentId)}>
-                        Join
-                      </button>
-                    ) : (
-                      <span className="text-muted" title="Your program's prestige isn't high enough to draw an invite to this event">
-                        Not eligible
-                      </span>
-                    )
-                  )}
-                </td>
+                {isD1 && (
+                  <td>
+                    {data.editable && !t.userTeamIn && (
+                      t.eligible ? (
+                        <button className="secondary" disabled={busy} onClick={() => join(t.tournamentId)}>
+                          Join
+                        </button>
+                      ) : (
+                        <span className="text-muted" title="Your program's prestige isn't high enough to draw an invite to this event">
+                          Not eligible
+                        </span>
+                      )
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

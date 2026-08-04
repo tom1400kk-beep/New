@@ -189,9 +189,9 @@ export const api = {
     await persistence.persistSave(state);
     return result;
   },
-  leavePreseasonTournament: async (saveId: string) => {
+  leavePreseasonTournament: async (saveId: string, tournamentId: string) => {
     const state = await ensureLoaded(saveId);
-    const result = actions.leavePreseasonTournament(state);
+    const result = actions.leavePreseasonTournament(state, tournamentId);
     await persistence.persistSave(state);
     return result;
   },
