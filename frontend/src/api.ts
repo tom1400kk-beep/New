@@ -80,4 +80,15 @@ export const api = {
   resignAndAccept: (saveId: string, teamId: string) =>
     request<any>(`/saves/${saveId}/resign-and-accept`, { method: "POST", body: JSON.stringify({ teamId }) }),
   upgradeArena: (saveId: string) => request<any>(`/saves/${saveId}/upgrade-arena`, { method: "POST" }),
+  respondToConferenceInvite: (
+    saveId: string,
+    accept: boolean,
+    targetConferenceId: string,
+    targetDivision: string,
+    replacingTeamId: string
+  ) =>
+    request<any>(`/saves/${saveId}/conference-invite/respond`, {
+      method: "POST",
+      body: JSON.stringify({ accept, targetConferenceId, targetDivision, replacingTeamId }),
+    }),
 };

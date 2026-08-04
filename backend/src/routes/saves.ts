@@ -15,6 +15,8 @@ import { EUROPEAN_COUNTRIES } from "../engine/countries";
 import { mulberry32, clamp } from "../engine/rng";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
+import { normalizeScholarshipsForDivision } from "../engine/conferenceRealignment";
+import { overall } from "../engine/simulate";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import { randomFirstName, randomLastName } from "../engine/names";
 import type { Division } from "../types";
@@ -360,6 +362,56 @@ savesRouter.post("/saves/:id/upgrade-arena", async (req, res) => {
   }
 
   res.json({ granted, oldCapacity, newCapacity, avgTurnoutPct, seasonWinPct });
+});
+
+// Resolving a conference-realignment invite handed back from the last /advance
+// call (see engine/conferenceRealignment.ts). The offer is ephemeral — not
+// persisted between requests — so the client passes back exactly what it was
+// shown; declining is just a no-op.
+savesRouter.post("/saves/:id/conference-invite/respond", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (!save.coachTeamId) return res.status(400).json({ error: "Not currently employed" });
+  const { accept, targetConferenceId, targetDivision, replacingTeamId } = req.body as {
+    accept: boolean; targetConferenceId: string; targetDivision: Division; replacingTeamId: string;
+  };
+  if (!accept) return res.json({ applied: false });
+
+  const myTeam = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { players: true } });
+  const replacingTeam = await prisma.team.findUniqueOrThrow({ where: { id: replacingTeamId }, include: { players: true } });
+  const targetConference = await prisma.conference.findUniqueOrThrow({ where: { id: targetConferenceId } });
+
+  const oldConferenceId = myTeam.conferenceId;
+  const oldDivision = myTeam.division as Division;
+
+  await prisma.team.update({
+    where: { id: myTeam.id },
+    data: { conferenceId: targetConferenceId, division: targetDivision },
+  });
+  await prisma.team.update({
+    where: { id: replacingTeam.id },
+    data: { conferenceId: oldConferenceId, division: oldDivision },
+  });
+
+  // Only the displaced team can end up over its new (lower) scholarship limit —
+  // the promoted team only ever moves to a division with equal or more room.
+  if (targetDivision !== oldDivision) {
+    const scholarshipMap = normalizeScholarshipsForDivision(
+      replacingTeam.players.map((p) => ({ id: p.id, onScholarship: p.onScholarship, overallRating: overall(p) })),
+      oldDivision
+    );
+    await Promise.all(
+      [...scholarshipMap.entries()].map(([playerId, onScholarship]) =>
+        prisma.player.update({ where: { id: playerId }, data: { onScholarship } })
+      )
+    );
+  }
+
+  res.json({
+    applied: true,
+    newConferenceName: targetConference.name,
+    newDivision: targetDivision,
+    replacingTeamName: replacingTeam.name,
+  });
 });
 
 savesRouter.post("/saves/:id/advance", async (req, res) => {

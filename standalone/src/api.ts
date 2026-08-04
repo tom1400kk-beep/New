@@ -230,4 +230,16 @@ export const api = {
     await persistence.persistSave(state);
     return result;
   },
+  respondToConferenceInvite: async (
+    saveId: string,
+    accept: boolean,
+    targetConferenceId: string,
+    targetDivision: string,
+    replacingTeamId: string
+  ) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.respondToConferenceInvite(state, accept, targetConferenceId, targetDivision as any, replacingTeamId);
+    await persistence.persistSave(state);
+    return result;
+  },
 };

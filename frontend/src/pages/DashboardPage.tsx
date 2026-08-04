@@ -155,6 +155,8 @@ export default function DashboardPage() {
   const [rivalries, setRivalries] = useState<any[]>([]);
   const [preview, setPreview] = useState<any>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [conferenceInvite, setConferenceInvite] = useState<any>(null);
+  const [respondingToInvite, setRespondingToInvite] = useState(false);
 
   async function refresh() {
     if (!activeSaveId) return;
@@ -187,9 +189,24 @@ export default function DashboardPage() {
     try {
       const result = await api.advance(activeSaveId);
       setLastResult(result);
+      if (result.offseasonResult?.conferenceInvite) setConferenceInvite(result.offseasonResult.conferenceInvite);
       await refresh();
     } finally {
       setAdvancing(false);
+    }
+  }
+
+  async function respondToInvite(accept: boolean) {
+    if (!activeSaveId || !conferenceInvite) return;
+    setRespondingToInvite(true);
+    try {
+      await api.respondToConferenceInvite(
+        activeSaveId, accept, conferenceInvite.targetConferenceId, conferenceInvite.targetDivision, conferenceInvite.replacingTeamId
+      );
+      setConferenceInvite(null);
+      await refresh();
+    } finally {
+      setRespondingToInvite(false);
     }
   }
 
@@ -434,6 +451,32 @@ export default function DashboardPage() {
             <h3 style={{ marginTop: 4 }}>Injury Report</h3>
             <InjuryReportLine team={preview.awayTeam} />
             <InjuryReportLine team={preview.homeTeam} />
+          </div>
+        </div>
+      )}
+
+      {conferenceInvite && (
+        <div className="modal-backdrop">
+          <div className="modal-panel" style={{ maxWidth: 560 }}>
+            <h2>{conferenceInvite.kind === "DIVISION_PROMOTION" ? "Reclassification Invite" : "Conference Upgrade Invite"}</h2>
+            <p>{conferenceInvite.reason}</p>
+            <div className="player-detail-grid">
+              <div><div className="label">New Conference</div><div className="value">{conferenceInvite.targetConferenceName}</div></div>
+              <div><div className="label">New Division</div><div className="value">{conferenceInvite.targetDivision}</div></div>
+              <div><div className="label">Replaced By</div><div className="value">{conferenceInvite.replacingTeamName}</div></div>
+            </div>
+            <p className="text-muted" style={{ fontSize: "0.82rem", marginTop: 10 }}>
+              Accepting takes effect immediately — new conference schedule, new rivals, new level of competition.
+              Declining keeps things exactly as they are.
+            </p>
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button onClick={() => respondToInvite(true)} disabled={respondingToInvite}>
+                {respondingToInvite ? "..." : "Accept"}
+              </button>
+              <button className="secondary" onClick={() => respondToInvite(false)} disabled={respondingToInvite}>
+                Decline
+              </button>
+            </div>
           </div>
         </div>
       )}

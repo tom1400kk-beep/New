@@ -17,6 +17,8 @@ import { newId, type WorldState } from "./types";
 import { PRESEASON_EVENTS, type PreseasonEventDef } from "../engine/preseasonEvents";
 import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, isTourAffordable, simulateTourGames } from "../engine/internationalTour";
 import type { SimTeam } from "../engine/simulate";
+import { overall } from "../engine/simulate";
+import { normalizeScholarshipsForDivision } from "../engine/conferenceRealignment";
 
 function noisy(rng: () => number, value: number, noise: number): number {
   return Math.round(clamp(value + randInt(rng, -noise, noise), 1, 99));
@@ -558,6 +560,57 @@ export function upgradeArena(state: WorldState) {
   }
 
   return { granted, oldCapacity, newCapacity: team.venueCapacity, avgTurnoutPct, seasonWinPct };
+}
+
+// Resolving a conference-realignment invite handed back from the last advance
+// call (see engine/conferenceRealignment.ts). The offer is ephemeral — not
+// persisted between calls — so the caller passes back exactly what it was
+// shown; declining is just a no-op.
+export function respondToConferenceInvite(
+  state: WorldState,
+  accept: boolean,
+  targetConferenceId: string,
+  targetDivision: Division,
+  replacingTeamId: string
+) {
+  if (!state.save.coachTeamId) throw new Error("Not currently employed");
+  if (!accept) return { applied: false };
+
+  const myTeam = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!myTeam) throw new Error("Team not found");
+  const replacingTeam = state.teams.find((t) => t.id === replacingTeamId);
+  if (!replacingTeam) throw new Error("Replacing team not found");
+  const targetConference = state.conferences.find((c) => c.id === targetConferenceId);
+  if (!targetConference) throw new Error("Target conference not found");
+
+  const oldConferenceId = myTeam.conferenceId;
+  const oldDivision = myTeam.division as Division;
+
+  myTeam.conferenceId = targetConferenceId;
+  myTeam.division = targetDivision;
+  replacingTeam.conferenceId = oldConferenceId;
+  replacingTeam.division = oldDivision;
+
+  // Only the displaced team can end up over its new (lower) scholarship limit —
+  // the promoted team only ever moves to a division with equal or more room.
+  if (targetDivision !== oldDivision) {
+    const replacingPlayers = state.players.filter((p) => p.teamId === replacingTeam.id);
+    const scholarshipMap = normalizeScholarshipsForDivision(
+      replacingPlayers.map((p) => ({ id: p.id, onScholarship: p.onScholarship, overallRating: overall(p) })),
+      oldDivision
+    );
+    for (const p of replacingPlayers) {
+      const onScholarship = scholarshipMap.get(p.id);
+      if (onScholarship !== undefined) p.onScholarship = onScholarship;
+    }
+  }
+
+  return {
+    applied: true,
+    newConferenceName: targetConference.name,
+    newDivision: targetDivision,
+    replacingTeamName: replacingTeam.name,
+  };
 }
 
 export function addWalkOn(state: WorldState, candidateId: string) {

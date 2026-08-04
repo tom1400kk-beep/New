@@ -64,7 +64,11 @@ export interface AdvanceResult {
   gamesPlayedToday: number;
   newPhase: string;
   event: any | null;
-  offseasonResult?: { userFired: boolean; jobOffers: { teamId: string; teamName: string; prestige: number }[] };
+  offseasonResult?: {
+    userFired: boolean;
+    jobOffers: { teamId: string; teamName: string; prestige: number }[];
+    conferenceInvite: import("../engine/conferenceRealignment").RealignmentInvite | null;
+  };
 }
 
 export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> {

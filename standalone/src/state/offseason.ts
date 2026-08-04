@@ -22,6 +22,7 @@ import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes"
 import { maybeGenerateNILPoachingEvent, type NILPoachingContext } from "../engine/nilPoaching";
 import { poachingDestinationPool, generatePoachingInterest, type PortalCandidateTeam } from "../engine/portalPoaching";
 import { overall } from "../engine/simulate";
+import { evaluateRealignmentInvite, type RealignmentInvite } from "../engine/conferenceRealignment";
 import type { ClassYear, Division } from "../types";
 import { DIVISION_RULES } from "../types";
 import { newId, type WorldState, type RivalryRow, type GameEventRow } from "./types";
@@ -43,6 +44,7 @@ function tournamentWinsForTeam(state: WorldState, seasonYear: number, teamId: st
 export interface OffseasonResult {
   userFired: boolean;
   jobOffers: { teamId: string; teamName: string; prestige: number }[];
+  conferenceInvite: RealignmentInvite | null;
 }
 
 export function runOffseason(state: WorldState): OffseasonResult {
@@ -71,6 +73,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
   let userNewLegality = 75;
   let userNewAdRelationshipsJson = "{}";
   let jobOffers: OffseasonResult["jobOffers"] = [];
+  let conferenceInvite: RealignmentInvite | null = null;
   const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
   const firedTeamIds = new Set<string>();
 
@@ -134,7 +137,19 @@ export function runOffseason(state: WorldState): OffseasonResult {
       userNewPrestige = newPrestige;
       userNewLegality = newLegality;
       userNewAdRelationshipsJson = headCoach.adRelationshipsJson;
-      if (fired) userFired = true;
+      if (fired) {
+        userFired = true;
+      } else {
+        conferenceInvite = evaluateRealignmentInvite(
+          { id: team.id, name: team.name, conferenceId: team.conferenceId, division: team.division as Division, prestige: newPrestige },
+          winPct,
+          made,
+          wins,
+          state.teams.map((t) => ({ id: t.id, name: t.name, conferenceId: t.conferenceId, division: t.division as Division, prestige: t.prestige })),
+          state.conferences.map((c) => ({ id: c.id, name: c.name, division: c.division as Division })),
+          rng
+        );
+      }
     }
 
     if (fired) {
@@ -657,5 +672,5 @@ export function runOffseason(state: WorldState): OffseasonResult {
   state.save.currentDate = new Date(Date.UTC(nextSeasonYear, 9, 1));
   state.save.currentPhase = userFired ? "OFFSEASON" : "PRESEASON";
 
-  return { userFired, jobOffers };
+  return { userFired, jobOffers, conferenceInvite };
 }

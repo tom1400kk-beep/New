@@ -7,6 +7,7 @@ import { generateProspectPriorities } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
 import { maybeGenerateNILPoachingEvent, type NILPoachingContext } from "../engine/nilPoaching";
 import { poachingDestinationPool, generatePoachingInterest, type PortalCandidateTeam } from "../engine/portalPoaching";
+import { evaluateRealignmentInvite, type RealignmentInvite } from "../engine/conferenceRealignment";
 import { overall } from "../engine/simulate";
 import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
@@ -45,10 +46,15 @@ async function tournamentWinsForTeam(saveGameId: string, seasonYear: number, tea
   return { made: true, wins };
 }
 
-export async function runOffseason(saveGameId: string): Promise<{ userFired: boolean; jobOffers: { teamId: string; teamName: string; prestige: number }[] }> {
+export async function runOffseason(saveGameId: string): Promise<{
+  userFired: boolean;
+  jobOffers: { teamId: string; teamName: string; prestige: number }[];
+  conferenceInvite: RealignmentInvite | null;
+}> {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: saveGameId } });
   const seasonYear = save.currentSeasonYear;
   const teams = await prisma.team.findMany({ where: { saveGameId }, include: { headCoach: true, athleticDirector: true } });
+  const allConferences = await prisma.conference.findMany({ where: { saveGameId }, select: { id: true, name: true, division: true } });
   const divisionByTeam = new Map(teams.map((t) => [t.id, t.division as Division]));
   const standings = await computeStandings(saveGameId, seasonYear);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
@@ -76,6 +82,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   let userNewLegality = 75;
   let userNewAdRelationshipsJson = "{}";
   let jobOffers: { teamId: string; teamName: string; prestige: number }[] = [];
+  let conferenceInvite: RealignmentInvite | null = null;
   const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
   const firedTeamIds = new Set<string>();
 
@@ -138,7 +145,19 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       userNewPrestige = newPrestige;
       userNewLegality = newLegality;
       if (newAdRelationshipsJson) userNewAdRelationshipsJson = newAdRelationshipsJson;
-      if (fired) userFired = true;
+      if (fired) {
+        userFired = true;
+      } else {
+        conferenceInvite = evaluateRealignmentInvite(
+          { id: team.id, name: team.name, conferenceId: team.conferenceId, division: team.division as Division, prestige: newPrestige },
+          winPct,
+          made,
+          wins,
+          teams.map((t) => ({ id: t.id, name: t.name, conferenceId: t.conferenceId, division: t.division as Division, prestige: t.prestige })),
+          allConferences.map((c) => ({ id: c.id, name: c.name, division: c.division as Division })),
+          rng
+        );
+      }
     }
 
     if (fired) {
@@ -727,5 +746,5 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     },
   });
 
-  return { userFired, jobOffers };
+  return { userFired, jobOffers, conferenceInvite };
 }
