@@ -205,7 +205,11 @@ savesRouter.get("/saves/:id/job-offers", async (req, res) => {
       const currentCol = currentTeam ? costOfLivingIndex(currentTeam.state) : null;
       return {
         teamId: t.id, teamName: t.name, prestige: t.prestige, division: t.division,
-        athleticDirectorName: t.athleticDirector?.name ?? null,
+        athleticDirector: t.athleticDirector ? {
+          id: t.athleticDirector.id, name: t.athleticDirector.name, patience: t.athleticDirector.patience,
+          winFocus: t.athleticDirector.winFocus, integrityStandard: t.athleticDirector.integrityStandard,
+          loyalty: t.athleticDirector.loyalty, yearsAtCurrentJob: t.athleticDirector.yearsAtCurrentJob,
+        } : null,
         adRemembersYou: relScore !== null && relScore >= 70,
         salary: t.baseSalary,
         state: t.state,

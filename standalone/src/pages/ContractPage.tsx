@@ -100,6 +100,7 @@ export default function ContractPage() {
   const [arenaResult, setArenaResult] = useState<any>(null);
   const [upgradingArena, setUpgradingArena] = useState(false);
   const [coachStats, setCoachStats] = useState<any>(null);
+  const [selectedAd, setSelectedAd] = useState<any>(null);
 
   async function refresh() {
     if (!activeSaveId) return;
@@ -315,7 +316,10 @@ export default function ContractPage() {
         </div>
         {team.athleticDirector && (
           <p className="text-muted" style={{ marginTop: 12 }}>
-            Athletic Director: {team.athleticDirector.name}
+            Athletic Director:{" "}
+            <button className="player-name-link" onClick={() => setSelectedAd(team.athleticDirector)}>
+              {team.athleticDirector.name}
+            </button>
             {adStyleLine(team.athleticDirector) ? ` (${adStyleLine(team.athleticDirector)})` : ""}
           </p>
         )}
@@ -377,7 +381,14 @@ export default function ContractPage() {
                 {o.salary != null && <span className="text-muted"> · {fmtMoney(o.salary)}/yr</span>}
                 {o.costOfLivingIndex != null && <span className="text-muted"> · {colLabel(o.costOfLivingIndex)} cost of living</span>}
                 {offerLine(o) && <span className="text-muted"> ({offerLine(o)})</span>}
-                {o.athleticDirectorName && <span className="text-muted"> · AD: {o.athleticDirectorName}</span>}
+                {o.athleticDirector && (
+                  <span className="text-muted">
+                    {" "}· AD:{" "}
+                    <button className="player-name-link" onClick={() => setSelectedAd(o.athleticDirector)}>
+                      {o.athleticDirector.name}
+                    </button>
+                  </span>
+                )}
                 {o.adRemembersYou && <span className="text-good"> — remembers you well from a previous job together</span>}
                 {" "}
                 <button onClick={() => resignAndAccept(o.teamId)}>Leave for This Job</button>
@@ -386,6 +397,30 @@ export default function ContractPage() {
           </div>
         )}
       </div>
+
+      {selectedAd && (
+        <div className="modal-backdrop" onClick={() => setSelectedAd(null)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <h2>{selectedAd.name}</h2>
+            <p className="text-muted">
+              Athletic Director · {selectedAd.yearsAtCurrentJob} year{selectedAd.yearsAtCurrentJob === 1 ? "" : "s"} in the role
+            </p>
+            {adStyleLine(selectedAd) && <p className="text-muted" style={{ marginTop: -8 }}>{adStyleLine(selectedAd)}</p>}
+            <div className="player-detail-grid">
+              <div><div className="label">Patience</div><div className="value">{selectedAd.patience}/100</div></div>
+              <div><div className="label">Win Focus</div><div className="value">{selectedAd.winFocus}/100</div></div>
+              <div><div className="label">Integrity Standard</div><div className="value">{selectedAd.integrityStandard}/100</div></div>
+              <div><div className="label">Loyalty</div><div className="value">{selectedAd.loyalty}/100</div></div>
+            </div>
+            <p className="text-muted" style={{ fontSize: "0.8rem", marginTop: 12 }}>
+              Patience and win focus shape how forgiving they are of a rough season before your seat gets hot. Integrity
+              standard sets how strict they are about off-court issues before they'll hire — or keep — a coach. Loyalty
+              affects how much a personal relationship with you protects your job, for better or worse.
+            </p>
+            <button style={{ marginTop: 12 }} onClick={() => setSelectedAd(null)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

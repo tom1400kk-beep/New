@@ -414,7 +414,10 @@ export function getJobOffers(state: WorldState) {
       const col = costOfLivingIndex(team.state);
       return {
         teamId: team.id, teamName: team.name, prestige: team.prestige, division: team.division,
-        athleticDirectorName: ad?.name ?? null,
+        athleticDirector: ad ? {
+          id: ad.id, name: ad.name, patience: ad.patience, winFocus: ad.winFocus,
+          integrityStandard: ad.integrityStandard, loyalty: ad.loyalty, yearsAtCurrentJob: ad.yearsAtCurrentJob,
+        } : null,
         adRemembersYou: ad ? adRelationshipScore(myRelationships, ad.id) >= 70 : false,
         salary: team.baseSalary,
         state: team.state,

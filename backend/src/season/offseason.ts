@@ -87,6 +87,10 @@ export async function runOffseason(saveGameId: string): Promise<{
   let conferenceInvite: RealignmentInvite | null = null;
   const vacancies: { teamId: string; prestige: number; academicReputation: number }[] = [];
   const firedTeamIds = new Set<string>();
+  // AI teams whose coach was just fired -- resolved after the main loop by
+  // the coaching carousel below, which may hire them out to a different
+  // program instead of just discarding them into a fresh random replacement.
+  const departingCoaches: { teamId: string; coachId: string; reputation: number; legalityReputation: number; priorPrestige: number }[] = [];
 
   for (const team of teams) {
     if (!team.headCoach) continue;
@@ -182,24 +186,19 @@ export async function runOffseason(saveGameId: string): Promise<{
     if (fired) {
       firedTeamIds.add(team.id);
       vacancies.push({ teamId: team.id, prestige: newPrestige, academicReputation: team.academicReputation });
-      const replacementArchetype = randomArchetype(rng);
-      const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
-      const replacementSkills = {
-        reputation: replacementSkillRoll.reputation,
-        offenseSkill: replacementSkillRoll.offenseSkill,
-        defenseSkill: replacementSkillRoll.defenseSkill,
-        recruitingSkill: replacementSkillRoll.recruitingSkill,
-        developmentSkill: replacementSkillRoll.developmentSkill,
-        archetype: replacementArchetype,
-        background: null as string | null,
-      };
       if (team.headCoach.isPlayerControlled) {
         // Bench the user's coach (identity + career stats persist) rather than
         // overwriting them — a fresh AI coach takes over the vacated program.
+        const replacementArchetype = randomArchetype(rng);
+        const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
         const replacement = await prisma.coach.create({
           data: {
             id: randomUUID(), saveGameId, name: `${randomFirstName(rng)} ${randomLastName(rng)}`,
-            isPlayerControlled: false, hotSeatLevel: 0, ...replacementSkills, careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
+            isPlayerControlled: false, hotSeatLevel: 0,
+            reputation: replacementSkillRoll.reputation, offenseSkill: replacementSkillRoll.offenseSkill,
+            defenseSkill: replacementSkillRoll.defenseSkill, recruitingSkill: replacementSkillRoll.recruitingSkill,
+            developmentSkill: replacementSkillRoll.developmentSkill, archetype: replacementArchetype, background: null,
+            careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
           },
         });
         await prisma.team.update({ where: { id: team.id }, data: { headCoachId: replacement.id } });
@@ -211,15 +210,19 @@ export async function runOffseason(saveGameId: string): Promise<{
           },
         });
       } else {
+        // AI coach: don't overwrite their identity yet — credit their final
+        // season onto their own row and hold them as a carousel candidate.
+        // The carousel pass below (after every team's outcome is known)
+        // decides whether another program hires them or their identity gets
+        // reset for a fresh replacement, mirroring the AD turnover carousel.
+        const updatedCareerWins = team.headCoach.careerWins + record.wins;
+        const updatedCareerLosses = team.headCoach.careerLosses + record.losses;
         await prisma.coach.update({
           where: { id: team.headCoach.id },
-          data: {
-            name: `${randomFirstName(rng)} ${randomLastName(rng)}`,
-            isPlayerControlled: false,
-            hotSeatLevel: 0,
-            ...replacementSkills,
-            careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
-          },
+          data: { careerWins: updatedCareerWins, careerLosses: updatedCareerLosses, legalityReputation: newLegality, reputation: newReputation },
+        });
+        departingCoaches.push({
+          teamId: team.id, coachId: team.headCoach.id, reputation: newReputation, legalityReputation: newLegality, priorPrestige: team.prestige,
         });
       }
     } else {
@@ -331,6 +334,60 @@ export async function runOffseason(saveGameId: string): Promise<{
         data: { id: randomUUID(), saveGameId, name: `${randomFirstName(rng)} ${randomLastName(rng)}`, ...freshTraits, yearsAtCurrentJob: 0 },
       });
       await prisma.team.update({ where: { id: teamId }, data: { athleticDirectorId: fresh.id } });
+    }
+  }
+
+  // ---- AI coaching carousel: a fired coach sometimes lands at another
+  // program instead of just vanishing into a freshly-generated unknown —
+  // same idea as the AD turnover carousel above. Purely AI-vs-AI; the
+  // player's own re-hiring runs through generateJobOffers below, which has
+  // its own reputation/legality/AD-relationship-aware logic. ----
+  if (departingCoaches.length > 0) {
+    const carouselTeams = await prisma.team.findMany({
+      where: { id: { in: departingCoaches.map((v) => v.teamId) } },
+      include: { athleticDirector: true },
+    });
+    const candidatePool = [...departingCoaches].sort(() => rng() - 0.5);
+    const claimedCoachIds = new Set<string>();
+    const resolvedTeamIds = new Set<string>();
+
+    for (const vacancy of departingCoaches) {
+      const team = carouselTeams.find((t) => t.id === vacancy.teamId)!;
+      const candidateIndex = candidatePool.findIndex((c) =>
+        c.coachId !== vacancy.coachId && !claimedCoachIds.has(c.coachId) &&
+        team.prestige <= clamp(c.reputation + 10, 0, 100) && team.prestige > c.priorPrestige - 15 &&
+        meetsLegalityBar(c.legalityReputation, team.academicReputation, team.athleticDirector?.integrityStandard)
+      );
+      if (candidateIndex !== -1 && rng() < 0.35) {
+        const hired = candidatePool[candidateIndex];
+        claimedCoachIds.add(hired.coachId);
+        resolvedTeamIds.add(vacancy.teamId);
+        await prisma.team.update({ where: { id: vacancy.teamId }, data: { headCoachId: hired.coachId } });
+        await prisma.coach.update({ where: { id: hired.coachId }, data: { isPlayerControlled: false, hotSeatLevel: 0, yearsAtCurrentJob: 0 } });
+      }
+    }
+
+    for (const vacancy of departingCoaches) {
+      if (resolvedTeamIds.has(vacancy.teamId)) continue; // already filled via the carousel above
+      const team = carouselTeams.find((t) => t.id === vacancy.teamId)!;
+      const replacementArchetype = randomArchetype(rng);
+      const replacementSkillRoll = generateCoachSkills(rng, team.prestige, replacementArchetype);
+      const replacementData = {
+        name: `${randomFirstName(rng)} ${randomLastName(rng)}`, isPlayerControlled: false, hotSeatLevel: 0,
+        reputation: replacementSkillRoll.reputation, offenseSkill: replacementSkillRoll.offenseSkill,
+        defenseSkill: replacementSkillRoll.defenseSkill, recruitingSkill: replacementSkillRoll.recruitingSkill,
+        developmentSkill: replacementSkillRoll.developmentSkill, archetype: replacementArchetype, background: null as string | null,
+        careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
+      };
+      if (claimedCoachIds.has(vacancy.coachId)) {
+        // Our own just-fired coach got scooped up by another program in the
+        // loop above — their row now belongs there, so this team needs a
+        // brand-new coach rather than reusing (and corrupting) that identity.
+        const fresh = await prisma.coach.create({ data: { id: randomUUID(), saveGameId, ...replacementData } });
+        await prisma.team.update({ where: { id: vacancy.teamId }, data: { headCoachId: fresh.id } });
+      } else {
+        await prisma.coach.update({ where: { id: vacancy.coachId }, data: replacementData });
+      }
     }
   }
 
