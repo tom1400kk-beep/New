@@ -301,6 +301,12 @@ export default function RosterPage() {
                 <div className="label">Origin</div>
                 <div className="value">{ORIGIN_LABELS[selectedPlayer.origin] ?? selectedPlayer.origin}</div>
               </div>
+              {selectedPlayer.origin === "HIGH_SCHOOL" && selectedPlayer.highSchool && (
+                <div>
+                  <div className="label">High School</div>
+                  <div className="value">{selectedPlayer.highSchool}</div>
+                </div>
+              )}
               {selectedPlayer.potential != null && (
                 <div>
                   <div className="label">Potential</div>

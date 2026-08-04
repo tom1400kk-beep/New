@@ -8,6 +8,7 @@ import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
 import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedIntensity, POSTSEASON_RIVALRY_THRESHOLD } from "../engine/rivalry";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
+import { POWERHOUSE_SCHOOL_NAMES, POWERHOUSE_D1_CLASS_CAP, capHighSchoolIfNeeded } from "../engine/highSchools";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generatePreseasonTournaments } from "./preseasonTournaments";
 import { generateDivisionInSeasonEvents } from "./inSeasonEvents";
@@ -588,7 +589,13 @@ export function runOffseason(state: WorldState): OffseasonResult {
   }
   state.transferInterests = state.transferInterests.filter((i) => !priorPortalPlayers.some((p) => p.id === i.playerId));
 
-  const classToSign = state.prospects.filter((p) => p.graduationYear === seasonYear + 1);
+  const classToSign = state.prospects
+    .filter((p) => p.graduationYear === seasonYear + 1)
+    .sort((a, b) => b.starRating - a.starRating);
+  // Caps how many D1 signings one powerhouse high school can produce in this
+  // class, summed across every D1 team combined — shared with the AI roster
+  // backfill below, since both represent the same incoming class this cycle.
+  const d1SigningsByPowerhouseSchool = new Map<string, number>();
   for (const prospect of classToSign) {
     if (prospect.source === "HIGH_SCHOOL") {
       prospect.scoring = driftProspectRating(rng, prospect.scoring, prospect.potential);
@@ -619,7 +626,10 @@ export function runOffseason(state: WorldState): OffseasonResult {
     }
 
     if (winnerTeamId === undefined) {
-      const roomyInterest = eligibleInterest.filter((i) => hasRoom(i.teamId));
+      const isPowerhouseCapped = prospect.source === "HIGH_SCHOOL"
+        && POWERHOUSE_SCHOOL_NAMES.has(prospect.highSchool)
+        && (d1SigningsByPowerhouseSchool.get(prospect.highSchool) ?? 0) >= POWERHOUSE_D1_CLASS_CAP;
+      const roomyInterest = eligibleInterest.filter((i) => hasRoom(i.teamId) && !(isPowerhouseCapped && divisionByTeam.get(i.teamId) === "D1"));
       if (roomyInterest.length === 0) {
         prospect.signed = false;
         prospect.committedTeamId = null;
@@ -655,10 +665,14 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const onScholarship = DIVISION_RULES[finalDivision].hasScholarships && (scholarshipCounts.get(finalTeamId) ?? 0) < DIVISION_RULES[finalDivision].scholarshipLimit;
     rosterCounts.set(finalTeamId, (rosterCounts.get(finalTeamId) ?? 0) + 1);
     if (onScholarship) scholarshipCounts.set(finalTeamId, (scholarshipCounts.get(finalTeamId) ?? 0) + 1);
+    if (finalDivision === "D1" && prospect.source === "HIGH_SCHOOL" && POWERHOUSE_SCHOOL_NAMES.has(prospect.highSchool)) {
+      d1SigningsByPowerhouseSchool.set(prospect.highSchool, (d1SigningsByPowerhouseSchool.get(prospect.highSchool) ?? 0) + 1);
+    }
 
     state.players.push({
       id: newId(), teamId: finalTeamId, firstName: prospect.firstName, lastName: prospect.lastName,
       position: prospect.position, classYear: "FR", heightInches: 76, hometownState: prospect.hometownState, hometownCity: prospect.hometownCity,
+      highSchool: prospect.highSchool,
       countryOfOrigin: prospect.countryOfOrigin, origin: prospect.source,
       scoring: prospect.scoring, threePoint: prospect.threePoint, finishing: prospect.finishing,
       playmaking: prospect.playmaking, rebounding: prospect.rebounding, defense: prospect.defense,
@@ -685,6 +699,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const p = generateHighSchoolProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity,
+      highSchool: p.highSchool,
       countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
@@ -698,6 +713,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const p = generateJucoProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity,
+      highSchool: p.highSchool,
       countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
@@ -711,6 +727,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
     const p = generateInternationalProspect(rng, seasonYear + 2);
     state.prospects.push({
       id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity,
+      highSchool: p.highSchool,
       countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
@@ -759,7 +776,9 @@ export function runOffseason(state: WorldState): OffseasonResult {
     for (const p of roster) {
       state.players.push({
         id: newId(), teamId: team.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
-        classYear: "FR", heightInches: p.ratings.heightInches, hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, origin: p.origin,
+        classYear: "FR", heightInches: p.ratings.heightInches, hometownState: p.hometownState, hometownCity: p.hometownCity,
+        highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, teamDivision === "D1", d1SigningsByPowerhouseSchool) : "",
+        countryOfOrigin: p.countryOfOrigin, origin: p.origin,
         scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
         playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
         athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,

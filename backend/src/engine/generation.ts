@@ -5,6 +5,7 @@ import { weightedStateList, STATE_PROFILES } from "./regions";
 import { weightedCountryList, COUNTRY_PROFILES } from "./countries";
 import { pickCityForState } from "./cities";
 import { pickCityForCountry } from "./internationalCities";
+import { pickHighSchool } from "./highSchools";
 import { generateProspectPriorities, boostPriority, type PriorityProfile } from "./priorities";
 import type { ClassYear, Division, PlayerOrigin, PositionType, ProspectSource } from "../types";
 
@@ -99,6 +100,7 @@ export interface GeneratedProspect {
   position: PositionType;
   hometownState: string;
   hometownCity: string; // real US city/town matching hometownState; "" for international prospects
+  highSchool: string; // US high school attended; "" for JUCO/international prospects
   countryOfOrigin: string | null; // null = USA; set for international prospects and foreign-born HS players
   source: ProspectSource;
   starRating: number;
@@ -150,6 +152,8 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
   const { base, variance } = STAR_TIER_TALENT[starRating];
   const position = POSITIONS[Math.floor(rng() * POSITIONS.length)];
   const ratings = generateRatings(rng, position, base, variance, starRating);
+  const city = pickCityForState(rng, state);
+  const highSchool = pickHighSchool(rng, starRating, city, state);
 
   // Some US high schoolers were born overseas — flavor/realism, doesn't change
   // where they play (still a domestic HS recruit with a US hometown state).
@@ -173,7 +177,8 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
     lastName,
     position,
     hometownState: state,
-    hometownCity: pickCityForState(rng, state),
+    hometownCity: city,
+    highSchool,
     countryOfOrigin,
     source: "HIGH_SCHOOL",
     starRating,
@@ -207,6 +212,7 @@ export function generateJucoProspect(rng: () => number, graduationYear: number):
     position,
     hometownState: state,
     hometownCity: pickCityForState(rng, state),
+    highSchool: "",
     countryOfOrigin: jucoCountryOfOrigin,
     source: "JUCO",
     starRating,
@@ -237,6 +243,7 @@ export function generateInternationalProspect(rng: () => number, graduationYear:
     position,
     hometownState: "",
     hometownCity: pickCityForCountry(rng, country),
+    highSchool: "",
     countryOfOrigin: country,
     source: "INTERNATIONAL",
     starRating,
@@ -260,6 +267,7 @@ export interface GeneratedPlayer {
   classYear: ClassYear;
   hometownState: string;
   hometownCity: string;
+  highSchool: string;
   countryOfOrigin: string | null;
   origin: PlayerOrigin;
   eligibilityYearsLeft: number;
@@ -320,13 +328,15 @@ export function generateRosterForTeam(
 
     const { firstName, lastName } = pickName(rng, countryOfOrigin);
     const isInternational = origin === "INTERNATIONAL";
+    const city = isInternational ? pickCityForCountry(rng, countryOfOrigin!) : pickCityForState(rng, state);
     players.push({
       firstName,
       lastName,
       position,
       classYear,
       hometownState: isInternational ? "" : state,
-      hometownCity: isInternational ? pickCityForCountry(rng, countryOfOrigin!) : pickCityForState(rng, state),
+      hometownCity: city,
+      highSchool: origin === "HIGH_SCHOOL" ? pickHighSchool(rng, starTierApprox, city, state) : "",
       countryOfOrigin,
       origin,
       eligibilityYearsLeft: ELIGIBILITY_BY_CLASS[classYear],

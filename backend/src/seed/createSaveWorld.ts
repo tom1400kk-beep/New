@@ -7,6 +7,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
+import { capHighSchoolIfNeeded } from "../engine/highSchools";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
 import { generatePreseasonTournaments, type PreseasonGenerationResult } from "../season/preseasonTournaments";
@@ -90,6 +91,19 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   }[] = [];
   const playerRows: any[] = [];
   const pendingTeams: PendingTeam[] = [];
+
+  // Caps how many D1 signees any one powerhouse high school can produce per
+  // graduating class — bucketed by classYear since this single pass generates
+  // all 4 class years at once, each representing a different real-world class.
+  const hsCapCountersByClassYear = new Map<string, Map<string, number>>();
+  function hsCapCounterFor(classYear: string): Map<string, number> {
+    let counter = hsCapCountersByClassYear.get(classYear);
+    if (!counter) {
+      counter = new Map<string, number>();
+      hsCapCountersByClassYear.set(classYear, counter);
+    }
+    return counter;
+  }
 
   let foundChosenTeam = false;
 
@@ -179,6 +193,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
           heightInches: p.ratings.heightInches,
           hometownState: p.hometownState,
           hometownCity: p.hometownCity,
+          highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, div === "D1", hsCapCounterFor(p.classYear)) : "",
           countryOfOrigin: p.countryOfOrigin,
           origin: p.origin,
           scoring: p.ratings.scoring,
@@ -340,6 +355,7 @@ function prospectFromGenerated(saveGameId: string, p: ReturnType<typeof generate
     position: p.position,
     hometownState: p.hometownState,
     hometownCity: p.hometownCity,
+    highSchool: p.highSchool,
     countryOfOrigin: p.countryOfOrigin,
     source: p.source,
     starRating: p.starRating,

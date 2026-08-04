@@ -14,6 +14,7 @@ import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
 import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedIntensity, POSTSEASON_RIVALRY_THRESHOLD } from "../engine/rivalry";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
+import { POWERHOUSE_SCHOOL_NAMES, POWERHOUSE_D1_CLASS_CAP, capHighSchoolIfNeeded } from "../engine/highSchools";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generatePreseasonTournaments, type PreseasonGenerationResult } from "./preseasonTournaments";
 import { generateDivisionInSeasonEvents } from "./inSeasonEvents";
@@ -647,7 +648,12 @@ export async function runOffseason(saveGameId: string): Promise<{
   const classToSign = await prisma.prospect.findMany({
     where: { saveGameId, graduationYear: seasonYear + 1 },
     include: { interest: true },
+    orderBy: { starRating: "desc" },
   });
+  // Caps how many D1 signings one powerhouse high school can produce in this
+  // class, summed across every D1 team combined — shared with the AI roster
+  // backfill below, since both represent the same incoming class this cycle.
+  const d1SigningsByPowerhouseSchool = new Map<string, number>();
   for (const prospect of classToSign) {
     if (prospect.source === "HIGH_SCHOOL") {
       prospect.scoring = driftProspectRating(rng, prospect.scoring, prospect.potential);
@@ -683,7 +689,10 @@ export async function runOffseason(saveGameId: string): Promise<{
     }
 
     if (winnerTeamId === undefined) {
-      const roomyInterest = eligibleInterest.filter((i) => hasRoom(i.teamId));
+      const isPowerhouseCapped = prospect.source === "HIGH_SCHOOL"
+        && POWERHOUSE_SCHOOL_NAMES.has(prospect.highSchool)
+        && (d1SigningsByPowerhouseSchool.get(prospect.highSchool) ?? 0) >= POWERHOUSE_D1_CLASS_CAP;
+      const roomyInterest = eligibleInterest.filter((i) => hasRoom(i.teamId) && !(isPowerhouseCapped && divisionByTeam.get(i.teamId) === "D1"));
       if (roomyInterest.length === 0) {
         await prisma.prospect.update({ where: { id: prospect.id }, data: { signed: false, committedTeamId: null, ...driftedRatings } });
         continue;
@@ -719,12 +728,16 @@ export async function runOffseason(saveGameId: string): Promise<{
     const onScholarship = DIVISION_RULES[finalDivision].hasScholarships && (scholarshipCounts.get(finalTeamId) ?? 0) < DIVISION_RULES[finalDivision].scholarshipLimit;
     rosterCounts.set(finalTeamId, (rosterCounts.get(finalTeamId) ?? 0) + 1);
     if (onScholarship) scholarshipCounts.set(finalTeamId, (scholarshipCounts.get(finalTeamId) ?? 0) + 1);
+    if (finalDivision === "D1" && prospect.source === "HIGH_SCHOOL" && POWERHOUSE_SCHOOL_NAMES.has(prospect.highSchool)) {
+      d1SigningsByPowerhouseSchool.set(prospect.highSchool, (d1SigningsByPowerhouseSchool.get(prospect.highSchool) ?? 0) + 1);
+    }
 
     await prisma.player.create({
       data: {
         id: randomUUID(), saveGameId, teamId: finalTeamId,
         firstName: prospect.firstName, lastName: prospect.lastName, position: prospect.position,
         classYear: "FR", heightInches: 76, hometownState: prospect.hometownState, hometownCity: prospect.hometownCity,
+        highSchool: prospect.highSchool,
         countryOfOrigin: prospect.countryOfOrigin,
         origin: prospect.source,
         scoring: prospect.scoring, threePoint: prospect.threePoint, finishing: prospect.finishing,
@@ -757,7 +770,7 @@ export async function runOffseason(saveGameId: string): Promise<{
     const p = generateHighSchoolProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
-      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+      hometownState: p.hometownState, hometownCity: p.hometownCity, highSchool: p.highSchool, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
@@ -771,7 +784,7 @@ export async function runOffseason(saveGameId: string): Promise<{
     const p = generateJucoProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
-      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+      hometownState: p.hometownState, hometownCity: p.hometownCity, highSchool: p.highSchool, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
@@ -785,7 +798,7 @@ export async function runOffseason(saveGameId: string): Promise<{
     const p = generateInternationalProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
-      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+      hometownState: p.hometownState, hometownCity: p.hometownCity, highSchool: p.highSchool, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
@@ -834,7 +847,9 @@ export async function runOffseason(saveGameId: string): Promise<{
     const rows = roster.map((p) => ({
       id: randomUUID(), saveGameId, teamId: team.id, firstName: p.firstName, lastName: p.lastName,
       position: p.position, classYear: "FR" as ClassYear, heightInches: p.ratings.heightInches,
-      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, origin: p.origin, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
+      hometownState: p.hometownState, hometownCity: p.hometownCity,
+      highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, teamDivision === "D1", d1SigningsByPowerhouseSchool) : "",
+      countryOfOrigin: p.countryOfOrigin, origin: p.origin, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)), potential: p.ratings.potential,

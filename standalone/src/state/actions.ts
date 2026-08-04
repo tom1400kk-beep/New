@@ -53,6 +53,7 @@ export interface RecruitingBoardEntry {
   position: string;
   hometownState: string;
   hometownCity: string;
+  highSchool: string;
   countryOfOrigin: string | null;
   source: string;
   starRating: number;
@@ -87,7 +88,7 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
       const interest = state.interests.find((i) => i.prospectId === p.id && i.teamId === teamId);
       return {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
-        hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
+        hometownState: p.hometownState, hometownCity: p.hometownCity, highSchool: p.highSchool, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
         playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
         topPriorities: topPriorities(parsePriorities(p.prioritiesJson), 3),
         pipelineScore: p.hometownState ? pipelineScore(pipeline, p.hometownState) : null,
@@ -661,7 +662,8 @@ export function addWalkOn(state: WorldState, candidateId: string) {
 
   const player = {
     id: newId(), teamId: team.id, firstName: candidate.firstName, lastName: candidate.lastName, position: candidate.position,
-    classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, hometownCity: candidate.hometownCity, countryOfOrigin: candidate.countryOfOrigin,
+    classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, hometownCity: candidate.hometownCity, highSchool: "",
+    countryOfOrigin: candidate.countryOfOrigin,
     origin: candidate.origin,
     scoring: candidate.scoring, threePoint: candidate.threePoint, finishing: candidate.finishing,
     playmaking: candidate.playmaking, rebounding: candidate.rebounding, defense: candidate.defense,

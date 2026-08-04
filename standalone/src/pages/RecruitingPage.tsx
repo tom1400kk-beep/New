@@ -161,6 +161,9 @@ export default function RecruitingPage() {
                 <div className="label">Hometown</div>
                 <div className="value" title={pipelineTitle(selectedRecruit)}>{homeLabel(selectedRecruit)}</div>
               </div>
+              {selectedRecruit.source === "HIGH_SCHOOL" && selectedRecruit.highSchool && (
+                <div><div className="label">High School</div><div className="value">{selectedRecruit.highSchool}</div></div>
+              )}
               <div><div className="label">Interest</div><div className="value">{selectedRecruit.interestLevel}</div></div>
               <div><div className="label">Points Invested</div><div className="value">{selectedRecruit.pointsInvested}</div></div>
               {selectedRecruit.pipelineScore != null && (

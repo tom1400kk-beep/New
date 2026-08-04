@@ -5,6 +5,7 @@ import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
+import { capHighSchoolIfNeeded } from "../engine/highSchools";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
@@ -54,6 +55,19 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   type PendingTeam = { id: string; name: string; state: string; conferenceId: string; division: Division; prestige: number };
   const pendingTeams: PendingTeam[] = [];
   let chosenTeamId: string | null = null;
+
+  // Caps how many D1 signees any one powerhouse high school can produce per
+  // graduating class — bucketed by classYear since this single pass generates
+  // all 4 class years at once, each representing a different real-world class.
+  const hsCapCountersByClassYear = new Map<string, Map<string, number>>();
+  function hsCapCounterFor(classYear: string): Map<string, number> {
+    let counter = hsCapCountersByClassYear.get(classYear);
+    if (!counter) {
+      counter = new Map<string, number>();
+      hsCapCountersByClassYear.set(classYear, counter);
+    }
+    return counter;
+  }
 
   for (const div of ALL_DIVISIONS) {
     const league = loadLeagueData(div);
@@ -137,7 +151,9 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         players.push({
           id: newId(), teamId,
           firstName: p.firstName, lastName: p.lastName, position: p.position, classYear: p.classYear,
-          heightInches: p.ratings.heightInches, hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, origin: p.origin,
+          heightInches: p.ratings.heightInches, hometownState: p.hometownState, hometownCity: p.hometownCity,
+          highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, div === "D1", hsCapCounterFor(p.classYear)) : "",
+          countryOfOrigin: p.countryOfOrigin, origin: p.origin,
           scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
           playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
           athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
@@ -268,7 +284,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 function prospectFromGenerated(p: ReturnType<typeof generateHighSchoolProspect>): ProspectRow {
   return {
     id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position,
-    hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+    hometownState: p.hometownState, hometownCity: p.hometownCity, highSchool: p.highSchool, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
     scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
     playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
     athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,

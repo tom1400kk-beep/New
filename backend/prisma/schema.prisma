@@ -269,6 +269,7 @@ model Player {
   heightInches     Int
   hometownState    String
   hometownCity     String   @default("") // real US city/town matching hometownState; "" for international
+  highSchool       String   @default("") // US high school attended; "" for JUCO/international/transfer origins
   countryOfOrigin  String?  // null = USA; set for international players and foreign-born HS recruits
   origin           String   @default("HIGH_SCHOOL")
 
@@ -321,6 +322,7 @@ model Prospect {
   position         String
   hometownState    String
   hometownCity     String   @default("")
+  highSchool       String   @default("") // US high school attended; "" for JUCO/international prospects
   countryOfOrigin  String?  // null = USA; set for international prospects and foreign-born HS recruits
   source           String
   starRating       Int      // 1-5

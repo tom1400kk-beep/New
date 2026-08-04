@@ -112,6 +112,7 @@ export interface PlayerRow {
   heightInches: number;
   hometownState: string;
   hometownCity: string;
+  highSchool: string;
   countryOfOrigin: string | null;
   origin: string;
   scoring: number;
@@ -180,6 +181,7 @@ export interface ProspectRow {
   position: string;
   hometownState: string;
   hometownCity: string;
+  highSchool: string;
   countryOfOrigin: string | null;
   source: string;
   starRating: number;
