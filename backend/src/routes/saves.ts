@@ -11,7 +11,7 @@ import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCa
 import { generateStartingJobOffers, type CandidateJob } from "../engine/coachCreation";
 import { meetsLegalityBar, expectedWinPct, generateJobOffers, type JobOpening } from "../engine/career";
 import { parseAdRelationships, adRelationshipScore, updateAdRelationship } from "../engine/athleticDirector";
-import { EUROPEAN_COUNTRIES } from "../engine/countries";
+import { INTERNATIONAL_COUNTRIES } from "../engine/countries";
 import { mulberry32, clamp } from "../engine/rng";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
@@ -26,7 +26,7 @@ export const savesRouter = Router();
 const ALL_DIVISIONS: Division[] = ["D1", "D2", "D3"];
 
 savesRouter.get("/coach-options", (_req, res) => {
-  res.json({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS, countries: EUROPEAN_COUNTRIES });
+  res.json({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS, countries: INTERNATIONAL_COUNTRIES });
 });
 
 // The full national school list (all divisions), used both for the alma

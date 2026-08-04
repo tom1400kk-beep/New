@@ -136,6 +136,78 @@ const POOLS: Record<string, NamePool> = {
     first: ["Filip", "Stefan", "Marko", "Aleksandar", "Bojan", "Petar", "Ivan", "Damjan", "Nikola", "Vlatko"],
     last: ["Stojanov", "Nikolov", "Petrov", "Trajkovski", "Angelov", "Ristovski", "Dimitrov", "Kostov", "Georgiev", "Todorov"],
   },
+  Canada: {
+    first: ["Liam", "Noah", "Ethan", "Jacob", "Owen", "Mason", "Lucas", "Gabriel", "Olivier", "William"],
+    last: ["Smith", "Brown", "Tremblay", "Gagnon", "Roy", "Wilson", "MacDonald", "Campbell", "Bouchard", "Leblanc"],
+  },
+  Nigeria: {
+    first: ["Chidi", "Emeka", "Chinedu", "Ikenna", "Tobenna", "Adewale", "Femi", "Oluwaseun", "Kelechi", "Chukwuemeka"],
+    last: ["Okafor", "Adeyemi", "Okonkwo", "Eze", "Balogun", "Nwosu", "Chukwu", "Afolabi", "Obi", "Adeleke"],
+  },
+  Australia: {
+    first: ["Jack", "Oliver", "William", "Lachlan", "Ethan", "James", "Cooper", "Harrison", "Riley", "Noah"],
+    last: ["Smith", "Wilson", "Taylor", "Anderson", "Thompson", "White", "Martin", "Clarke", "Mitchell", "Harris"],
+  },
+  Senegal: {
+    first: ["Mamadou", "Ousmane", "Ibrahima", "Cheikh", "Abdoulaye", "Modou", "Sidy", "Pape", "Malick", "Serigne"],
+    last: ["Diop", "Ndiaye", "Fall", "Sarr", "Diallo", "Gueye", "Sy", "Ba", "Faye", "Cisse"],
+  },
+  Cameroon: {
+    first: ["Joel", "Pascal", "Yannick", "Christian", "Franck", "Junior", "Emmanuel", "Arnaud", "Patrick", "Herve"],
+    last: ["Nkeng", "Fotso", "Talla", "Kamga", "Njoya", "Etoundi", "Onana", "Manga", "Mballa", "Ndzana"],
+  },
+  "Dominican Republic": {
+    first: ["Juan", "Luis", "Carlos", "Miguel", "Jose", "Rafael", "Manuel", "Pedro", "Francisco", "Rodrigo"],
+    last: ["Rodriguez", "Martinez", "Garcia", "Fernandez", "Perez", "Reyes", "Cruz", "Diaz", "Jimenez", "Castillo"],
+  },
+  Argentina: {
+    first: ["Mateo", "Santiago", "Nicolas", "Facundo", "Franco", "Lucas", "Tomas", "Agustin", "Ignacio", "Joaquin"],
+    last: ["Gonzalez", "Rodriguez", "Fernandez", "Lopez", "Martinez", "Diaz", "Alvarez", "Romero", "Sosa", "Acosta"],
+  },
+  Brazil: {
+    first: ["Joao", "Pedro", "Lucas", "Gabriel", "Matheus", "Rafael", "Bruno", "Thiago", "Gustavo", "Felipe"],
+    last: ["Silva", "Santos", "Oliveira", "Souza", "Costa", "Pereira", "Almeida", "Ferreira", "Rodrigues", "Carvalho"],
+  },
+  "South Sudan": {
+    first: ["Deng", "Akech", "Majok", "Garang", "Bul", "Malual", "Kuek", "Chol", "Wal", "Manyang"],
+    last: ["Deng", "Majok", "Garang", "Akol", "Bul", "Malual", "Wek", "Kuek", "Chol", "Aguer"],
+  },
+  Mali: {
+    first: ["Oumar", "Amadou", "Modibo", "Seydou", "Ibrahim", "Cheick", "Bakary", "Yacouba", "Moussa", "Adama"],
+    last: ["Traore", "Diarra", "Keita", "Coulibaly", "Sidibe", "Toure", "Sanogo", "Diakite", "Konate", "Camara"],
+  },
+  China: {
+    first: ["Wei", "Jun", "Hao", "Yang", "Chen", "Feng", "Lei", "Tao", "Ming", "Bo"],
+    last: ["Wang", "Li", "Zhang", "Liu", "Chen", "Yang", "Huang", "Zhao", "Wu", "Zhou"],
+  },
+  Japan: {
+    first: ["Ren", "Sota", "Haruto", "Yuto", "Riku", "Sora", "Kaito", "Yuki", "Daiki", "Hayato"],
+    last: ["Sato", "Suzuki", "Takahashi", "Tanaka", "Watanabe", "Ito", "Yamamoto", "Nakamura", "Kobayashi", "Saito"],
+  },
+  Philippines: {
+    first: ["Miguel", "Josef", "Paolo", "Enzo", "Rafael", "Gabriel", "Diego", "Antonio", "Marco", "Andres"],
+    last: ["Santos", "Reyes", "Cruz", "Bautista", "Garcia", "Mendoza", "Torres", "Flores", "Ramos", "Aquino"],
+  },
+  Venezuela: {
+    first: ["Jesus", "Carlos", "Luis", "Miguel", "Andres", "Diego", "Jose", "Alejandro", "Victor", "Daniel"],
+    last: ["Rodriguez", "Gonzalez", "Hernandez", "Perez", "Sanchez", "Ramirez", "Torres", "Flores", "Marquez", "Silva"],
+  },
+  "DR Congo": {
+    first: ["Emmanuel", "Patrick", "Christian", "Joel", "Fiston", "Blaise", "Divin", "Junior", "Gaston", "Aristide"],
+    last: ["Ilunga", "Kalala", "Mwamba", "Kasongo", "Nzuzi", "Mfumu", "Kanku", "Muteba", "Tshilombo", "Bakenga"],
+  },
+  Israel: {
+    first: ["Yonatan", "Daniel", "Omer", "Itay", "Noam", "Tomer", "Ariel", "Eitan", "Amit", "Yosef"],
+    last: ["Cohen", "Levi", "Mizrahi", "Peretz", "Biton", "Avraham", "Katz", "Friedman", "Dahan", "Azoulay"],
+  },
+  "New Zealand": {
+    first: ["Jack", "Liam", "James", "William", "Oliver", "Cooper", "Isaac", "Finn", "Hunter", "Caleb"],
+    last: ["Smith", "Williams", "Taylor", "Wilson", "Anderson", "Thompson", "Baker", "Clarke", "Ngata", "Wiremu"],
+  },
+  Bahamas: {
+    first: ["Malik", "Jamal", "Andre", "Antoine", "Dario", "Trevor", "Marcus", "Devin", "Kevaughn", "Jerome"],
+    last: ["Rolle", "Bethel", "Munroe", "Ferguson", "Johnson", "Adderley", "Curry", "Miller", "Pratt", "Sweeting"],
+  },
 };
 
 export function randomInternationalFirstName(rng: () => number, country: string): string {

@@ -7,7 +7,7 @@ function overall(p: any): number {
 }
 
 function homeLabel(p: any): string {
-  if (p.origin === "INTERNATIONAL") return p.countryOfOrigin;
+  if (p.origin === "INTERNATIONAL") return p.hometownCity ? `${p.hometownCity}, ${p.countryOfOrigin}` : p.countryOfOrigin;
   const town = p.hometownCity ? `${p.hometownCity}, ${p.hometownState}` : p.hometownState;
   if (p.countryOfOrigin) return `${town} (${p.countryOfOrigin})`;
   return town;

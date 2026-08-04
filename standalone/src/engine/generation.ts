@@ -4,6 +4,7 @@ import { clamp, randInt, randNormal, weightedPick } from "./rng";
 import { weightedStateList, STATE_PROFILES } from "./regions";
 import { weightedCountryList, COUNTRY_PROFILES } from "./countries";
 import { pickCityForState } from "./cities";
+import { pickCityForCountry } from "./internationalCities";
 import { generateProspectPriorities, boostPriority, type PriorityProfile } from "./priorities";
 import type { ClassYear, Division, PlayerOrigin, PositionType, ProspectSource } from "../types";
 
@@ -235,7 +236,7 @@ export function generateInternationalProspect(rng: () => number, graduationYear:
     lastName: intlName.lastName,
     position,
     hometownState: "",
-    hometownCity: "",
+    hometownCity: pickCityForCountry(rng, country),
     countryOfOrigin: country,
     source: "INTERNATIONAL",
     starRating,
@@ -318,13 +319,14 @@ export function generateRosterForTeam(
     }
 
     const { firstName, lastName } = pickName(rng, countryOfOrigin);
+    const isInternational = origin === "INTERNATIONAL";
     players.push({
       firstName,
       lastName,
       position,
       classYear,
-      hometownState: state,
-      hometownCity: pickCityForState(rng, state),
+      hometownState: isInternational ? "" : state,
+      hometownCity: isInternational ? pickCityForCountry(rng, countryOfOrigin!) : pickCityForState(rng, state),
       countryOfOrigin,
       origin,
       eligibilityYearsLeft: ELIGIBILITY_BY_CLASS[classYear],

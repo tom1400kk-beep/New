@@ -8,7 +8,7 @@ import { COACH_ARCHETYPES, type CoachArchetype } from "./engine/coachArchetypes"
 import { COACH_BACKGROUNDS, type CoachBackground } from "./engine/coachBackgrounds";
 import { NO_PLAYING_CAREER, type PlayingCareerChoice } from "./engine/playingCareer";
 import { generateStartingJobOffers, type CandidateJob } from "./engine/coachCreation";
-import { EUROPEAN_COUNTRIES } from "./engine/countries";
+import { INTERNATIONAL_COUNTRIES } from "./engine/countries";
 import { mulberry32 } from "./engine/rng";
 import type { WorldState } from "./state/types";
 import type { Division } from "./types";
@@ -109,7 +109,7 @@ export const api = {
     return state.save;
   },
 
-  getCoachOptions: async () => ({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS, countries: EUROPEAN_COUNTRIES }),
+  getCoachOptions: async () => ({ archetypes: COACH_ARCHETYPES, backgrounds: COACH_BACKGROUNDS, countries: INTERNATIONAL_COUNTRIES }),
 
   getAllTeams: async () => allNationalTeams(),
 

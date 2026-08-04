@@ -5,7 +5,7 @@
 // program is eligible to tour again.
 
 import { clamp } from "./rng";
-import { EUROPEAN_COUNTRIES, COUNTRY_PROFILES } from "./countries";
+import { INTERNATIONAL_COUNTRIES, COUNTRY_PROFILES } from "./countries";
 import { simulateGame, overall, type SimTeam, type SimPlayer } from "./simulate";
 import type { Division } from "../types";
 
@@ -14,7 +14,7 @@ export const TOUR_COOLDOWN_YEARS = 4;
 // Only countries with an actual prospect pool (see countries.ts) give the
 // recruiting boost real mechanical effect, so the tour is offered to the
 // same list rather than a broader real-world destination list.
-export const TOUR_COUNTRIES = EUROPEAN_COUNTRIES;
+export const TOUR_COUNTRIES = INTERNATIONAL_COUNTRIES;
 
 // D1 programs can plausibly fund a foreign tour at any prestige level (the
 // real-world rule doesn't gate on it). D2/D3 boosters can't — a tour there

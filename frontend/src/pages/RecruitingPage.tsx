@@ -10,7 +10,7 @@ function sourceLabel(source: string): string {
 }
 
 function homeLabel(p: any): string {
-  if (p.source === "INTERNATIONAL") return p.countryOfOrigin;
+  if (p.source === "INTERNATIONAL") return p.hometownCity ? `${p.hometownCity}, ${p.countryOfOrigin}` : p.countryOfOrigin;
   return p.hometownCity ? `${p.hometownCity}, ${p.hometownState}` : p.hometownState;
 }
 
