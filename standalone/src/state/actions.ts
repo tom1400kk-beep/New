@@ -15,6 +15,8 @@ import { computeStandings, winPct } from "./standings";
 import { aggregateCareerStats, type CareerSeasonLine, type RawGameStatLine } from "../engine/careerStats";
 import { newId, type WorldState } from "./types";
 import { PRESEASON_EVENTS, type PreseasonEventDef } from "../engine/preseasonEvents";
+import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, simulateTourGames } from "../engine/internationalTour";
+import type { SimTeam } from "../engine/simulate";
 
 function noisy(rng: () => number, value: number, noise: number): number {
   return Math.round(clamp(value + randInt(rng, -noise, noise), 1, 99));
@@ -696,4 +698,59 @@ export function leavePreseasonTournament(state: WorldState): { ok: true; swapped
 
   swapNonConferenceSlates(state, seasonYear, state.save.coachTeamId, partner.id);
   return { ok: true, swappedWithTeamId: partner.id };
+}
+
+export function getInternationalTour(state: WorldState) {
+  const userTeamId = state.save.coachTeamId;
+  if (!userTeamId) return { editable: false, eligible: false, countries: TOUR_COUNTRIES, currentCountry: null, currentTourSeasonYear: null, nextEligibleSeasonYear: null, thisSeasonTour: null };
+
+  const team = state.teams.find((t) => t.id === userTeamId)!;
+  const seasonYear = state.save.currentSeasonYear;
+  const eligible = isTourEligible(team.internationalTourSeasonYear, seasonYear);
+  const thisSeasonTour = state.internationalTours.find((t) => t.teamId === team.id && t.seasonYear === seasonYear);
+
+  return {
+    editable: state.save.currentPhase === "PRESEASON",
+    eligible,
+    countries: TOUR_COUNTRIES,
+    currentCountry: team.internationalTourCountry,
+    currentTourSeasonYear: team.internationalTourSeasonYear,
+    nextEligibleSeasonYear: !eligible && team.internationalTourSeasonYear !== null ? team.internationalTourSeasonYear + TOUR_COOLDOWN_YEARS : null,
+    thisSeasonTour: thisSeasonTour ? { country: thisSeasonTour.country, games: thisSeasonTour.games } : null,
+  };
+}
+
+export function bookInternationalTour(state: WorldState, country: string) {
+  if (!state.save.coachTeamId) throw new Error("No active team");
+  if (state.save.currentPhase !== "PRESEASON") throw new Error("The tour can only be booked during the preseason");
+  if (!TOUR_COUNTRIES.includes(country)) throw new Error("Not a valid tour destination");
+
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+  const seasonYear = state.save.currentSeasonYear;
+  if (!isTourEligible(team.internationalTourSeasonYear, seasonYear)) {
+    throw new Error("This program toured within the last 4 years — not eligible yet");
+  }
+  if (team.internationalTourSeasonYear === seasonYear) throw new Error("Already toured this season");
+
+  const headCoach = state.coaches.find((c) => c.id === team.headCoachId);
+  const rosterPlayers = state.players.filter((p) => p.teamId === team.id);
+  const simTeam: SimTeam = {
+    id: team.id,
+    players: rosterPlayers.map((p) => ({
+      id: p.id, position: p.position, scoring: p.scoring, threePoint: p.threePoint, finishing: p.finishing,
+      playmaking: p.playmaking, rebounding: p.rebounding, defense: p.defense, athleticism: p.athleticism,
+      basketballIq: p.basketballIq, characterRating: p.characterRating, isInjured: p.isInjured, isSuspended: p.isSuspended,
+    })),
+    offenseSkill: headCoach?.offenseSkill ?? 50,
+    defenseSkill: headCoach?.defenseSkill ?? 50,
+  };
+
+  const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
+  const games = simulateTourGames(simTeam, country, rng);
+
+  state.internationalTours.push({ id: newId(), teamId: team.id, seasonYear, country, games, createdAt: new Date() });
+  team.internationalTourCountry = country;
+  team.internationalTourSeasonYear = seasonYear;
+
+  return { ok: true, country, games };
 }

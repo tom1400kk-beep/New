@@ -60,6 +60,10 @@ export const api = {
   leavePreseasonTournament: (saveId: string) =>
     request<any>(`/saves/${saveId}/preseason-tournaments/leave`, { method: "POST" }),
 
+  getInternationalTour: (saveId: string) => request<any>(`/saves/${saveId}/international-tour`),
+  bookInternationalTour: (saveId: string, country: string) =>
+    request<any>(`/saves/${saveId}/international-tour`, { method: "POST", body: JSON.stringify({ country }) }),
+
   getPendingEvents: (saveId: string) => request<any[]>(`/saves/${saveId}/events/pending`),
   resolveEvent: (saveId: string, eventId: string, optionId: string) =>
     request<any>(`/saves/${saveId}/events/${eventId}/resolve`, {

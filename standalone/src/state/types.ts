@@ -37,6 +37,17 @@ export interface TeamRow {
   isPlayerControlled: boolean;
   headCoachId: string;
   athleticDirectorId: string;
+  internationalTourCountry: string | null;
+  internationalTourSeasonYear: number | null;
+}
+
+export interface InternationalTourRow {
+  id: string;
+  teamId: string;
+  seasonYear: number;
+  country: string;
+  games: { opponentName: string; teamScore: number; opponentScore: number; win: boolean }[];
+  createdAt: Date;
 }
 
 export interface AthleticDirectorRow {
@@ -291,6 +302,7 @@ export interface WorldState {
   events: GameEventRow[];
   rivalries: RivalryRow[];
   walkOnCandidates: WalkOnCandidateRow[];
+  internationalTours: InternationalTourRow[];
 }
 
 export function newId(): string {

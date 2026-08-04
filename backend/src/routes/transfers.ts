@@ -158,6 +158,9 @@ transfersRouter.post("/saves/:id/transfers/:playerId/pursue", async (req, res) =
     campusAtmosphere: team.headCoach?.campusAtmosphere,
     hasScholarshipOpen: scholarshipOpen(team.division as Division, team.players.filter((p) => p.onScholarship).length),
     coachTransferPipeline: parsePipelineStates(team.headCoach?.transferPipelineJson ?? "{}"),
+    currentSeasonYear: save.currentSeasonYear,
+    internationalTourCountry: team.internationalTourCountry,
+    internationalTourSeasonYear: team.internationalTourSeasonYear,
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);

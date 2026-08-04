@@ -124,6 +124,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity,
         arenaUpgradeRequestedThisSeason: false, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
+        internationalTourCountry: null, internationalTourSeasonYear: null,
       });
       pendingTeams.push({ id: teamId, conferenceId, division: div, prestige });
 
@@ -244,6 +245,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     transferInterests: [],
     seasons: [{ id: newId(), year: seasonYear }], games, stats: [], tournaments, events: [], rivalries,
     walkOnCandidates: [],
+    internationalTours: [],
   };
 }
 

@@ -75,6 +75,13 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
       if ((s as any).teamId === undefined) s.teamId = teamByPlayer.get(s.playerId) ?? "";
     }
   }
+  // Saves persisted before the international tour feature won't have these
+  // fields on existing teams, or the tours array at all.
+  if (!loaded.internationalTours) loaded.internationalTours = [];
+  for (const t of loaded.teams) {
+    if (t.internationalTourCountry === undefined) t.internationalTourCountry = null;
+    if (t.internationalTourSeasonYear === undefined) t.internationalTourSeasonYear = null;
+  }
   cache = loaded;
   return loaded;
 }
@@ -171,6 +178,14 @@ export const api = {
   leavePreseasonTournament: async (saveId: string) => {
     const state = await ensureLoaded(saveId);
     const result = actions.leavePreseasonTournament(state);
+    await persistence.persistSave(state);
+    return result;
+  },
+
+  getInternationalTour: async (saveId: string) => actions.getInternationalTour(await ensureLoaded(saveId)),
+  bookInternationalTour: async (saveId: string, country: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.bookInternationalTour(state, country);
     await persistence.persistSave(state);
     return result;
   },

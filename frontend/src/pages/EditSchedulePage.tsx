@@ -15,7 +15,94 @@ const TIER_LABELS: Record<string, string> = {
   SMALL: "Small",
 };
 
-export default function EditSchedulePage() {
+function InternationalTourCard() {
+  const { activeSaveId } = useSave();
+  const [data, setData] = useState<any | null>(null);
+  const [country, setCountry] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refresh() {
+    if (activeSaveId) setData(await api.getInternationalTour(activeSaveId));
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSaveId]);
+
+  async function book() {
+    if (!activeSaveId || busy || !country) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.bookInternationalTour(activeSaveId, country);
+      await refresh();
+    } catch (e: any) {
+      setError(e?.message ?? "Failed to book tour");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!data) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3>International Exhibition Tour</h3>
+      <p className="text-muted" style={{ fontSize: "0.85rem" }}>
+        NCAA rules let a program tour a foreign country once every 4 years, playing 3 exempt exhibition games there —
+        they don't count toward your record. It also earns a recruiting boost for prospects from that country,
+        strongest this season and fading out over the next few.
+      </p>
+
+      {data.thisSeasonTour && (
+        <div style={{ marginBottom: 12 }}>
+          <strong>This season's tour: {data.thisSeasonTour.country}</strong>
+          <table>
+            <thead>
+              <tr><th>Opponent</th><th>Result</th></tr>
+            </thead>
+            <tbody>
+              {data.thisSeasonTour.games.map((g: any, i: number) => (
+                <tr key={i}>
+                  <td>{g.opponentName}</td>
+                  <td className={g.win ? "text-good" : "text-bad"}>
+                    {g.win ? "W" : "L"} {g.teamScore}-{g.opponentScore}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!data.thisSeasonTour && data.currentCountry && (
+        <p className="text-muted">
+          Last toured <strong>{data.currentCountry}</strong> in {data.currentTourSeasonYear}.
+          {!data.eligible && data.nextEligibleSeasonYear && ` Eligible to tour again in ${data.nextEligibleSeasonYear}.`}
+        </p>
+      )}
+
+      {data.editable && !data.thisSeasonTour && data.eligible && (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <select value={country} onChange={(e) => setCountry(e.target.value)}>
+            <option value="">Select a country…</option>
+            {data.countries.map((c: string) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <button disabled={busy || !country} onClick={book}>Book Tour</button>
+        </div>
+      )}
+
+      {error && <p className="text-bad">{error}</p>}
+      {!data.editable && <p className="text-muted">The tour can only be booked during the preseason.</p>}
+    </div>
+  );
+}
+
+function PreseasonTournamentsSection() {
   const { activeSaveId } = useSave();
   const [data, setData] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
@@ -51,17 +138,14 @@ export default function EditSchedulePage() {
     }
   }
 
-  if (!data) return <div><h1>Edit Schedule</h1><p>Loading…</p></div>;
+  if (!data) return <p>Loading…</p>;
 
   if (data.userDivision !== "D1") {
     return (
-      <div>
-        <h1>Edit Schedule</h1>
-        <p className="text-muted">
-          Preseason multi-team events (Maui Invitational, Battle 4 Atlantis, and the rest) are a D1-only tradition —
-          not available at this level.
-        </p>
-      </div>
+      <p className="text-muted">
+        Preseason multi-team events (Maui Invitational, Battle 4 Atlantis, and the rest) are a D1-only tradition —
+        not available at this level.
+      </p>
     );
   }
 
@@ -69,7 +153,6 @@ export default function EditSchedulePage() {
 
   return (
     <div>
-      <h1>Edit Schedule</h1>
       <p className="text-muted">
         Pick a preseason multi-team event for your non-conference slate. Joining swaps your entire early-season
         schedule with the invite you're replacing — same dates, same opponents-for-opponents. You'll only draw a bid
@@ -121,6 +204,16 @@ export default function EditSchedulePage() {
         </table>
         {data.tournaments.length === 0 && <p>No preseason events generated for this season.</p>}
       </div>
+    </div>
+  );
+}
+
+export default function EditSchedulePage() {
+  return (
+    <div>
+      <h1>Edit Schedule</h1>
+      <InternationalTourCard />
+      <PreseasonTournamentsSection />
     </div>
   );
 }

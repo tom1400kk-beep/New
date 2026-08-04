@@ -7,6 +7,7 @@ import { transfersRouter } from "./routes/transfers";
 import { eventsRouter } from "./routes/events";
 import { preseasonTournamentsRouter } from "./routes/preseasonTournaments";
 import { rankingsRouter } from "./routes/rankings";
+import { internationalTourRouter } from "./routes/internationalTour";
 
 const app = express();
 app.use(cors());
@@ -19,6 +20,7 @@ app.use("/api", transfersRouter);
 app.use("/api", eventsRouter);
 app.use("/api", preseasonTournamentsRouter);
 app.use("/api", rankingsRouter);
+app.use("/api", internationalTourRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

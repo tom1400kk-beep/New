@@ -38,6 +38,7 @@ model SaveGame {
   tournaments      Tournament[]
   gameEvents       GameEvent[]
   rivalries        Rivalry[]
+  internationalTours InternationalTour[]
 }
 
 // ---------- League structure ----------
@@ -77,6 +78,9 @@ model Team {
   arenaUpgradeRequestedThisSeason Boolean @default(false) // reset each offseason
   isPlayerControlled Boolean  @default(false)
 
+  internationalTourCountry    String? // last country toured — program-scoped, source of the decaying recruiting boost
+  internationalTourSeasonYear Int?    // season the last tour happened; gates the once-every-4-years cooldown
+
   players           Player[]
   prospectInterest  RecruitInterest[]
   transferInterest  TransferInterest[]
@@ -89,9 +93,29 @@ model Team {
 
   homeGames         Game[]   @relation("HomeTeam")
   awayGames         Game[]   @relation("AwayTeam")
+  internationalTours InternationalTour[]
 
   @@index([saveGameId, division])
   @@index([conferenceId])
+}
+
+// A team's once-every-4-years foreign exhibition tour: 3 exempt games against
+// fabricated in-country opposition, simulated immediately (not scheduled as
+// real Game rows — these don't touch standings/KenPom/RPI, matching how real
+// exhibition games don't count against a team's official record).
+model InternationalTour {
+  id         String   @id @default(cuid())
+  saveGame   SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId String
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId     String
+  seasonYear Int
+  country    String
+  gamesJson  String   // JSON array of {opponentName, teamScore, opponentScore, win}
+  createdAt  DateTime @default(now())
+
+  @@index([saveGameId])
+  @@index([teamId])
 }
 
 // ---------- Coaches ----------

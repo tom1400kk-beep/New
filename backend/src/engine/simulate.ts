@@ -48,7 +48,7 @@ export interface GameResult {
   awayBox: PlayerBoxScore[];
 }
 
-function overall(p: SimPlayer): number {
+export function overall(p: SimPlayer): number {
   return (
     p.scoring * 0.2 +
     p.threePoint * 0.12 +

@@ -1,6 +1,7 @@
 import { clamp, randNormal } from "./rng";
 import { PRIORITY_KEYS, sameRegion, isWarmState, type PriorityProfile } from "./priorities";
 import { pipelineScore, pipelineMultiplier } from "./pipeline";
+import { tourRecruitingMultiplier } from "./internationalTour";
 import type { Division, PositionType } from "../types";
 
 // Real-world ceiling on how much star power a division can plausibly land —
@@ -67,6 +68,9 @@ export interface RecruitingTeamInput {
   campusAtmosphere?: number; // 1-100, program culture/environment — a buzzing program is a real recruiting draw
   hasScholarshipOpen?: boolean; // explicitly false = this program is only offering a walk-on spot right now
   coachTransferPipeline?: Record<string, number>; // per-school connection strength, built by landing transfers from that program
+  currentSeasonYear?: number;
+  internationalTourCountry?: string | null; // country of the program's last foreign exhibition tour
+  internationalTourSeasonYear?: number | null;
 }
 
 // Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
@@ -163,6 +167,11 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   }
   if (team.proCountry && prospect.countryOfOrigin === team.proCountry) {
     base *= 1.15; // "International Playing Ties" — a specific-country match is rarer, so it counts more
+  }
+  if (team.internationalTourCountry && team.currentSeasonYear !== undefined) {
+    base *= tourRecruitingMultiplier(
+      team.internationalTourCountry, team.internationalTourSeasonYear, team.currentSeasonYear, prospect.countryOfOrigin,
+    );
   }
   if (team.playedProDomestic && prospect.starRating >= 4) {
     base *= 1.05; // "Pro Pedigree" — a smaller nationwide blue-chip edge
