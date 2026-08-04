@@ -8,6 +8,7 @@ import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDir
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { arenaUpgradeGrantChance, nextArenaCapacity, isArenaNearCap } from "../engine/attendance";
 import type { Division } from "../types";
+import { DIVISION_RULES } from "../types";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { computeStandings, winPct } from "./standings";
@@ -19,6 +20,11 @@ function noisy(rng: () => number, value: number, noise: number): number {
 
 function playerOverall(p: { scoring: number; threePoint: number; finishing: number; playmaking: number; rebounding: number; defense: number; athleticism: number; basketballIq: number }): number {
   return Math.round((p.scoring + p.threePoint + p.finishing + p.playmaking + p.rebounding + p.defense + p.athleticism + p.basketballIq) / 8);
+}
+
+function scholarshipOpen(division: Division, currentScholarshipCount: number): boolean {
+  const rules = DIVISION_RULES[division];
+  return rules.hasScholarships && currentScholarshipCount < rules.scholarshipLimit;
 }
 
 function parsePriorities(json: string): PriorityProfile {
@@ -124,6 +130,7 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
     playedProDomestic: coach.proPath === "DOMESTIC_PRO",
     coachPipelineStates: parsePipelineStates(coach.pipelineStatesJson),
     campusAtmosphere: coach.campusAtmosphere,
+    hasScholarshipOpen: scholarshipOpen(team.division as Division, roster.filter((p) => p.onScholarship).length),
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);
@@ -422,4 +429,32 @@ export function upgradeArena(state: WorldState) {
   }
 
   return { granted, oldCapacity, newCapacity: team.venueCapacity, avgTurnoutPct, seasonWinPct };
+}
+
+export function addWalkOn(state: WorldState, candidateId: string) {
+  if (!state.save.coachTeamId) throw new Error("No active team");
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) throw new Error("Team not found");
+  const candidate = state.walkOnCandidates.find((c) => c.id === candidateId && c.teamId === team.id);
+  if (!candidate) throw new Error("Candidate not found");
+
+  const rosterCount = state.players.filter((p) => p.teamId === team.id).length;
+  const rosterCap = DIVISION_RULES[team.division as Division].rosterCap;
+  if (rosterCount >= rosterCap) throw new Error("Roster is already full");
+
+  const player = {
+    id: newId(), teamId: team.id, firstName: candidate.firstName, lastName: candidate.lastName, position: candidate.position,
+    classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, countryOfOrigin: candidate.countryOfOrigin,
+    origin: candidate.origin,
+    scoring: candidate.scoring, threePoint: candidate.threePoint, finishing: candidate.finishing,
+    playmaking: candidate.playmaking, rebounding: candidate.rebounding, defense: candidate.defense,
+    athleticism: candidate.athleticism, basketballIq: candidate.basketballIq,
+    stamina: 60, potential: candidate.potential, characterRating: candidate.characterRating,
+    disciplineRating: candidate.disciplineRating, chemistryImpact: 0,
+    eligibilityYearsLeft: 4, inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
+    isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
+  };
+  state.players.push(player);
+  state.walkOnCandidates = state.walkOnCandidates.filter((c) => c.id !== candidateId);
+  return player;
 }

@@ -342,7 +342,21 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   // for D1-bound HS prospects only, ~25% of the time — commits a year early
   // as a junior instead, buying one more season before actually joining a
   // roster. Prospects who already committed early get one last chance to
-  // decommit here, far more likely if their program just fired its coach. ----
+  // decommit here, far more likely if their program just fired its coach.
+  // Every team's scholarship count and total roster size are tracked live so
+  // no program can out-sign its division's limits (scholarshipLimit,
+  // rosterCap) — once a team's board is full, its recruits either take a
+  // walk-on spot instead or, if the whole roster is full, go unsigned. ----
+  const rosterCap = DIVISION_RULES[division].rosterCap;
+  const rosterState = await prisma.player.findMany({ where: { saveGameId, teamId: { not: null } }, select: { teamId: true, onScholarship: true } });
+  const rosterCounts = new Map<string, number>();
+  const scholarshipCounts = new Map<string, number>();
+  for (const p of rosterState) {
+    rosterCounts.set(p.teamId!, (rosterCounts.get(p.teamId!) ?? 0) + 1);
+    if (p.onScholarship) scholarshipCounts.set(p.teamId!, (scholarshipCounts.get(p.teamId!) ?? 0) + 1);
+  }
+  const hasRoom = (teamId: string) => (rosterCounts.get(teamId) ?? 0) < rosterCap;
+
   const classToSign = await prisma.prospect.findMany({
     where: { saveGameId, graduationYear: seasonYear + 1 },
     include: { interest: true },
@@ -370,20 +384,24 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     if (prospect.signed && prospect.committedTeamId) {
       const formerTeamId = prospect.committedTeamId;
       const decommitChance = firedTeamIds.has(formerTeamId) ? JUNIOR_DECOMMIT_COACH_FIRED_CHANCE : JUNIOR_DECOMMIT_BASE_CHANCE;
-      if (rng() >= decommitChance) {
-        winnerTeamId = formerTeamId; // still committed — locks in for good
+      const stillCommitted = rng() >= decommitChance;
+      if (stillCommitted && hasRoom(formerTeamId)) {
+        winnerTeamId = formerTeamId; // still committed and there's a spot — locks in for good
       } else {
-        await prisma.recruitInterest.deleteMany({ where: { prospectId: prospect.id, teamId: formerTeamId } });
+        if (!stillCommitted) {
+          await prisma.recruitInterest.deleteMany({ where: { prospectId: prospect.id, teamId: formerTeamId } });
+        }
         eligibleInterest = prospect.interest.filter((i) => i.teamId !== formerTeamId);
       }
     }
 
     if (winnerTeamId === undefined) {
-      if (eligibleInterest.length === 0) {
+      const roomyInterest = eligibleInterest.filter((i) => hasRoom(i.teamId));
+      if (roomyInterest.length === 0) {
         await prisma.prospect.update({ where: { id: prospect.id }, data: { signed: false, committedTeamId: null, ...driftedRatings } });
         continue;
       }
-      const weights = commitmentWeights(eligibleInterest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
+      const weights = commitmentWeights(roomyInterest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
       const total = weights.reduce((s, w) => s + w.weight, 0);
       if (total <= 0) {
         await prisma.prospect.update({ where: { id: prospect.id }, data: { signed: false, committedTeamId: null, ...driftedRatings } });
@@ -410,6 +428,10 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     }
 
     const finalTeamId = winnerTeamId as string;
+    const onScholarship = DIVISION_RULES[division].hasScholarships && (scholarshipCounts.get(finalTeamId) ?? 0) < DIVISION_RULES[division].scholarshipLimit;
+    rosterCounts.set(finalTeamId, (rosterCounts.get(finalTeamId) ?? 0) + 1);
+    if (onScholarship) scholarshipCounts.set(finalTeamId, (scholarshipCounts.get(finalTeamId) ?? 0) + 1);
+
     await prisma.player.create({
       data: {
         id: randomUUID(), saveGameId, teamId: finalTeamId,
@@ -424,6 +446,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
         potential: prospect.potential, characterRating: prospect.characterRating,
         disciplineRating: prospect.disciplineRating,
         eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4,
+        onScholarship,
       },
     });
   }
@@ -474,12 +497,36 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     await prisma.prospect.createMany({ data: nextProspects.slice(i, i + 400) });
   }
 
-  // ---- Backfill rosters below scholarship limits with walk-on-level fillers ----
-  const rosterCap = DIVISION_RULES[division].rosterCap;
-  const currentTeams = await prisma.team.findMany({ where: { saveGameId }, include: { players: true } });
+  // ---- Backfill rosters below cap: AI teams auto-fill with walk-on-level
+  // fillers as before. The user's own team instead gets a walk-on tryout
+  // pool (local hopefuls plus a few who reached out directly) so the coach
+  // can pick who actually earns the open spots. ----
+  const currentTeams = await prisma.team.findMany({ where: { saveGameId }, include: { players: true, headCoach: true } });
+  await prisma.walkOnCandidate.deleteMany({ where: { saveGameId } });
   for (const team of currentTeams) {
     const need = rosterCap - team.players.length;
     if (need <= 0) continue;
+
+    if (team.headCoach?.isPlayerControlled) {
+      const candidateCount = Math.min(8, Math.max(3, need + 3));
+      const localCount = Math.round(candidateCount * 0.7);
+      const localCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.45, 15, 99), division, localCount, team.internationalScoutingRating);
+      const reachedOutCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.6, 15, 99), division, candidateCount - localCount, team.internationalScoutingRating);
+      const candidateRows = [
+        ...localCandidates.map((p) => ({ ...p, source: "LOCAL" as const })),
+        ...reachedOutCandidates.map((p) => ({ ...p, source: "REACHED_OUT" as const })),
+      ].map((p) => ({
+        id: randomUUID(), saveGameId, teamId: team.id, firstName: p.firstName, lastName: p.lastName,
+        position: p.position, hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, origin: p.origin, source: p.source,
+        scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
+        playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
+        athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
+        characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+      }));
+      if (candidateRows.length > 0) await prisma.walkOnCandidate.createMany({ data: candidateRows });
+      continue;
+    }
+
     const roster = generateRosterForTeam(rng, team.prestige, division, need, team.internationalScoutingRating);
     const rows = roster.map((p) => ({
       id: randomUUID(), saveGameId, teamId: team.id, firstName: p.firstName, lastName: p.lastName,
@@ -489,7 +536,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)), potential: p.ratings.potential,
       characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
-      eligibilityYearsLeft: 4,
+      eligibilityYearsLeft: 4, onScholarship: false,
     }));
     if (rows.length > 0) await prisma.player.createMany({ data: rows });
   }

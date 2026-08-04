@@ -314,7 +314,19 @@ export function runOffseason(state: WorldState): OffseasonResult {
   // D1-bound HS prospects only, ~25% of the time — commits a year early as a
   // junior instead, buying one more season before actually joining a roster.
   // Prospects who already committed early get one last chance to decommit
-  // here, far more likely if their program just fired its coach.
+  // here, far more likely if their program just fired its coach. Every
+  // team's scholarship count and roster size are tracked live so no program
+  // out-signs its division's limits.
+  const rosterCap = DIVISION_RULES[division].rosterCap;
+  const rosterCounts = new Map<string, number>();
+  const scholarshipCounts = new Map<string, number>();
+  for (const p of state.players) {
+    if (!p.teamId) continue;
+    rosterCounts.set(p.teamId, (rosterCounts.get(p.teamId) ?? 0) + 1);
+    if (p.onScholarship) scholarshipCounts.set(p.teamId, (scholarshipCounts.get(p.teamId) ?? 0) + 1);
+  }
+  const hasRoom = (teamId: string) => (rosterCounts.get(teamId) ?? 0) < rosterCap;
+
   const classToSign = state.prospects.filter((p) => p.graduationYear === seasonYear + 1);
   for (const prospect of classToSign) {
     if (prospect.source === "HIGH_SCHOOL") {
@@ -334,21 +346,25 @@ export function runOffseason(state: WorldState): OffseasonResult {
     if (prospect.signed && prospect.committedTeamId) {
       const formerTeamId = prospect.committedTeamId;
       const decommitChance = firedTeamIds.has(formerTeamId) ? JUNIOR_DECOMMIT_COACH_FIRED_CHANCE : JUNIOR_DECOMMIT_BASE_CHANCE;
-      if (rng() >= decommitChance) {
-        winnerTeamId = formerTeamId; // still committed — locks in for good
+      const stillCommitted = rng() >= decommitChance;
+      if (stillCommitted && hasRoom(formerTeamId)) {
+        winnerTeamId = formerTeamId; // still committed and there's a spot — locks in for good
       } else {
-        state.interests = state.interests.filter((i) => !(i.prospectId === prospect.id && i.teamId === formerTeamId));
+        if (!stillCommitted) {
+          state.interests = state.interests.filter((i) => !(i.prospectId === prospect.id && i.teamId === formerTeamId));
+        }
         eligibleInterest = eligibleInterest.filter((i) => i.teamId !== formerTeamId);
       }
     }
 
     if (winnerTeamId === undefined) {
-      if (eligibleInterest.length === 0) {
+      const roomyInterest = eligibleInterest.filter((i) => hasRoom(i.teamId));
+      if (roomyInterest.length === 0) {
         prospect.signed = false;
         prospect.committedTeamId = null;
         continue;
       }
-      const weights = commitmentWeights(eligibleInterest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
+      const weights = commitmentWeights(roomyInterest.map((i) => ({ teamId: i.teamId, interest: i.interestLevel })));
       const total = weights.reduce((s, w) => s + w.weight, 0);
       if (total <= 0) {
         prospect.signed = false;
@@ -374,6 +390,10 @@ export function runOffseason(state: WorldState): OffseasonResult {
     }
 
     const finalTeamId = winnerTeamId as string;
+    const onScholarship = DIVISION_RULES[division].hasScholarships && (scholarshipCounts.get(finalTeamId) ?? 0) < DIVISION_RULES[division].scholarshipLimit;
+    rosterCounts.set(finalTeamId, (rosterCounts.get(finalTeamId) ?? 0) + 1);
+    if (onScholarship) scholarshipCounts.set(finalTeamId, (scholarshipCounts.get(finalTeamId) ?? 0) + 1);
+
     state.players.push({
       id: newId(), teamId: finalTeamId, firstName: prospect.firstName, lastName: prospect.lastName,
       position: prospect.position, classYear: "FR", heightInches: 76, hometownState: prospect.hometownState,
@@ -385,7 +405,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       potential: prospect.potential, characterRating: prospect.characterRating,
       disciplineRating: prospect.disciplineRating, chemistryImpact: 0,
       eligibilityYearsLeft: prospect.source === "JUCO" ? 2 : 4, inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
-      isSuspended: false, suspensionDaysLeft: 0,
+      isSuspended: false, suspensionDaysLeft: 0, onScholarship,
     });
   }
 
@@ -428,12 +448,39 @@ export function runOffseason(state: WorldState): OffseasonResult {
     });
   }
 
-  // Backfill rosters below cap
-  const rosterCap = DIVISION_RULES[division].rosterCap;
+  // Backfill rosters below cap: AI teams auto-fill with walk-on-level
+  // fillers as before. The user's own team instead gets a walk-on tryout
+  // pool (local hopefuls plus a few who reached out directly) so the coach
+  // can pick who actually earns the open spots.
+  state.walkOnCandidates = [];
   for (const team of state.teams) {
     const rosterCount = state.players.filter((p) => p.teamId === team.id).length;
     const need = rosterCap - rosterCount;
     if (need <= 0) continue;
+
+    const coach = state.coaches.find((c) => c.id === team.headCoachId);
+    if (coach?.isPlayerControlled) {
+      const candidateCount = Math.min(8, Math.max(3, need + 3));
+      const localCount = Math.round(candidateCount * 0.7);
+      const localCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.45, 15, 99), division, localCount, team.internationalScoutingRating);
+      const reachedOutCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.6, 15, 99), division, candidateCount - localCount, team.internationalScoutingRating);
+      const withSource = [
+        ...localCandidates.map((p) => ({ ...p, source: "LOCAL" as const })),
+        ...reachedOutCandidates.map((p) => ({ ...p, source: "REACHED_OUT" as const })),
+      ];
+      for (const p of withSource) {
+        state.walkOnCandidates.push({
+          id: newId(), teamId: team.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
+          hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, origin: p.origin, source: p.source,
+          scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
+          playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
+          athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
+          characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
+        });
+      }
+      continue;
+    }
+
     const roster = generateRosterForTeam(rng, team.prestige, division, need, team.internationalScoutingRating);
     for (const p of roster) {
       state.players.push({
@@ -446,7 +493,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
         characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
         chemistryImpact: 0, eligibilityYearsLeft: 4,
         inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
-        isSuspended: false, suspensionDaysLeft: 0,
+        isSuspended: false, suspensionDaysLeft: 0, onScholarship: false,
       });
     }
   }

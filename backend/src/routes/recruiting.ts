@@ -6,6 +6,7 @@ import { PRIORITY_KEYS, topPriorities, type PriorityProfile } from "../engine/pr
 import { clamp, randInt, mulberry32 } from "../engine/rng";
 import { parsePipelineStates, pipelineScore, bumpPipelineState } from "../engine/pipeline";
 import { computeStandings, winPct } from "../season/standings";
+import { DIVISION_RULES, type Division } from "../types";
 
 export const recruitingRouter = Router();
 
@@ -15,6 +16,11 @@ function noisy(rng: () => number, value: number, noise: number): number {
 
 function playerOverall(p: { scoring: number; threePoint: number; finishing: number; playmaking: number; rebounding: number; defense: number; athleticism: number; basketballIq: number }): number {
   return Math.round((p.scoring + p.threePoint + p.finishing + p.playmaking + p.rebounding + p.defense + p.athleticism + p.basketballIq) / 8);
+}
+
+function scholarshipOpen(division: Division, currentScholarshipCount: number): boolean {
+  const rules = DIVISION_RULES[division];
+  return rules.hasScholarships && currentScholarshipCount < rules.scholarshipLimit;
 }
 
 function parsePriorities(json: string): PriorityProfile {
@@ -135,6 +141,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
     playedProDomestic: team.headCoach?.proPath === "DOMESTIC_PRO",
     coachPipelineStates: parsePipelineStates(team.headCoach?.pipelineStatesJson ?? "{}"),
     campusAtmosphere: team.headCoach?.campusAtmosphere,
+    hasScholarshipOpen: scholarshipOpen(team.division as Division, team.players.filter((p) => p.onScholarship).length),
   };
 
   const gain = computeInterestGain(prospectInput, teamInput, pointsInvested);

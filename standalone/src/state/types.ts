@@ -120,6 +120,30 @@ export interface PlayerRow {
   injuryWeeksLeft: number;
   isSuspended: boolean;
   suspensionDaysLeft: number;
+  onScholarship: boolean;
+}
+
+export interface WalkOnCandidateRow {
+  id: string;
+  teamId: string;
+  firstName: string;
+  lastName: string;
+  position: string;
+  hometownState: string;
+  countryOfOrigin: string | null;
+  origin: string;
+  source: string; // "LOCAL" | "REACHED_OUT"
+  scoring: number;
+  threePoint: number;
+  finishing: number;
+  playmaking: number;
+  rebounding: number;
+  defense: number;
+  athleticism: number;
+  basketballIq: number;
+  potential: number;
+  characterRating: number;
+  disciplineRating: number;
 }
 
 export interface ProspectRow {
@@ -248,6 +272,7 @@ export interface WorldState {
   tournaments: TournamentRow[];
   events: GameEventRow[];
   rivalries: RivalryRow[];
+  walkOnCandidates: WalkOnCandidateRow[];
 }
 
 export function newId(): string {

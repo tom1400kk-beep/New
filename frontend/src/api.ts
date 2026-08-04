@@ -29,6 +29,9 @@ export const api = {
 
   getDashboard: (saveId: string) => request<any>(`/saves/${saveId}/dashboard`),
   getRoster: (saveId: string) => request<any[]>(`/saves/${saveId}/roster`),
+  getWalkOns: (saveId: string) => request<any>(`/saves/${saveId}/walkons`),
+  addWalkOn: (saveId: string, candidateId: string) =>
+    request<any>(`/saves/${saveId}/walkons/${candidateId}/add`, { method: "POST" }),
   getSchedule: (saveId: string) => request<any[]>(`/saves/${saveId}/schedule`),
   getStandings: (saveId: string) => request<any>(`/saves/${saveId}/standings`),
   getRivalries: (saveId: string) => request<any[]>(`/saves/${saveId}/rivalries`),

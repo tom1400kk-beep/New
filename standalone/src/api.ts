@@ -36,6 +36,12 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
   if (!loaded) throw new Error("Save not found");
   // Saves persisted before the rivalries feature won't have this array yet.
   if (!loaded.rivalries) loaded.rivalries = [];
+  // Saves persisted before the walk-on tryouts feature won't have this array
+  // or the onScholarship field on existing players yet.
+  if (!loaded.walkOnCandidates) loaded.walkOnCandidates = [];
+  for (const p of loaded.players) {
+    if (p.onScholarship === undefined) p.onScholarship = true;
+  }
   cache = loaded;
   return loaded;
 }
@@ -86,6 +92,13 @@ export const api = {
 
   getDashboard: async (saveId: string) => queries.getDashboard(await ensureLoaded(saveId)),
   getRoster: async (saveId: string) => queries.getRoster(await ensureLoaded(saveId)),
+  getWalkOns: async (saveId: string) => queries.getWalkOns(await ensureLoaded(saveId)),
+  addWalkOn: async (saveId: string, candidateId: string) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.addWalkOn(state, candidateId);
+    await persistence.persistSave(state);
+    return result;
+  },
   getSchedule: async (saveId: string) => queries.getSchedule(await ensureLoaded(saveId)),
   getStandings: async (saveId: string) => queries.getStandings(await ensureLoaded(saveId)),
   getRivalries: async (saveId: string) => queries.getRivalries(await ensureLoaded(saveId)),

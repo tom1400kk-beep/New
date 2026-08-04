@@ -57,6 +57,7 @@ export interface RecruitingTeamInput {
   playedProDomestic?: boolean;
   coachPipelineStates?: Record<string, number>;
   campusAtmosphere?: number; // 1-100, program culture/environment — a buzzing program is a real recruiting draw
+  hasScholarshipOpen?: boolean; // explicitly false = this program is only offering a walk-on spot right now
 }
 
 // Each of the 11 recruit priorities maps to a concrete 0-100 "how well does
@@ -149,6 +150,14 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   }
   if (team.playedProDomestic && prospect.starRating >= 4) {
     base *= 1.05; // "Pro Pedigree" — a smaller nationwide blue-chip edge
+  }
+
+  // A walk-on offer (no guaranteed aid) is a real tradeoff, not a footnote —
+  // recruits chasing money/security punish it hard, while ones chasing
+  // exposure or a shot at winning now barely blink at the missing scholarship.
+  if (team.hasScholarshipOpen === false) {
+    const toughness = clamp(prospect.priorities.NIL_MONEY * 1.3 - prospect.priorities.BRAND_EXPOSURE * 0.5 - prospect.priorities.WINNING * 0.4, 0, 60);
+    base *= clamp(1 - toughness / 100, 0.35, 1);
   }
 
   return clamp(base, 0, 100);

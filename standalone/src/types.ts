@@ -27,6 +27,6 @@ export const DIVISION_RULES: Record<
   { scholarshipLimit: number; rosterCap: number; hasScholarships: boolean; hasNil: boolean }
 > = {
   D1: { scholarshipLimit: 13, rosterCap: 15, hasScholarships: true, hasNil: true },
-  D2: { scholarshipLimit: 10, rosterCap: 17, hasScholarships: true, hasNil: false },
+  D2: { scholarshipLimit: 10, rosterCap: 20, hasScholarships: true, hasNil: false },
   D3: { scholarshipLimit: 0, rosterCap: 20, hasScholarships: false, hasNil: false },
 };

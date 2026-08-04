@@ -32,6 +32,7 @@ model SaveGame {
   assistantCoaches AssistantCoach[]
   players          Player[]
   prospects        Prospect[]
+  walkOnCandidates WalkOnCandidate[]
   seasons          Season[]
   games            Game[]
   tournaments      Tournament[]
@@ -78,6 +79,7 @@ model Team {
 
   players           Player[]
   prospectInterest  RecruitInterest[]
+  walkOnCandidates  WalkOnCandidate[]
   headCoach         Coach?   @relation("HeadCoach", fields: [headCoachId], references: [id])
   headCoachId       String?  @unique
   assistants        AssistantCoach[]
@@ -222,6 +224,7 @@ model Player {
   injuryWeeksLeft  Int      @default(0)
   isSuspended      Boolean  @default(false)
   suspensionDaysLeft Int    @default(0)
+  onScholarship    Boolean  @default(true) // false = walk-on, no athletic aid
 
   gameStats        PlayerGameStat[]
 
@@ -281,6 +284,40 @@ model RecruitInterest {
   visitCompleted    Boolean  @default(false)
 
   @@unique([prospectId, teamId])
+}
+
+// Walk-on tryout pool: local players and prospects who reached out on their
+// own about walking on, regenerated for the user's team each offseason
+// whenever the roster sits below the division's roster cap. Source:
+// "LOCAL" | "REACHED_OUT".
+model WalkOnCandidate {
+  id               String   @id @default(cuid())
+  saveGame         SaveGame @relation(fields: [saveGameId], references: [id], onDelete: Cascade)
+  saveGameId       String
+  team             Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId           String
+
+  firstName        String
+  lastName         String
+  position         String
+  hometownState    String
+  countryOfOrigin  String?
+  origin           String   @default("HIGH_SCHOOL")
+  source           String   // "LOCAL" | "REACHED_OUT"
+
+  scoring          Int
+  threePoint       Int
+  finishing        Int
+  playmaking       Int
+  rebounding       Int
+  defense          Int
+  athleticism      Int
+  basketballIq     Int
+  potential        Int
+  characterRating  Int
+  disciplineRating Int      @default(65)
+
+  @@index([saveGameId, teamId])
 }
 
 // ---------- Seasons, games, tournaments ----------

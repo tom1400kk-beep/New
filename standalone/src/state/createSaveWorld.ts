@@ -123,8 +123,9 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       pendingTeams.push({ id: teamId, conferenceId });
 
       const rosterSize = DIVISION_RULES[division].rosterCap;
+      const scholarshipLimit = DIVISION_RULES[division].scholarshipLimit;
       const roster = generateRosterForTeam(rng, prestige, division, rosterSize, internationalScoutingRating);
-      for (const p of roster) {
+      roster.forEach((p, i) => {
         players.push({
           id: newId(), teamId,
           firstName: p.firstName, lastName: p.lastName, position: p.position, classYear: p.classYear,
@@ -137,8 +138,9 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
           disciplineRating: p.ratings.disciplineRating, chemistryImpact: 0,
           eligibilityYearsLeft: p.eligibilityYearsLeft, inTransferPortal: false, isInjured: false, injuryWeeksLeft: 0,
           isSuspended: false, suspensionDaysLeft: 0,
+          onScholarship: i < scholarshipLimit,
         });
-      }
+      });
     }
   }
 
@@ -215,6 +217,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     },
     conferences, teams, coaches, athleticDirectors, assistants: [], players, prospects, interests: [],
     seasons: [{ id: newId(), year: seasonYear }], games, stats: [], tournaments: [], events: [], rivalries,
+    walkOnCandidates: [],
   };
 }
 

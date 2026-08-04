@@ -2,6 +2,7 @@ import { computeStandings } from "./standings";
 import { costOfLivingIndex } from "../engine/costOfLiving";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { sortedPair } from "../engine/rivalry";
+import { DIVISION_RULES, type Division } from "../types";
 import type { WorldState } from "./types";
 
 export function getDashboard(state: WorldState) {
@@ -53,6 +54,15 @@ export function getRoster(state: WorldState) {
   return state.players
     .filter((p) => p.teamId === state.save.coachTeamId)
     .sort((a, b) => a.classYear.localeCompare(b.classYear) || b.scoring - a.scoring);
+}
+
+export function getWalkOns(state: WorldState) {
+  if (!state.save.coachTeamId) return { candidates: [], rosterCount: 0, rosterCap: 0 };
+  const teamId = state.save.coachTeamId;
+  const team = state.teams.find((t) => t.id === teamId)!;
+  const rosterCount = state.players.filter((p) => p.teamId === teamId).length;
+  const candidates = [...state.walkOnCandidates.filter((c) => c.teamId === teamId)].sort((a, b) => b.scoring - a.scoring);
+  return { candidates, rosterCount, rosterCap: DIVISION_RULES[team.division as Division].rosterCap };
 }
 
 export function getSchedule(state: WorldState) {

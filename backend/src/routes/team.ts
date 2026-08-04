@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { computeStandings } from "../season/standings";
 import { sortedPair } from "../engine/rivalry";
+import { DIVISION_RULES, type Division } from "../types";
 
 export const teamRouter = Router();
 
@@ -13,6 +15,44 @@ teamRouter.get("/saves/:id/roster", async (req, res) => {
     orderBy: [{ classYear: "asc" }, { scoring: "desc" }],
   });
   res.json(players);
+});
+
+teamRouter.get("/saves/:id/walkons", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (!save.coachTeamId) return res.json({ candidates: [], rosterCount: 0, rosterCap: 0 });
+  const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { players: true } });
+  const candidates = await prisma.walkOnCandidate.findMany({
+    where: { saveGameId: save.id, teamId: team.id },
+    orderBy: { scoring: "desc" },
+  });
+  res.json({ candidates, rosterCount: team.players.length, rosterCap: DIVISION_RULES[team.division as Division].rosterCap });
+});
+
+teamRouter.post("/saves/:id/walkons/:candidateId/add", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  if (!save.coachTeamId) return res.status(400).json({ error: "No active team" });
+  const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { players: true } });
+  const candidate = await prisma.walkOnCandidate.findUnique({ where: { id: req.params.candidateId } });
+  if (!candidate || candidate.teamId !== team.id) return res.status(404).json({ error: "Candidate not found" });
+
+  const rosterCap = DIVISION_RULES[team.division as Division].rosterCap;
+  if (team.players.length >= rosterCap) return res.status(400).json({ error: "Roster is already full" });
+
+  const player = await prisma.player.create({
+    data: {
+      id: randomUUID(), saveGameId: save.id, teamId: team.id,
+      firstName: candidate.firstName, lastName: candidate.lastName, position: candidate.position,
+      classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, countryOfOrigin: candidate.countryOfOrigin,
+      origin: candidate.origin,
+      scoring: candidate.scoring, threePoint: candidate.threePoint, finishing: candidate.finishing,
+      playmaking: candidate.playmaking, rebounding: candidate.rebounding, defense: candidate.defense,
+      athleticism: candidate.athleticism, basketballIq: candidate.basketballIq,
+      stamina: 60, potential: candidate.potential, characterRating: candidate.characterRating,
+      disciplineRating: candidate.disciplineRating, eligibilityYearsLeft: 4, onScholarship: false,
+    },
+  });
+  await prisma.walkOnCandidate.delete({ where: { id: candidate.id } });
+  res.json(player);
 });
 
 teamRouter.get("/saves/:id/schedule", async (req, res) => {
