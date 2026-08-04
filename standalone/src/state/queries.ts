@@ -3,6 +3,9 @@ import { costOfLivingIndex } from "../engine/costOfLiving";
 import { parseAdRelationships, adRelationshipScore } from "../engine/athleticDirector";
 import { sortedPair } from "../engine/rivalry";
 import { DIVISION_RULES, type Division } from "../types";
+import { computeKenPomRatings, type TeamGameBoxScore } from "../engine/kenpom";
+import { computeRPI, type RPIGameResult } from "../engine/rpi";
+import { projectBracketology, type BracketTeamInput } from "../engine/bracketology";
 import type { WorldState } from "./types";
 
 export function getDashboard(state: WorldState) {
@@ -128,4 +131,99 @@ export function getStandings(state: WorldState) {
     .sort((a, b) => b.confWins / Math.max(1, b.confWins + b.confLosses) - a.confWins / Math.max(1, a.confWins + a.confLosses));
 
   return { conferenceName: conference?.name ?? null, rows };
+}
+
+function d1Teams(state: WorldState) {
+  return state.teams.filter((t) => t.division === "D1");
+}
+
+// KenPom-style ratings weigh every game played, including conference and
+// NCAA tournament games, the same way the real system updates all season —
+// unlike the W-L record shown elsewhere, which is regular-season only.
+function buildKenPomBoxScores(state: WorldState, seasonYear: number): TeamGameBoxScore[] {
+  const games = state.games.filter((g) => g.seasonYear === seasonYear && g.isPlayed);
+  const statsByGameTeam = new Map<string, { fga: number; fta: number; turnovers: number; rebounds: number }>();
+  for (const s of state.stats) {
+    const key = `${s.gameId}|${s.teamId}`;
+    if (!statsByGameTeam.has(key)) statsByGameTeam.set(key, { fga: 0, fta: 0, turnovers: 0, rebounds: 0 });
+    const agg = statsByGameTeam.get(key)!;
+    agg.fga += s.fga;
+    agg.fta += s.fta;
+    agg.turnovers += s.turnovers;
+    agg.rebounds += s.rebounds;
+  }
+
+  const boxScores: TeamGameBoxScore[] = [];
+  for (const g of games) {
+    if (g.homeScore === null || g.awayScore === null) continue;
+    const homeStats = statsByGameTeam.get(`${g.id}|${g.homeTeamId}`);
+    const awayStats = statsByGameTeam.get(`${g.id}|${g.awayTeamId}`);
+    if (!homeStats || !awayStats) continue;
+    boxScores.push({ gameId: g.id, teamId: g.homeTeamId, points: g.homeScore, opponentPoints: g.awayScore, ...homeStats });
+    boxScores.push({ gameId: g.id, teamId: g.awayTeamId, points: g.awayScore, opponentPoints: g.homeScore, ...awayStats });
+  }
+  return boxScores;
+}
+
+// RPI sticks to the regular-season game set (matches the W-L record shown
+// everywhere else in the app), the traditional convention for the metric.
+function buildRPIResults(state: WorldState, seasonYear: number): RPIGameResult[] {
+  const games = state.games.filter((g) => g.seasonYear === seasonYear && g.isPlayed && g.tournamentId === null);
+  const results: RPIGameResult[] = [];
+  for (const g of games) {
+    if (g.homeScore === null || g.awayScore === null) continue;
+    const homeWon = g.homeScore > g.awayScore;
+    results.push({ teamId: g.homeTeamId, opponentId: g.awayTeamId, won: homeWon });
+    results.push({ teamId: g.awayTeamId, opponentId: g.homeTeamId, won: !homeWon });
+  }
+  return results;
+}
+
+export function getKenPom(state: WorldState) {
+  const teams = d1Teams(state);
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  const boxScores = buildKenPomBoxScores(state, state.save.currentSeasonYear).filter((b) => teamById.has(b.teamId));
+  const ratings = computeKenPomRatings(boxScores);
+  return [...ratings.values()]
+    .filter((r) => teamById.has(r.teamId))
+    .sort((a, b) => b.adjEM - a.adjEM)
+    .map((r, i) => ({ rank: i + 1, name: teamById.get(r.teamId)!.name, ...r }));
+}
+
+export function getRPI(state: WorldState) {
+  const teams = d1Teams(state);
+  const teamById = new Map(teams.map((t) => [t.id, t]));
+  const results = buildRPIResults(state, state.save.currentSeasonYear).filter((r) => teamById.has(r.teamId));
+  const ratings = computeRPI(results);
+  return [...ratings.values()]
+    .filter((r) => teamById.has(r.teamId))
+    .sort((a, b) => b.rpi - a.rpi)
+    .map((r, i) => ({ rank: i + 1, name: teamById.get(r.teamId)!.name, ...r }));
+}
+
+export function getBracketology(state: WorldState) {
+  const teams = d1Teams(state);
+  const seasonYear = state.save.currentSeasonYear;
+  const boxScores = buildKenPomBoxScores(state, seasonYear);
+  const rpiResults = buildRPIResults(state, seasonYear);
+  const standings = computeStandings(state, seasonYear);
+
+  const kenpom = computeKenPomRatings(boxScores);
+  const rpi = computeRPI(rpiResults);
+
+  const kenpomRankOf = new Map([...kenpom.values()].sort((a, b) => b.adjEM - a.adjEM).map((r, i) => [r.teamId, i + 1]));
+  const rpiRankOf = new Map([...rpi.values()].sort((a, b) => b.rpi - a.rpi).map((r, i) => [r.teamId, i + 1]));
+
+  const inputs: BracketTeamInput[] = teams
+    .filter((t) => kenpomRankOf.has(t.id) && rpiRankOf.has(t.id))
+    .map((t) => {
+      const record = standings.get(t.id) ?? { wins: 0, losses: 0, confWins: 0, confLosses: 0 };
+      return {
+        teamId: t.id, name: t.name, conferenceId: t.conferenceId,
+        wins: record.wins, losses: record.losses, confWins: record.confWins, confLosses: record.confLosses,
+        kenpomRank: kenpomRankOf.get(t.id)!, rpiRank: rpiRankOf.get(t.id)!,
+      };
+    });
+
+  return projectBracketology(inputs);
 }

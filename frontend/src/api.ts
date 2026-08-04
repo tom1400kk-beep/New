@@ -34,6 +34,9 @@ export const api = {
     request<any>(`/saves/${saveId}/walkons/${candidateId}/add`, { method: "POST" }),
   getSchedule: (saveId: string) => request<any[]>(`/saves/${saveId}/schedule`),
   getStandings: (saveId: string) => request<any>(`/saves/${saveId}/standings`),
+  getKenPom: (saveId: string) => request<any[]>(`/saves/${saveId}/kenpom`),
+  getRPI: (saveId: string) => request<any[]>(`/saves/${saveId}/rpi`),
+  getBracketology: (saveId: string) => request<any>(`/saves/${saveId}/bracketology`),
   getRivalries: (saveId: string) => request<any[]>(`/saves/${saveId}/rivalries`),
   advance: (saveId: string) => request<any>(`/saves/${saveId}/advance`, { method: "POST" }),
 

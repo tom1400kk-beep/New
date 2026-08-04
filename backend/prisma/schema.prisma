@@ -394,6 +394,7 @@ model PlayerGameStat {
   gameId    String
   player    Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
   playerId  String
+  teamId    String // which side of the matchup this player represented in this specific game — fixed at simulation time, so it stays correct even after a later transfer
 
   minutes   Int
   points    Int
@@ -411,6 +412,7 @@ model PlayerGameStat {
 
   @@index([gameId])
   @@index([playerId])
+  @@index([gameId, teamId])
 }
 
 // TournamentType: "CONFERENCE_TOURNAMENT" | "NCAA_TOURNAMENT" | "NIT" | "D2_NATIONAL" | "D3_NATIONAL"

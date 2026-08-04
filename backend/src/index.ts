@@ -6,6 +6,7 @@ import { recruitingRouter } from "./routes/recruiting";
 import { transfersRouter } from "./routes/transfers";
 import { eventsRouter } from "./routes/events";
 import { preseasonTournamentsRouter } from "./routes/preseasonTournaments";
+import { rankingsRouter } from "./routes/rankings";
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,7 @@ app.use("/api", recruitingRouter);
 app.use("/api", transfersRouter);
 app.use("/api", eventsRouter);
 app.use("/api", preseasonTournamentsRouter);
+app.use("/api", rankingsRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

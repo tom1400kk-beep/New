@@ -223,6 +223,7 @@ export interface PlayerGameStatRow {
   id: string;
   gameId: string;
   playerId: string;
+  teamId: string; // which side of the matchup this player represented in this specific game
   minutes: number;
   points: number;
   rebounds: number;

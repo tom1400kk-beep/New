@@ -65,6 +65,16 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
   for (const t of loaded.tournaments) {
     if (t.name === undefined) t.name = null;
   }
+  // Saves persisted before the KenPom/RPI/bracketology feature won't have
+  // teamId on existing stat rows — best-effort backfill from the player's
+  // current team (wrong only for the rare case of a stat line predating a
+  // since-completed transfer).
+  if (loaded.stats.some((s: any) => s.teamId === undefined)) {
+    const teamByPlayer = new Map(loaded.players.map((p) => [p.id, p.teamId]));
+    for (const s of loaded.stats) {
+      if ((s as any).teamId === undefined) s.teamId = teamByPlayer.get(s.playerId) ?? "";
+    }
+  }
   cache = loaded;
   return loaded;
 }
@@ -123,6 +133,9 @@ export const api = {
   },
   getSchedule: async (saveId: string) => queries.getSchedule(await ensureLoaded(saveId)),
   getStandings: async (saveId: string) => queries.getStandings(await ensureLoaded(saveId)),
+  getKenPom: async (saveId: string) => queries.getKenPom(await ensureLoaded(saveId)),
+  getRPI: async (saveId: string) => queries.getRPI(await ensureLoaded(saveId)),
+  getBracketology: async (saveId: string) => queries.getBracketology(await ensureLoaded(saveId)),
   getRivalries: async (saveId: string) => queries.getRivalries(await ensureLoaded(saveId)),
 
   advance: async (saveId: string) => {

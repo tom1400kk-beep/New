@@ -98,8 +98,8 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
     });
     gameUpdates.push({ id: g.id, homeScore: result.homeScore, awayScore: result.awayScore, attendance });
 
-    for (const b of result.homeBox) statRows.push({ id: randomUUID(), gameId: g.id, ...b });
-    for (const b of result.awayBox) statRows.push({ id: randomUUID(), gameId: g.id, ...b });
+    for (const b of result.homeBox) statRows.push({ id: randomUUID(), gameId: g.id, teamId: homeTeam.id, ...b });
+    for (const b of result.awayBox) statRows.push({ id: randomUUID(), gameId: g.id, teamId: awayTeam.id, ...b });
   }
 
   await prisma.$transaction(

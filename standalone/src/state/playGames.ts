@@ -75,7 +75,7 @@ export function playGames(state: WorldState, gameIds: string[]): void {
       rivalryIntensity: rivalry?.intensity,
     });
 
-    for (const b of result.homeBox) state.stats.push({ id: newId(), gameId: g.id, ...b });
-    for (const b of result.awayBox) state.stats.push({ id: newId(), gameId: g.id, ...b });
+    for (const b of result.homeBox) state.stats.push({ id: newId(), gameId: g.id, teamId: homeTeam.id, ...b });
+    for (const b of result.awayBox) state.stats.push({ id: newId(), gameId: g.id, teamId: awayTeam.id, ...b });
   }
 }
