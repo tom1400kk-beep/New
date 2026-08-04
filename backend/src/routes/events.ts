@@ -24,9 +24,11 @@ eventsRouter.post("/saves/:id/events/:eventId/resolve", async (req, res) => {
 });
 
 async function applyEffects(saveGameId: string, teamId: string | null, playerId: string | null, effects: EventEffects) {
+  let sourceTeamName: string | null = null;
   if (teamId) {
     const team = await prisma.team.findUnique({ where: { id: teamId }, include: { headCoach: true, athleticDirector: true } });
     if (team) {
+      sourceTeamName = team.name;
       if (effects.prestigeDelta) {
         await prisma.team.update({ where: { id: team.id }, data: { prestige: Math.round(clamp(team.prestige + effects.prestigeDelta, 5, 99)) } });
       }
@@ -91,7 +93,12 @@ async function applyEffects(saveGameId: string, teamId: string | null, playerId:
         data.isSuspended = true;
         data.suspensionDaysLeft = effects.suspensionDays;
       }
-      if (effects.removePlayer) data.teamId = null;
+      if (effects.transferToTeamId) {
+        data.teamId = effects.transferToTeamId;
+        data.previousSchool = sourceTeamName;
+      } else if (effects.removePlayer) {
+        data.teamId = null;
+      }
       if (Object.keys(data).length > 0) {
         await prisma.player.update({ where: { id: player.id }, data });
       }

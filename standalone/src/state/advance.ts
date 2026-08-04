@@ -4,6 +4,7 @@ import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason, type OffseasonResult } from "./offseason";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
+import { maybeGenerateNILPoachingEvent, type NILPoachingContext } from "../engine/nilPoaching";
 import { sortedPair } from "../engine/rivalry";
 import { computeTeamChemistry } from "../engine/chemistry";
 import { mulberry32 } from "../engine/rng";
@@ -137,6 +138,23 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
           coachBackground: coach?.background ?? null,
         };
         ev = maybeGenerateEvent(rng, ctx);
+      }
+
+      // NIL tampering only makes sense while games are actually being played —
+      // not during the preseason schedule-editing window, and not during the
+      // offseason, which already has its own dedicated transfer portal flow.
+      const gamesAreBeingPlayed = ["REGULAR_SEASON", "CONFERENCE_TOURNAMENT", "NCAA_TOURNAMENT", "NIT"].includes(state.save.currentPhase);
+      if (!ev && gamesAreBeingPlayed) {
+        const nilRosterPlayers = state.players.filter((p) => p.teamId === state.save.coachTeamId);
+        const userTeam = state.teams.find((t) => t.id === state.save.coachTeamId);
+        const rivalTeams = userTeam
+          ? state.teams.filter((t) => t.division === userTeam.division && t.id !== state.save.coachTeamId)
+          : [];
+        const nilCtx: NILPoachingContext = {
+          players: nilRosterPlayers,
+          rivals: rivalTeams.map((r) => ({ teamId: r.id, teamName: r.name, prestige: r.prestige, nilBudget: r.nilBudget })),
+        };
+        ev = maybeGenerateNILPoachingEvent(rng, nilCtx);
       }
 
       if (ev) {

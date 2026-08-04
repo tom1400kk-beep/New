@@ -27,7 +27,8 @@ export interface EventEffects {
   nilBudgetDelta?: number;
   playerCharacterDelta?: number;
   injuryWeeks?: number;
-  removePlayer?: boolean; // player leaves team (transfer out)
+  removePlayer?: boolean; // player leaves team (transfer out) to no team in particular
+  transferToTeamId?: string; // player leaves for this specific team (e.g. an NIL poaching loss)
   suspensionDays?: number;
   legalityDelta?: number; // program off-court integrity reputation
   teamPerceptionDelta?: number; // how the locker room views the coach

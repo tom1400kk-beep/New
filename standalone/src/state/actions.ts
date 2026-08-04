@@ -296,9 +296,11 @@ export function resolveEvent(state: WorldState, eventId: string, optionId: strin
 }
 
 function applyEffects(state: WorldState, teamId: string | null, playerId: string | null, effects: EventEffects) {
+  let sourceTeamName: string | null = null;
   if (teamId) {
     const team = state.teams.find((t) => t.id === teamId);
     if (team) {
+      sourceTeamName = team.name;
       if (effects.prestigeDelta) team.prestige = Math.round(clamp(team.prestige + effects.prestigeDelta, 5, 99));
       if (effects.nilBudgetDelta) team.nilBudget = Math.max(0, team.nilBudget + effects.nilBudgetDelta);
       if (effects.hotSeatDelta) {
@@ -344,7 +346,12 @@ function applyEffects(state: WorldState, teamId: string | null, playerId: string
       if (effects.playerCharacterDelta) player.characterRating = Math.round(clamp(player.characterRating + effects.playerCharacterDelta, 5, 99));
       if (effects.injuryWeeks) { player.isInjured = true; player.injuryWeeksLeft = effects.injuryWeeks * 7; }
       if (effects.suspensionDays) { player.isSuspended = true; player.suspensionDaysLeft = effects.suspensionDays; }
-      if (effects.removePlayer) player.teamId = null;
+      if (effects.transferToTeamId) {
+        player.teamId = effects.transferToTeamId;
+        player.previousSchool = sourceTeamName;
+      } else if (effects.removePlayer) {
+        player.teamId = null;
+      }
     }
   }
 }
