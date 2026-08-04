@@ -37,6 +37,7 @@ export default function SaveSelectPage() {
   const [division, setDivision] = useState("D1");
   const [teams, setTeams] = useState<any[]>([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
+  const [stateFilter, setStateFilter] = useState("");
   const [name, setName] = useState("");
   const [teamSchoolName, setTeamSchoolName] = useState("");
   const [coachName, setCoachName] = useState("");
@@ -84,11 +85,21 @@ export default function SaveSelectPage() {
   useEffect(() => {
     setTeamsLoading(true);
     setTeamSchoolName("");
+    setStateFilter("");
     api.listLeagueTeams(division).then((t) => {
       setTeams([...t].sort((a, b) => a.school.localeCompare(b.school)));
       setTeamsLoading(false);
     });
   }, [division]);
+
+  const availableStates = [...new Set(teams.map((t) => t.state))].sort();
+  const filteredTeams = stateFilter ? teams.filter((t) => t.state === stateFilter) : teams;
+  const teamsByState = new Map<string, any[]>();
+  for (const t of filteredTeams) {
+    if (!teamsByState.has(t.state)) teamsByState.set(t.state, []);
+    teamsByState.get(t.state)!.push(t);
+  }
+  const statesToRender = [...teamsByState.keys()].sort();
 
   function playingCareerChoice() {
     const hometown = hometownState || null;
@@ -232,13 +243,30 @@ export default function SaveSelectPage() {
               </select>
             </p>
             <p>
-              <label>Team ({teamsLoading ? "loading..." : `${teams.length} available`})</label><br />
+              <label>State ({teamsLoading ? "loading..." : `${availableStates.length} with programs`})</label><br />
+              <select
+                value={stateFilter}
+                onChange={(e) => { setStateFilter(e.target.value); setTeamSchoolName(""); }}
+                disabled={teamsLoading}
+              >
+                <option value="">All states</option>
+                {availableStates.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </p>
+            <p>
+              <label>Team ({teamsLoading ? "loading..." : `${filteredTeams.length} available`})</label><br />
               <select value={teamSchoolName} onChange={(e) => setTeamSchoolName(e.target.value)} disabled={teamsLoading}>
                 <option value="">Select a team...</option>
-                {teams.map((t) => (
-                  <option key={t.school} value={t.school}>
-                    {t.school} ({t.conference}) — prestige {t.prestige}
-                  </option>
+                {statesToRender.map((state) => (
+                  <optgroup key={state} label={state}>
+                    {teamsByState.get(state)!.map((t) => (
+                      <option key={t.school} value={t.school}>
+                        {t.school} ({t.conference}) — prestige {t.prestige}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </p>
