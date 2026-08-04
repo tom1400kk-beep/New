@@ -375,7 +375,7 @@ export default function SaveSelectPage() {
                     onChange={(e) => setOffersFilter(e.target.value)}
                   />
                 </p>
-                <div style={{ maxHeight: 480, overflowY: "auto", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px" }}>
+                <div>
                   {(["D3", "D2", "D1"] as const).map((div) => {
                     const group = offers.filter((o) =>
                       o.division === div &&
