@@ -1,6 +1,8 @@
 // Real US high schools for domestic HS prospects/players, plus a large pool of
 // generic town-based school names for everyone else — same idea as EYBL_TEAMS
 // in generation.ts (a fixed curated flavor pool) but for the school itself.
+import { REAL_HIGH_SCHOOLS_BY_STATE } from "./realHighSchoolsByState";
+
 export interface PowerhouseSchool {
   name: string;
   state: string;
@@ -78,6 +80,20 @@ export function pickGenericHighSchool(rng: () => number, city: string): string {
   return template.includes("{city}") ? template.replace("{city}", city || "Central") : template;
 }
 
+// Chance a non-powerhouse prospect's school is drawn from the real per-state
+// list rather than a procedurally generated placeholder — kept below 100% so
+// there's still unlimited variety in states with a shorter real-school list,
+// rather than the same handful of names repeating across every class.
+const REAL_SCHOOL_CHANCE = 0.85;
+
+export function pickRegularHighSchool(rng: () => number, city: string, state: string): string {
+  const realSchools = REAL_HIGH_SCHOOLS_BY_STATE[state];
+  if (realSchools && realSchools.length > 0 && rng() < REAL_SCHOOL_CHANCE) {
+    return realSchools[Math.floor(rng() * realSchools.length)];
+  }
+  return pickGenericHighSchool(rng, city);
+}
+
 export function pickHighSchool(rng: () => number, starRating: number, city: string, state: string): string {
   const chance = HIGH_SCHOOL_CHANCE_BY_STAR[starRating] ?? 0;
   if (rng() < chance) {
@@ -89,7 +105,7 @@ export function pickHighSchool(rng: () => number, starRating: number, city: stri
     }
     return POWERHOUSE_SCHOOLS[POWERHOUSE_SCHOOLS.length - 1].name;
   }
-  return pickGenericHighSchool(rng, city);
+  return pickRegularHighSchool(rng, city, state);
 }
 
 // Caps how many D1 signings a single powerhouse school can produce in one
@@ -102,12 +118,13 @@ export function capHighSchoolIfNeeded(
   rng: () => number,
   highSchool: string,
   city: string,
+  state: string,
   isD1: boolean,
   counter: Map<string, number>,
 ): string {
   if (!isD1 || !POWERHOUSE_SCHOOL_NAMES.has(highSchool)) return highSchool;
   const count = counter.get(highSchool) ?? 0;
-  if (count >= POWERHOUSE_D1_CLASS_CAP) return pickGenericHighSchool(rng, city);
+  if (count >= POWERHOUSE_D1_CLASS_CAP) return pickRegularHighSchool(rng, city, state);
   counter.set(highSchool, count + 1);
   return highSchool;
 }

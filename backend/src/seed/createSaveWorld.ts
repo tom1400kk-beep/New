@@ -193,7 +193,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
           heightInches: p.ratings.heightInches,
           hometownState: p.hometownState,
           hometownCity: p.hometownCity,
-          highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, div === "D1", hsCapCounterFor(p.classYear)) : "",
+          highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, p.hometownState, div === "D1", hsCapCounterFor(p.classYear)) : "",
           countryOfOrigin: p.countryOfOrigin,
           origin: p.origin,
           scoring: p.ratings.scoring,

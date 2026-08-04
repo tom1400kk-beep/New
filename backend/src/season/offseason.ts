@@ -848,7 +848,7 @@ export async function runOffseason(saveGameId: string): Promise<{
       id: randomUUID(), saveGameId, teamId: team.id, firstName: p.firstName, lastName: p.lastName,
       position: p.position, classYear: "FR" as ClassYear, heightInches: p.ratings.heightInches,
       hometownState: p.hometownState, hometownCity: p.hometownCity,
-      highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, teamDivision === "D1", d1SigningsByPowerhouseSchool) : "",
+      highSchool: p.origin === "HIGH_SCHOOL" ? capHighSchoolIfNeeded(rng, p.highSchool, p.hometownCity, p.hometownState, teamDivision === "D1", d1SigningsByPowerhouseSchool) : "",
       countryOfOrigin: p.countryOfOrigin, origin: p.origin, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
