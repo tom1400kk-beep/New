@@ -60,11 +60,11 @@ teamRouter.get("/saves/:id/teams/:teamId", async (req, res) => {
     isPlayerControlled: team.isPlayerControlled,
     costOfLivingIndex: costOfLivingIndex(team.state),
     headCoach: team.headCoach ? {
-      name: team.headCoach.name, archetype: team.headCoach.archetype, background: team.headCoach.background,
+      id: team.headCoach.id, name: team.headCoach.name, archetype: team.headCoach.archetype, background: team.headCoach.background,
       hotSeatLevel: team.headCoach.hotSeatLevel, reputation: team.headCoach.reputation,
     } : null,
     athleticDirector: team.athleticDirector ? {
-      name: team.athleticDirector.name, patience: team.athleticDirector.patience, winFocus: team.athleticDirector.winFocus,
+      id: team.athleticDirector.id, name: team.athleticDirector.name, patience: team.athleticDirector.patience, winFocus: team.athleticDirector.winFocus,
       integrityStandard: team.athleticDirector.integrityStandard, loyalty: team.athleticDirector.loyalty,
       yearsAtCurrentJob: team.athleticDirector.yearsAtCurrentJob,
     } : null,

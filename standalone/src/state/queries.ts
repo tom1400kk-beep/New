@@ -167,16 +167,40 @@ export function getTeamProfile(state: WorldState, teamId: string) {
     isPlayerControlled: team.isPlayerControlled,
     costOfLivingIndex: costOfLivingIndex(team.state),
     headCoach: headCoach ? {
-      name: headCoach.name, archetype: headCoach.archetype, background: headCoach.background,
+      id: headCoach.id, name: headCoach.name, archetype: headCoach.archetype, background: headCoach.background,
       hotSeatLevel: headCoach.hotSeatLevel, reputation: headCoach.reputation,
     } : null,
     athleticDirector: athleticDirector ? {
-      name: athleticDirector.name, patience: athleticDirector.patience, winFocus: athleticDirector.winFocus,
+      id: athleticDirector.id, name: athleticDirector.name, patience: athleticDirector.patience, winFocus: athleticDirector.winFocus,
       integrityStandard: athleticDirector.integrityStandard, loyalty: athleticDirector.loyalty,
       yearsAtCurrentJob: athleticDirector.yearsAtCurrentJob,
     } : null,
     record, kenpom, rpi, roster,
   };
+}
+
+// Fetch-by-id profile lookups powering the "click any player/coach/AD name"
+// feature across the UI, mirroring getTeamProfile's shape so every current
+// and future screen can link to a person's profile with just id + name.
+export function getPlayerProfile(state: WorldState, playerId: string) {
+  const player = state.players.find((p) => p.id === playerId);
+  if (!player) return null;
+  const team = player.teamId ? state.teams.find((t) => t.id === player.teamId) : null;
+  return { ...player, overall: Math.round(overall(player as unknown as SimPlayer)), teamId: team?.id ?? null, teamName: team?.name ?? null };
+}
+
+export function getCoachProfile(state: WorldState, coachId: string) {
+  const coach = state.coaches.find((c) => c.id === coachId);
+  if (!coach) return null;
+  const team = state.teams.find((t) => t.headCoachId === coach.id) ?? null;
+  return { ...coach, teamId: team?.id ?? null, teamName: team?.name ?? null };
+}
+
+export function getADProfile(state: WorldState, adId: string) {
+  const ad = state.athleticDirectors.find((a) => a.id === adId);
+  if (!ad) return null;
+  const team = state.teams.find((t) => t.athleticDirectorId === ad.id) ?? null;
+  return { ...ad, teamId: team?.id ?? null, teamName: team?.name ?? null };
 }
 
 export function getRivalries(state: WorldState) {
@@ -557,7 +581,7 @@ export function getHotSeatBoard(state: WorldState) {
         teamId: t.id, teamName: t.name, division: t.division, state: t.state, prestige: t.prestige,
         isUserTeam: t.id === state.save.coachTeamId,
         coach: {
-          name: coach.name, archetype: coach.archetype, background: coach.background,
+          id: coach.id, name: coach.name, archetype: coach.archetype, background: coach.background,
           hotSeatLevel: coach.hotSeatLevel, yearsAtCurrentJob: coach.yearsAtCurrentJob,
         },
         record,

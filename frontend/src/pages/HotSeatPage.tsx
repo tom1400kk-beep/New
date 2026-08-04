@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 import TeamLink from "../components/TeamLink";
+import CoachLink from "../components/CoachLink";
 
 const ARCHETYPE_LABELS: Record<string, string> = {
   OFFENSIVE_INNOVATOR: "Offensive Innovator",
@@ -52,7 +53,7 @@ export default function HotSeatPage() {
                     <TeamLink teamId={r.teamId} name={r.teamName} /> <span className="text-muted">({r.division})</span>
                     {r.isUserTeam && <strong> · You</strong>}
                   </td>
-                  <td>{r.coach.name}</td>
+                  <td><CoachLink coachId={r.coach.id} name={r.coach.name} /></td>
                   <td className="text-muted">{ARCHETYPE_LABELS[r.coach.archetype] ?? r.coach.archetype}</td>
                   <td>{r.record.wins}-{r.record.losses}</td>
                   <td className="text-muted">{r.prestige}</td>

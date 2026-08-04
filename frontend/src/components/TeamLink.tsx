@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
+import CoachLink from "./CoachLink";
+import ADLink from "./ADLink";
+import PlayerLink from "./PlayerLink";
 
 const ARCHETYPE_LABELS: Record<string, string> = {
   OFFENSIVE_INNOVATOR: "Offensive Innovator",
@@ -88,13 +91,13 @@ export default function TeamLink({ teamId, name }: { teamId: string; name: strin
 
                 {profile.headCoach && (
                   <p className="text-muted" style={{ marginTop: -8 }}>
-                    Coach: {profile.headCoach.name} — {ARCHETYPE_LABELS[profile.headCoach.archetype] ?? formatKey(profile.headCoach.archetype)}
+                    Coach: <CoachLink coachId={profile.headCoach.id} name={profile.headCoach.name} /> — {ARCHETYPE_LABELS[profile.headCoach.archetype] ?? formatKey(profile.headCoach.archetype)}
                     {profile.headCoach.background ? ` · ${BACKGROUND_LABELS[profile.headCoach.background] ?? formatKey(profile.headCoach.background)}` : ""}
                   </p>
                 )}
                 {profile.athleticDirector && (
                   <p className="text-muted" style={{ marginTop: -8 }}>
-                    Athletic Director: {profile.athleticDirector.name}
+                    Athletic Director: <ADLink adId={profile.athleticDirector.id} name={profile.athleticDirector.name} />
                   </p>
                 )}
 
@@ -105,7 +108,7 @@ export default function TeamLink({ teamId, name }: { teamId: string; name: strin
                     <tbody>
                       {profile.roster.map((p: any) => (
                         <tr key={p.id}>
-                          <td>{p.firstName} {p.lastName}</td>
+                          <td><PlayerLink playerId={p.id} name={`${p.firstName} ${p.lastName}`} /></td>
                           <td>{p.position}</td>
                           <td>{p.classYear}</td>
                           <td>{overall(p)}</td>

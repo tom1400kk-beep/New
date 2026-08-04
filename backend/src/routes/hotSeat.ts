@@ -24,7 +24,7 @@ hotSeatRouter.get("/saves/:id/hot-seat", async (req, res) => {
         teamId: t.id, teamName: t.name, division: t.division, state: t.state, prestige: t.prestige,
         isUserTeam: t.id === save.coachTeamId,
         coach: {
-          name: t.headCoach!.name, archetype: t.headCoach!.archetype, background: t.headCoach!.background,
+          id: t.headCoach!.id, name: t.headCoach!.name, archetype: t.headCoach!.archetype, background: t.headCoach!.background,
           hotSeatLevel: t.headCoach!.hotSeatLevel, yearsAtCurrentJob: t.headCoach!.yearsAtCurrentJob,
         },
         record,

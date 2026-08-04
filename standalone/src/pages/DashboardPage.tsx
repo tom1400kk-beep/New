@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useSave } from "../SaveContext";
 import TeamLink from "../components/TeamLink";
+import PlayerLink from "../components/PlayerLink";
+import ADLink from "../components/ADLink";
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -51,7 +53,7 @@ function LineupTable({ team }: { team: any }) {
             {team.startingLineup.map((p: any) => (
               <tr key={p.playerId}>
                 <td className="text-muted">{p.position}</td>
-                <td>{p.name}</td>
+                <td><PlayerLink playerId={p.playerId} name={p.name} /></td>
                 <td className="text-muted">{p.classYear}</td>
                 <td>{fmtStat(p.ppg)}</td>
                 <td>{fmtStat(p.rpg)}</td>
@@ -76,7 +78,7 @@ function InjuryReportLine({ team }: { team: any }) {
         team.injuryReport.map((r: any, i: number) => (
           <span key={r.playerId}>
             {i > 0 && ", "}
-            {r.name} <span className="text-bad">({r.detail})</span>
+            <PlayerLink playerId={r.playerId} name={r.name} /> <span className="text-bad">({r.detail})</span>
           </span>
         ))
       )}
@@ -158,7 +160,6 @@ export default function DashboardPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [conferenceInvite, setConferenceInvite] = useState<any>(null);
   const [respondingToInvite, setRespondingToInvite] = useState(false);
-  const [selectedAd, setSelectedAd] = useState<any>(null);
 
   async function refresh() {
     if (!activeSaveId) return;
@@ -267,10 +268,7 @@ export default function DashboardPage() {
               {o.costOfLivingIndex != null && <span className="text-muted"> · {colLabel(o.costOfLivingIndex)} cost of living</span>}
               {o.athleticDirector && (
                 <span className="text-muted">
-                  {" "}· AD:{" "}
-                  <button className="player-name-link" onClick={() => setSelectedAd(o.athleticDirector)}>
-                    {o.athleticDirector.name}
-                  </button>
+                  {" "}· AD: <ADLink adId={o.athleticDirector.id} name={o.athleticDirector.name} />
                 </span>
               )}
               {o.adRemembersYou && <span className="text-good"> — remembers you well from a previous job together</span>}
@@ -307,10 +305,7 @@ export default function DashboardPage() {
       )}
       {team.athleticDirector && (
         <p className="text-muted" style={{ marginTop: -8 }}>
-          Athletic Director:{" "}
-          <button className="player-name-link" onClick={() => setSelectedAd(team.athleticDirector)}>
-            {team.athleticDirector.name}
-          </button>
+          Athletic Director: <ADLink adId={team.athleticDirector.id} name={team.athleticDirector.name} />
           {adStyleLine(team.athleticDirector) ? ` (${adStyleLine(team.athleticDirector)})` : ""}
         </p>
       )}
@@ -497,30 +492,6 @@ export default function DashboardPage() {
                 Decline
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {selectedAd && (
-        <div className="modal-backdrop" onClick={() => setSelectedAd(null)}>
-          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
-            <h2>{selectedAd.name}</h2>
-            <p className="text-muted">
-              Athletic Director · {selectedAd.yearsAtCurrentJob} year{selectedAd.yearsAtCurrentJob === 1 ? "" : "s"} in the role
-            </p>
-            {adStyleLine(selectedAd) && <p className="text-muted" style={{ marginTop: -8 }}>{adStyleLine(selectedAd)}</p>}
-            <div className="player-detail-grid">
-              <div><div className="label">Patience</div><div className="value">{selectedAd.patience}/100</div></div>
-              <div><div className="label">Win Focus</div><div className="value">{selectedAd.winFocus}/100</div></div>
-              <div><div className="label">Integrity Standard</div><div className="value">{selectedAd.integrityStandard}/100</div></div>
-              <div><div className="label">Loyalty</div><div className="value">{selectedAd.loyalty}/100</div></div>
-            </div>
-            <p className="text-muted" style={{ fontSize: "0.8rem", marginTop: 12 }}>
-              Patience and win focus shape how forgiving they are of a rough season before your seat gets hot. Integrity
-              standard sets how strict they are about off-court issues before they'll hire — or keep — a coach. Loyalty
-              affects how much a personal relationship with you protects your job, for better or worse.
-            </p>
-            <button style={{ marginTop: 12 }} onClick={() => setSelectedAd(null)}>Close</button>
           </div>
         </div>
       )}
