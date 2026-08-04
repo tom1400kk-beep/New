@@ -7,6 +7,7 @@
 import { clamp } from "./rng";
 import { EUROPEAN_COUNTRIES, COUNTRY_PROFILES } from "./countries";
 import { simulateGame, overall, type SimTeam, type SimPlayer } from "./simulate";
+import type { Division } from "../types";
 
 export const TOUR_COOLDOWN_YEARS = 4;
 
@@ -14,6 +15,17 @@ export const TOUR_COOLDOWN_YEARS = 4;
 // recruiting boost real mechanical effect, so the tour is offered to the
 // same list rather than a broader real-world destination list.
 export const TOUR_COUNTRIES = EUROPEAN_COUNTRIES;
+
+// D1 programs can plausibly fund a foreign tour at any prestige level (the
+// real-world rule doesn't gate on it). D2/D3 boosters can't — a tour there
+// is a reward for sustained success, not a baseline perk, so it's restricted
+// to prestige tier 4-5 programs (~top 7-8% of each division).
+const D2_D3_PRESTIGE_THRESHOLD = 75;
+
+export function isTourAffordable(division: Division, prestige: number): boolean {
+  if (division === "D1") return true;
+  return prestige >= D2_D3_PRESTIGE_THRESHOLD;
+}
 
 export function isTourEligible(lastTourSeasonYear: number | null, currentSeasonYear: number): boolean {
   if (lastTourSeasonYear === null || lastTourSeasonYear === undefined) return true;

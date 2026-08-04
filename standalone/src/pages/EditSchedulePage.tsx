@@ -53,7 +53,8 @@ function InternationalTourCard() {
       <p className="text-muted" style={{ fontSize: "0.85rem" }}>
         NCAA rules let a program tour a foreign country once every 4 years, playing 3 exempt exhibition games there —
         they don't count toward your record. It also earns a recruiting boost for prospects from that country,
-        strongest this season and fading out over the next few.
+        strongest this season and fading out over the next few. Below D1, only programs that have built real
+        success can attract the booster support it takes.
       </p>
 
       {data.thisSeasonTour && (
@@ -81,6 +82,13 @@ function InternationalTourCard() {
         <p className="text-muted">
           Last toured <strong>{data.currentCountry}</strong> in {data.currentTourSeasonYear}.
           {!data.eligible && data.nextEligibleSeasonYear && ` Eligible to tour again in ${data.nextEligibleSeasonYear}.`}
+        </p>
+      )}
+
+      {!data.thisSeasonTour && !data.affordable && (
+        <p className="text-muted">
+          Your program isn't successful enough yet to attract the booster support a foreign tour takes — build up
+          your prestige and it'll become an option.
         </p>
       )}
 

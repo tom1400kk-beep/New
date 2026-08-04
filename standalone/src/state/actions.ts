@@ -15,7 +15,7 @@ import { computeStandings, winPct } from "./standings";
 import { aggregateCareerStats, type CareerSeasonLine, type RawGameStatLine } from "../engine/careerStats";
 import { newId, type WorldState } from "./types";
 import { PRESEASON_EVENTS, type PreseasonEventDef } from "../engine/preseasonEvents";
-import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, simulateTourGames } from "../engine/internationalTour";
+import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, isTourAffordable, simulateTourGames } from "../engine/internationalTour";
 import type { SimTeam } from "../engine/simulate";
 
 function noisy(rng: () => number, value: number, noise: number): number {
@@ -702,20 +702,22 @@ export function leavePreseasonTournament(state: WorldState): { ok: true; swapped
 
 export function getInternationalTour(state: WorldState) {
   const userTeamId = state.save.coachTeamId;
-  if (!userTeamId) return { editable: false, eligible: false, countries: TOUR_COUNTRIES, currentCountry: null, currentTourSeasonYear: null, nextEligibleSeasonYear: null, thisSeasonTour: null };
+  if (!userTeamId) return { editable: false, eligible: false, affordable: false, countries: TOUR_COUNTRIES, currentCountry: null, currentTourSeasonYear: null, nextEligibleSeasonYear: null, thisSeasonTour: null };
 
   const team = state.teams.find((t) => t.id === userTeamId)!;
   const seasonYear = state.save.currentSeasonYear;
-  const eligible = isTourEligible(team.internationalTourSeasonYear, seasonYear);
+  const cooldownOk = isTourEligible(team.internationalTourSeasonYear, seasonYear);
+  const affordable = isTourAffordable(team.division as Division, team.prestige);
   const thisSeasonTour = state.internationalTours.find((t) => t.teamId === team.id && t.seasonYear === seasonYear);
 
   return {
     editable: state.save.currentPhase === "PRESEASON",
-    eligible,
+    eligible: cooldownOk && affordable,
+    affordable,
     countries: TOUR_COUNTRIES,
     currentCountry: team.internationalTourCountry,
     currentTourSeasonYear: team.internationalTourSeasonYear,
-    nextEligibleSeasonYear: !eligible && team.internationalTourSeasonYear !== null ? team.internationalTourSeasonYear + TOUR_COOLDOWN_YEARS : null,
+    nextEligibleSeasonYear: !cooldownOk && team.internationalTourSeasonYear !== null ? team.internationalTourSeasonYear + TOUR_COOLDOWN_YEARS : null,
     thisSeasonTour: thisSeasonTour ? { country: thisSeasonTour.country, games: thisSeasonTour.games } : null,
   };
 }
@@ -727,6 +729,9 @@ export function bookInternationalTour(state: WorldState, country: string) {
 
   const team = state.teams.find((t) => t.id === state.save.coachTeamId)!;
   const seasonYear = state.save.currentSeasonYear;
+  if (!isTourAffordable(team.division as Division, team.prestige)) {
+    throw new Error("Your program isn't successful enough yet to attract the booster support a foreign tour takes");
+  }
   if (!isTourEligible(team.internationalTourSeasonYear, seasonYear)) {
     throw new Error("This program toured within the last 4 years — not eligible yet");
   }

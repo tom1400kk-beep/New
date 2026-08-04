@@ -1,29 +1,32 @@
 import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
-import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, simulateTourGames } from "../engine/internationalTour";
+import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, isTourAffordable, simulateTourGames } from "../engine/internationalTour";
 import { mulberry32 } from "../engine/rng";
 import type { SimTeam } from "../engine/simulate";
+import type { Division } from "../types";
 
 export const internationalTourRouter = Router();
 
 internationalTourRouter.get("/saves/:id/international-tour", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  if (!save.coachTeamId) return res.json({ editable: false, eligible: false, countries: TOUR_COUNTRIES, currentCountry: null, currentTourSeasonYear: null, nextEligibleSeasonYear: null, thisSeasonTour: null });
+  if (!save.coachTeamId) return res.json({ editable: false, eligible: false, affordable: false, countries: TOUR_COUNTRIES, currentCountry: null, currentTourSeasonYear: null, nextEligibleSeasonYear: null, thisSeasonTour: null });
 
   const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId } });
-  const eligible = isTourEligible(team.internationalTourSeasonYear, save.currentSeasonYear);
+  const cooldownOk = isTourEligible(team.internationalTourSeasonYear, save.currentSeasonYear);
+  const affordable = isTourAffordable(team.division as Division, team.prestige);
   const thisSeasonTour = await prisma.internationalTour.findFirst({
     where: { teamId: team.id, seasonYear: save.currentSeasonYear },
   });
 
   res.json({
     editable: save.currentPhase === "PRESEASON",
-    eligible,
+    eligible: cooldownOk && affordable,
+    affordable,
     countries: TOUR_COUNTRIES,
     currentCountry: team.internationalTourCountry,
     currentTourSeasonYear: team.internationalTourSeasonYear,
-    nextEligibleSeasonYear: !eligible && team.internationalTourSeasonYear !== null ? team.internationalTourSeasonYear + TOUR_COOLDOWN_YEARS : null,
+    nextEligibleSeasonYear: !cooldownOk && team.internationalTourSeasonYear !== null ? team.internationalTourSeasonYear + TOUR_COOLDOWN_YEARS : null,
     thisSeasonTour: thisSeasonTour ? { country: thisSeasonTour.country, games: JSON.parse(thisSeasonTour.gamesJson) } : null,
   });
 });
@@ -37,6 +40,9 @@ internationalTourRouter.post("/saves/:id/international-tour", async (req, res) =
   if (!TOUR_COUNTRIES.includes(country)) return res.status(400).json({ error: "Not a valid tour destination" });
 
   const team = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, include: { headCoach: true } });
+  if (!isTourAffordable(team.division as Division, team.prestige)) {
+    return res.status(400).json({ error: "Your program isn't successful enough yet to attract the booster support a foreign tour takes" });
+  }
   if (!isTourEligible(team.internationalTourSeasonYear, save.currentSeasonYear)) {
     return res.status(400).json({ error: "This program toured within the last 4 years — not eligible yet" });
   }
