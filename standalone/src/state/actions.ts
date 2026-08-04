@@ -12,6 +12,7 @@ import { DIVISION_RULES } from "../types";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { computeStandings, winPct } from "./standings";
+import { aggregateCareerStats, type CareerSeasonLine, type RawGameStatLine } from "../engine/careerStats";
 import { newId, type WorldState } from "./types";
 
 function noisy(rng: () => number, value: number, noise: number): number {
@@ -121,6 +122,7 @@ export function pursueRecruit(state: WorldState, prospectId: string, points: num
   };
 
   const teamInput: RecruitingTeamInput = {
+    division: team.division as Division,
     state: team.state, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
     academicReputation: team.academicReputation, internationalScoutingRating: team.internationalScoutingRating,
     recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant, developmentSkill: coach.developmentSkill,
@@ -174,6 +176,7 @@ export interface TransferBoardEntry {
   interestLevel: number;
   pointsInvested: number;
   offered: boolean;
+  careerStats: CareerSeasonLine[];
 }
 
 export function getTransferBoard(state: WorldState): TransferBoardEntry[] {
@@ -182,6 +185,7 @@ export function getTransferBoard(state: WorldState): TransferBoardEntry[] {
   const team = state.teams.find((t) => t.id === teamId);
   const coach = team ? state.coaches.find((c) => c.id === team.headCoachId) : undefined;
   const transferPipeline = parsePipelineStates(coach?.transferPipelineJson ?? "{}");
+  const seasonYearByGame = new Map(state.games.map((g) => [g.id, g.seasonYear]));
 
   return state.players
     .filter((p) => p.inTransferPortal)
@@ -189,6 +193,10 @@ export function getTransferBoard(state: WorldState): TransferBoardEntry[] {
     .slice(0, 200)
     .map((p) => {
       const interest = state.transferInterests.find((i) => i.playerId === p.id && i.teamId === teamId);
+      const statRows: RawGameStatLine[] = state.stats
+        .filter((s) => s.playerId === p.id)
+        .map((s) => ({ ...s, seasonYear: seasonYearByGame.get(s.gameId) ?? 0 }))
+        .filter((s) => s.seasonYear !== 0);
       return {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position, classYear: p.classYear,
         hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, previousSchool: p.previousSchool,
@@ -199,6 +207,7 @@ export function getTransferBoard(state: WorldState): TransferBoardEntry[] {
         rebounding: p.rebounding, defense: p.defense, athleticism: p.athleticism, basketballIq: p.basketballIq,
         characterRating: p.characterRating, disciplineRating: p.disciplineRating,
         interestLevel: interest?.interestLevel ?? 0, pointsInvested: interest?.pointsInvested ?? 0, offered: interest?.offered ?? false,
+        careerStats: aggregateCareerStats(statRows),
       };
     });
 }
@@ -234,6 +243,7 @@ export function pursueTransfer(state: WorldState, playerId: string, points: numb
   };
 
   const teamInput: RecruitingTeamInput = {
+    division: team.division as Division,
     state: team.state, prestige: team.prestige, nilBudget: team.nilBudget, facilitiesRating: team.facilitiesRating,
     academicReputation: team.academicReputation, internationalScoutingRating: team.internationalScoutingRating,
     recruitingSkill: coach.recruitingSkill, assistantRecruitingSkill: bestAssistant, developmentSkill: coach.developmentSkill,

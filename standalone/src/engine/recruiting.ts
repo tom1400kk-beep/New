@@ -1,7 +1,13 @@
 import { clamp, randNormal } from "./rng";
 import { PRIORITY_KEYS, sameRegion, isWarmState, type PriorityProfile } from "./priorities";
 import { pipelineScore, pipelineMultiplier } from "./pipeline";
-import type { PositionType } from "../types";
+import type { Division, PositionType } from "../types";
+
+// Real-world ceiling on how much star power a division can plausibly land —
+// blue-chip prospects essentially always end up D1 regardless of a D2/D3
+// program's resources, so this gates on top of (not instead of) the existing
+// resource-based difficulty penalty below.
+const DIVISION_STAR_CEILING: Record<Division, number> = { D1: 5, D2: 2.5, D3: 1.5 };
 
 // Weekly recruiting points a program can allocate, driven by staff quality.
 export function weeklyRecruitingPoints(recruitingSkill: number, assistantRecruitingSkill: number): number {
@@ -39,6 +45,7 @@ export interface RecruitingProspectInput {
 }
 
 export interface RecruitingTeamInput {
+  division: Division;
   state: string;
   prestige: number;
   nilBudget: number;
@@ -130,7 +137,14 @@ export function computeInterestGain(prospect: RecruitingProspectInput, team: Rec
   const resourceLevel = team.prestige * 0.6 + nilPullFactor(team.nilBudget) * 0.4;
   const difficultyPenalty = Math.max(0, prospect.starRating * 6 - resourceLevel * 0.15);
 
-  let base = pointsInvested * 0.55 + fitScore * 0.45 + internationalReach - difficultyPenalty;
+  // Division ceiling: no amount of prestige/NIL lets a D2/D3 program
+  // realistically compete for talent well above their level — this is what
+  // makes recruits who miss a D1 offer actually cascade down to D2/D3
+  // instead of every division fishing from the same effective pool.
+  const overCeiling = Math.max(0, prospect.starRating - DIVISION_STAR_CEILING[team.division]);
+  const divisionGatePenalty = overCeiling * 22;
+
+  let base = pointsInvested * 0.55 + fitScore * 0.45 + internationalReach - difficultyPenalty - divisionGatePenalty;
 
   // Background perks: a coach's own history gives a specific, narrow edge on
   // top of general fit — not a blanket recruiting boost.

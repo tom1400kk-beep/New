@@ -123,6 +123,7 @@ recruitingRouter.post("/saves/:id/recruiting/:prospectId/pursue", async (req, re
   };
 
   const teamInput: RecruitingTeamInput = {
+    division: team.division as Division,
     state: team.state,
     prestige: team.prestige,
     nilBudget: team.nilBudget,

@@ -140,6 +140,37 @@ export default function TransfersPage() {
               <div><div className="label">Discipline</div><div className="value">{selectedPlayer.disciplineRating}</div></div>
             </div>
             <p className="text-muted">Priorities: {priorityLabel(selectedPlayer)}</p>
+            {selectedPlayer.careerStats && selectedPlayer.careerStats.length > 0 && (
+              <>
+                <h3 style={{ marginTop: 16, marginBottom: 6 }}>Career Stats{selectedPlayer.previousSchool ? ` — ${selectedPlayer.previousSchool}` : ""}</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Season</th><th>GP</th><th>MPG</th><th>PPG</th><th>RPG</th><th>APG</th><th>SPG</th><th>BPG</th><th>TOPG</th>
+                      <th>FG%</th><th>3P%</th><th>FT%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedPlayer.careerStats.map((s: any) => (
+                      <tr key={s.seasonYear}>
+                        <td>{s.seasonYear}</td>
+                        <td>{s.gamesPlayed}</td>
+                        <td>{s.mpg}</td>
+                        <td>{s.ppg}</td>
+                        <td>{s.rpg}</td>
+                        <td>{s.apg}</td>
+                        <td>{s.spg}</td>
+                        <td>{s.bpg}</td>
+                        <td>{s.topg}</td>
+                        <td>{s.fgPct}%</td>
+                        <td>{s.threePct}%</td>
+                        <td>{s.ftPct}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
             <button style={{ marginTop: 12 }} onClick={() => setSelectedPlayer(null)}>Close</button>
           </div>
         </div>

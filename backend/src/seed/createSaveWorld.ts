@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import type { Division } from "../types";
 import { DIVISION_RULES } from "../types";
-import { loadLeagueData, prestigeTierToScore } from "./leagueData";
+import { loadLeagueData, prestigeTierToScore, divisionDataAvailable } from "./leagueData";
 import { toStateAbbr } from "./stateAbbr";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
-import { generateSeasonSchedule } from "../engine/schedule";
+import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
@@ -40,7 +40,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const careerEffects = playingCareerEffects(playingCareer);
   const combinedExtraDeltas = mergeDeltas(backgroundProfile?.deltas, careerEffects.deltas);
   const initialPipelineJson = JSON.stringify(seedPipeline(playingCareer.hometownState, playingCareer.collegeState));
-  const league = loadLeagueData(division);
+  const ALL_DIVISIONS: Division[] = ["D1", "D2", "D3"];
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
   const seasonYear = new Date().getFullYear();
@@ -64,6 +64,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
     prestige: number;
     coachId: string;
     isPlayerControlled: boolean;
+    division: Division;
   };
 
   const conferenceRows: { id: string; saveGameId: string; name: string; abbreviation: string; division: string }[] = [];
@@ -90,17 +91,21 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
   let foundChosenTeam = false;
 
-  for (const conf of league.conferences) {
+  for (const div of ALL_DIVISIONS) {
+    if (!divisionDataAvailable(div)) continue;
+    const league = loadLeagueData(div);
+
+    for (const conf of league.conferences) {
     const conferenceId = randomUUID();
-    conferenceRows.push({ id: conferenceId, saveGameId: saveGame.id, name: conf.name, abbreviation: conf.abbreviation, division });
+    conferenceRows.push({ id: conferenceId, saveGameId: saveGame.id, name: conf.name, abbreviation: conf.abbreviation, division: div });
 
     for (const member of conf.members) {
       const teamId = randomUUID();
       const coachId = randomUUID();
       const prestige = prestigeTierToScore(member.prestigeTier);
-      const isPlayerControlled = member.school === teamSchoolName;
+      const isPlayerControlled = div === division && member.school === teamSchoolName;
       if (isPlayerControlled) foundChosenTeam = true;
-      const baseSalary = salaryForTeam(rng, prestige, division);
+      const baseSalary = salaryForTeam(rng, prestige, div);
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
@@ -128,7 +133,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
         ...(isPlayerControlled ? { currentSalary: baseSalary } : {}),
       });
 
-      const nilBudget = nilBudgetForTeam(rng, prestige, division);
+      const nilBudget = nilBudgetForTeam(rng, prestige, div);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
       let internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
       if (isPlayerControlled && chosenBackground === "INTERNATIONAL_SCOUT") {
@@ -138,7 +143,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
         internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 12, 5, 99));
       }
       const academicReputation = academicReputationForTeam(rng, prestige);
-      const venueCapacity = venueCapacityForTeam(rng, prestige, division);
+      const venueCapacity = venueCapacityForTeam(rng, prestige, div);
       const state = toStateAbbr(member.state);
 
       const adId = randomUUID();
@@ -151,15 +156,15 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
       });
 
       teamRows.push({
-        id: teamId, saveGameId: saveGame.id, name: member.school, state, division, conferenceId,
+        id: teamId, saveGameId: saveGame.id, name: member.school, state, division: div, conferenceId,
         prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
-      pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled });
+      pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, prestige, coachId, isPlayerControlled, division: div });
 
-      const rosterSize = DIVISION_RULES[division].rosterCap;
-      const scholarshipLimit = DIVISION_RULES[division].scholarshipLimit;
-      const roster = generateRosterForTeam(rng, prestige, division, rosterSize, internationalScoutingRating);
+      const rosterSize = DIVISION_RULES[div].rosterCap;
+      const scholarshipLimit = DIVISION_RULES[div].scholarshipLimit;
+      const roster = generateRosterForTeam(rng, prestige, div, rosterSize, internationalScoutingRating);
       roster.forEach((p, i) => {
         playerRows.push({
           id: randomUUID(),
@@ -190,6 +195,7 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
           onScholarship: i < scholarshipLimit,
         });
       });
+    }
     }
   }
 
@@ -253,12 +259,14 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
 
   await prisma.season.create({ data: { id: randomUUID(), saveGameId: saveGame.id, year: seasonYear } });
 
-  // Recruiting pool for the upcoming signing class — sized off the
-  // division's actual roster cap (see runOffseason's matching comment) so
-  // D2/D3's bigger rosters aren't quietly under-supplied relative to D1.
+  // Recruiting pool for the upcoming signing class — sized off each team's
+  // own division roster cap (see runOffseason's matching comment) and summed
+  // across the whole merged league, so D2/D3's bigger rosters aren't quietly
+  // under-supplied relative to D1.
   const prospectRows: any[] = [];
-  const estimatedNeedPerTeam = DIVISION_RULES[division].rosterCap / 4;
-  const recruitingPoolTarget = Math.round(pendingTeams.length * estimatedNeedPerTeam * 1.6);
+  let totalDemand = 0;
+  for (const t of pendingTeams) totalDemand += DIVISION_RULES[t.division].rosterCap / 4;
+  const recruitingPoolTarget = Math.round(totalDemand * 1.6);
   const hsCount = Math.round(recruitingPoolTarget * (3 / 4.4));
   const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
   const internationalCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
@@ -278,9 +286,14 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
     await prisma.prospect.createMany({ data: prospectRows.slice(i, i + chunkSize) });
   }
 
-  // Season schedule for this division
-  const scheduleTeams = pendingTeams.map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
-  const schedule = generateSeasonSchedule(scheduleTeams, division, seasonYear, rng);
+  // Season schedule, generated separately per division so non-conference
+  // pairings never cross divisions, then merged into one calendar.
+  let schedule: ScheduledGame[] = [];
+  for (const div of ALL_DIVISIONS) {
+    const divTeams = pendingTeams.filter((t) => t.division === div).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
+    if (divTeams.length === 0) continue;
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, seasonYear, rng));
+  }
   const gameRows = schedule.map((g) => ({
     id: randomUUID(),
     saveGameId: saveGame.id,

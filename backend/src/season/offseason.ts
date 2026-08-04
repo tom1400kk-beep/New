@@ -45,7 +45,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: saveGameId } });
   const seasonYear = save.currentSeasonYear;
   const teams = await prisma.team.findMany({ where: { saveGameId }, include: { headCoach: true, athleticDirector: true } });
-  const division = teams[0]?.division as Division;
+  const divisionByTeam = new Map(teams.map((t) => [t.id, t.division as Division]));
   const standings = await computeStandings(saveGameId, seasonYear);
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
@@ -115,7 +115,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const newPrestige = updatePrestige(team.prestige, record.wins, record.losses, made, wins, team.headCoach.background);
     const newLegality = driftLegalityReputation(team.headCoach.legalityReputation);
     const newAtmosphere = driftAtmosphere(team.headCoach.campusAtmosphere, atmosphereTarget({
-      division, prestige: team.prestige, winPct, expectedWinPct: expectedWinPct(team.prestige),
+      division: team.division as Division, prestige: team.prestige, winPct, expectedWinPct: expectedWinPct(team.prestige),
       yearsAtCurrentJob: team.headCoach.yearsAtCurrentJob, madeTournament: made, tournamentWins: wins,
     }));
     // Pipeline decay and AD-relationship tracking are coach-scoped and only
@@ -376,7 +376,6 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   // no program can out-sign its division's limits (scholarshipLimit,
   // rosterCap) — once a team's board is full, its recruits either take a
   // walk-on spot instead or, if the whole roster is full, go unsigned. ----
-  const rosterCap = DIVISION_RULES[division].rosterCap;
   const rosterState = await prisma.player.findMany({ where: { saveGameId, teamId: { not: null } }, select: { teamId: true, onScholarship: true } });
   const rosterCounts = new Map<string, number>();
   const scholarshipCounts = new Map<string, number>();
@@ -384,7 +383,11 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     rosterCounts.set(p.teamId!, (rosterCounts.get(p.teamId!) ?? 0) + 1);
     if (p.onScholarship) scholarshipCounts.set(p.teamId!, (scholarshipCounts.get(p.teamId!) ?? 0) + 1);
   }
-  const hasRoom = (teamId: string) => (rosterCounts.get(teamId) ?? 0) < rosterCap;
+  const hasRoom = (teamId: string) => {
+    const teamDivision = divisionByTeam.get(teamId);
+    const cap = teamDivision ? DIVISION_RULES[teamDivision].rosterCap : 15;
+    return (rosterCounts.get(teamId) ?? 0) < cap;
+  };
 
   // Resolve last season's portal entrants now that the season's worth of
   // interest they accumulated (and this cycle's freed-up roster spots) are
@@ -406,7 +409,8 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     }
     if (!winnerTeamId) continue;
 
-    const onScholarship = DIVISION_RULES[division].hasScholarships && (scholarshipCounts.get(winnerTeamId) ?? 0) < DIVISION_RULES[division].scholarshipLimit;
+    const winnerDivision = divisionByTeam.get(winnerTeamId)!;
+    const onScholarship = DIVISION_RULES[winnerDivision].hasScholarships && (scholarshipCounts.get(winnerTeamId) ?? 0) < DIVISION_RULES[winnerDivision].scholarshipLimit;
     rosterCounts.set(winnerTeamId, (rosterCounts.get(winnerTeamId) ?? 0) + 1);
     if (onScholarship) scholarshipCounts.set(winnerTeamId, (scholarshipCounts.get(winnerTeamId) ?? 0) + 1);
 
@@ -495,7 +499,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       }
       if (!winnerTeamId) continue;
 
-      if (division === "D1" && prospect.source === "HIGH_SCHOOL" && rng() < JUNIOR_EARLY_COMMIT_CHANCE) {
+      if (divisionByTeam.get(winnerTeamId) === "D1" && prospect.source === "HIGH_SCHOOL" && rng() < JUNIOR_EARLY_COMMIT_CHANCE) {
         await prisma.prospect.update({
           where: { id: prospect.id },
           data: { signed: true, committedTeamId: winnerTeamId, graduationYear: seasonYear + 2, ...driftedRatings },
@@ -508,7 +512,8 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     }
 
     const finalTeamId = winnerTeamId as string;
-    const onScholarship = DIVISION_RULES[division].hasScholarships && (scholarshipCounts.get(finalTeamId) ?? 0) < DIVISION_RULES[division].scholarshipLimit;
+    const finalDivision = divisionByTeam.get(finalTeamId)!;
+    const onScholarship = DIVISION_RULES[finalDivision].hasScholarships && (scholarshipCounts.get(finalTeamId) ?? 0) < DIVISION_RULES[finalDivision].scholarshipLimit;
     rosterCounts.set(finalTeamId, (rosterCounts.get(finalTeamId) ?? 0) + 1);
     if (onScholarship) scholarshipCounts.set(finalTeamId, (scholarshipCounts.get(finalTeamId) ?? 0) + 1);
 
@@ -537,9 +542,9 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   // a healthy surplus on top — a flat multiplier tuned for D1's 15-man cap
   // quietly under-supplied D2/D3's 20-man rosters. Split HS/JUCO/int'l in
   // the same proportions as before.
-  const teamCount = teams.length;
-  const estimatedNeedPerTeam = rosterCap / 4;
-  const recruitingPoolTarget = Math.round(teamCount * estimatedNeedPerTeam * 1.6);
+  let totalDemand = 0;
+  for (const t of teams) totalDemand += DIVISION_RULES[t.division as Division].rosterCap / 4;
+  const recruitingPoolTarget = Math.round(totalDemand * 1.6);
   const hsCount = Math.round(recruitingPoolTarget * (3 / 4.4));
   const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
   const intlCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
@@ -595,14 +600,15 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   const currentTeams = await prisma.team.findMany({ where: { saveGameId }, include: { players: true, headCoach: true } });
   await prisma.walkOnCandidate.deleteMany({ where: { saveGameId } });
   for (const team of currentTeams) {
-    const need = rosterCap - team.players.length;
+    const teamDivision = team.division as Division;
+    const need = DIVISION_RULES[teamDivision].rosterCap - team.players.length;
     if (need <= 0) continue;
 
     if (team.headCoach?.isPlayerControlled) {
       const candidateCount = Math.min(8, Math.max(3, need + 3));
       const localCount = Math.round(candidateCount * 0.7);
-      const localCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.45, 15, 99), division, localCount, team.internationalScoutingRating);
-      const reachedOutCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.6, 15, 99), division, candidateCount - localCount, team.internationalScoutingRating);
+      const localCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.45, 15, 99), teamDivision, localCount, team.internationalScoutingRating);
+      const reachedOutCandidates = generateRosterForTeam(rng, clamp(team.prestige * 0.6, 15, 99), teamDivision, candidateCount - localCount, team.internationalScoutingRating);
       const candidateRows = [
         ...localCandidates.map((p) => ({ ...p, source: "LOCAL" as const })),
         ...reachedOutCandidates.map((p) => ({ ...p, source: "REACHED_OUT" as const })),
@@ -618,7 +624,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       continue;
     }
 
-    const roster = generateRosterForTeam(rng, team.prestige, division, need, team.internationalScoutingRating);
+    const roster = generateRosterForTeam(rng, team.prestige, teamDivision, need, team.internationalScoutingRating);
     const rows = roster.map((p) => ({
       id: randomUUID(), saveGameId, teamId: team.id, firstName: p.firstName, lastName: p.lastName,
       position: p.position, classYear: "FR" as ClassYear, heightInches: p.ratings.heightInches,
@@ -635,8 +641,12 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
   // ---- Next season schedule ----
   const nextSeasonYear = seasonYear + 1;
   await prisma.season.create({ data: { id: randomUUID(), saveGameId, year: nextSeasonYear } });
-  const scheduleTeams = teams.map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
-  const schedule = generateSeasonSchedule(scheduleTeams, division, nextSeasonYear, rng);
+  let schedule: ReturnType<typeof generateSeasonSchedule> = [];
+  for (const div of ["D1", "D2", "D3"] as Division[]) {
+    const divTeams = teams.filter((t) => t.division === div).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
+    if (divTeams.length === 0) continue;
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, nextSeasonYear, rng));
+  }
   const gameRows = schedule.map((g) => ({
     id: randomUUID(), saveGameId, seasonYear: nextSeasonYear, date: g.date,
     homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId, isConference: g.isConference, isPlayed: false,

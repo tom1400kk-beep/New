@@ -6,7 +6,7 @@ import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media"
 import { sortedPair } from "../engine/rivalry";
 import { computeTeamChemistry } from "../engine/chemistry";
 import { mulberry32 } from "../engine/rng";
-import type { Division } from "../types";
+import type { Division, TournamentType } from "../types";
 import { newId, type WorldState, type GameEventRow } from "./types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -14,7 +14,7 @@ function addDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * DAY_MS);
 }
 
-function allConferenceTournamentsComplete(state: WorldState, seasonYear: number, division: Division): boolean {
+function allConferenceTournamentsCompleteForDivision(state: WorldState, seasonYear: number, division: Division): boolean {
   const tournaments = state.tournaments.filter((t) => t.seasonYear === seasonYear && t.division === division && t.type === "CONFERENCE_TOURNAMENT");
   if (tournaments.length === 0) return true;
   return tournaments.every((t) => {
@@ -25,7 +25,7 @@ function allConferenceTournamentsComplete(state: WorldState, seasonYear: number,
   });
 }
 
-function mainTournamentComplete(state: WorldState, seasonYear: number, division: Division): boolean {
+function mainTournamentCompleteForDivision(state: WorldState, seasonYear: number, division: Division): boolean {
   const type = division === "D1" ? "NCAA_TOURNAMENT" : division === "D2" ? "D2_NATIONAL" : "D3_NATIONAL";
   const tournament = state.tournaments.find((t) => t.seasonYear === seasonYear && t.division === division && t.type === type);
   if (!tournament) return false;
@@ -33,6 +33,18 @@ function mainTournamentComplete(state: WorldState, seasonYear: number, division:
   const maxRound = Math.max(...games.map((g) => g.round ?? 1), 0);
   const finalRoundGames = games.filter((g) => (g.round ?? 1) === maxRound);
   return finalRoundGames.length === 1 && finalRoundGames[0].isPlayed;
+}
+
+function allConferenceTournamentsComplete(state: WorldState, seasonYear: number, divisions: Division[]): boolean {
+  return divisions.every((d) => allConferenceTournamentsCompleteForDivision(state, seasonYear, d));
+}
+
+function mainTournamentComplete(state: WorldState, seasonYear: number, divisions: Division[]): boolean {
+  return divisions.every((d) => mainTournamentCompleteForDivision(state, seasonYear, d));
+}
+
+function nationalTournamentTypesForDivision(division: Division): TournamentType[] {
+  return division === "D1" ? ["NCAA_TOURNAMENT", "NIT"] : division === "D2" ? ["D2_NATIONAL"] : ["D3_NATIONAL"];
 }
 
 export interface AdvanceResult {
@@ -43,7 +55,7 @@ export interface AdvanceResult {
 }
 
 export function advanceOneDay(state: WorldState): AdvanceResult {
-  const division = (state.teams[0]?.division ?? "D1") as Division;
+  const divisions: Division[] = state.teams.length > 0 ? [...new Set(state.teams.map((t) => t.division as Division))] : ["D1"];
   const seasonYear = state.save.currentSeasonYear;
   const today = state.save.currentDate;
 
@@ -146,19 +158,19 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
     const remaining = state.games.filter((g) => g.seasonYear === seasonYear && g.tournamentId === null && !g.isPlayed).length;
     if (remaining === 0) {
       phase = "CONFERENCE_TOURNAMENT";
-      startConferenceTournaments(state, seasonYear, division, nextDate);
+      for (const d of divisions) startConferenceTournaments(state, seasonYear, d, nextDate);
     }
   } else if (phase === "CONFERENCE_TOURNAMENT") {
     advanceTournamentRounds(state, seasonYear, ["CONFERENCE_TOURNAMENT"], nextDate);
-    if (allConferenceTournamentsComplete(state, seasonYear, division)) {
+    if (allConferenceTournamentsComplete(state, seasonYear, divisions)) {
       phase = "NCAA_TOURNAMENT";
-      startNationalTournaments(state, seasonYear, division, addDays(nextDate, 2));
+      for (const d of divisions) startNationalTournaments(state, seasonYear, d, addDays(nextDate, 2));
       nextDate = addDays(nextDate, 2);
     }
   } else if (phase === "NCAA_TOURNAMENT" || phase === "NIT") {
-    const types = division === "D1" ? (["NCAA_TOURNAMENT", "NIT"] as const) : division === "D2" ? (["D2_NATIONAL"] as const) : (["D3_NATIONAL"] as const);
-    advanceTournamentRounds(state, seasonYear, [...types], nextDate);
-    if (mainTournamentComplete(state, seasonYear, division)) {
+    const types = divisions.flatMap(nationalTournamentTypesForDivision);
+    advanceTournamentRounds(state, seasonYear, types, nextDate);
+    if (mainTournamentComplete(state, seasonYear, divisions)) {
       phase = "OFFSEASON";
       offseasonResult = runOffseason(state);
       return { gamesPlayedToday: todaysGames.length, newPhase: state.save.currentPhase, event: generatedEvent, offseasonResult };

@@ -8,7 +8,7 @@ import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media"
 import { sortedPair } from "../engine/rivalry";
 import { computeTeamChemistry } from "../engine/chemistry";
 import { mulberry32 } from "../engine/rng";
-import type { Division } from "../types";
+import type { Division, TournamentType } from "../types";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -16,7 +16,7 @@ function addDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * DAY_MS);
 }
 
-async function allConferenceTournamentsComplete(saveGameId: string, seasonYear: number, division: Division): Promise<boolean> {
+async function allConferenceTournamentsCompleteForDivision(saveGameId: string, seasonYear: number, division: Division): Promise<boolean> {
   const tournaments = await prisma.tournament.findMany({
     where: { saveGameId, seasonYear, division, type: "CONFERENCE_TOURNAMENT" },
     include: { games: true },
@@ -29,7 +29,7 @@ async function allConferenceTournamentsComplete(saveGameId: string, seasonYear: 
   });
 }
 
-async function mainTournamentComplete(saveGameId: string, seasonYear: number, division: Division): Promise<boolean> {
+async function mainTournamentCompleteForDivision(saveGameId: string, seasonYear: number, division: Division): Promise<boolean> {
   const type = division === "D1" ? "NCAA_TOURNAMENT" : division === "D2" ? "D2_NATIONAL" : "D3_NATIONAL";
   const tournament = await prisma.tournament.findFirst({
     where: { saveGameId, seasonYear, division, type },
@@ -41,6 +41,24 @@ async function mainTournamentComplete(saveGameId: string, seasonYear: number, di
   return finalRoundGames.length === 1 && finalRoundGames[0].isPlayed;
 }
 
+async function allConferenceTournamentsComplete(saveGameId: string, seasonYear: number, divisions: Division[]): Promise<boolean> {
+  for (const d of divisions) {
+    if (!(await allConferenceTournamentsCompleteForDivision(saveGameId, seasonYear, d))) return false;
+  }
+  return true;
+}
+
+async function mainTournamentComplete(saveGameId: string, seasonYear: number, divisions: Division[]): Promise<boolean> {
+  for (const d of divisions) {
+    if (!(await mainTournamentCompleteForDivision(saveGameId, seasonYear, d))) return false;
+  }
+  return true;
+}
+
+function nationalTournamentTypesForDivision(division: Division): TournamentType[] {
+  return division === "D1" ? ["NCAA_TOURNAMENT", "NIT"] : division === "D2" ? ["D2_NATIONAL"] : ["D3_NATIONAL"];
+}
+
 export interface AdvanceResult {
   gamesPlayedToday: number;
   newPhase: string;
@@ -50,8 +68,8 @@ export interface AdvanceResult {
 
 export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: saveGameId } });
-  const teams = await prisma.team.findMany({ where: { saveGameId }, take: 1 });
-  const division = (teams[0]?.division ?? "D1") as Division;
+  const divisionRows = await prisma.team.findMany({ where: { saveGameId }, select: { division: true }, distinct: ["division"] });
+  const divisions: Division[] = divisionRows.length > 0 ? (divisionRows.map((d) => d.division) as Division[]) : ["D1"];
   const seasonYear = save.currentSeasonYear;
   const today = save.currentDate;
 
@@ -174,19 +192,19 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
     const remaining = await prisma.game.count({ where: { saveGameId, seasonYear, tournamentId: null, isPlayed: false } });
     if (remaining === 0) {
       phase = "CONFERENCE_TOURNAMENT";
-      await startConferenceTournaments(saveGameId, seasonYear, division, nextDate);
+      for (const d of divisions) await startConferenceTournaments(saveGameId, seasonYear, d, nextDate);
     }
   } else if (phase === "CONFERENCE_TOURNAMENT") {
     await advanceTournamentRounds(saveGameId, seasonYear, ["CONFERENCE_TOURNAMENT"], nextDate);
-    if (await allConferenceTournamentsComplete(saveGameId, seasonYear, division)) {
+    if (await allConferenceTournamentsComplete(saveGameId, seasonYear, divisions)) {
       phase = "NCAA_TOURNAMENT";
-      await startNationalTournaments(saveGameId, seasonYear, division, addDays(nextDate, 2));
+      for (const d of divisions) await startNationalTournaments(saveGameId, seasonYear, d, addDays(nextDate, 2));
       nextDate = addDays(nextDate, 2);
     }
   } else if (phase === "NCAA_TOURNAMENT" || phase === "NIT") {
-    const types = division === "D1" ? (["NCAA_TOURNAMENT", "NIT"] as const) : division === "D2" ? (["D2_NATIONAL"] as const) : (["D3_NATIONAL"] as const);
-    await advanceTournamentRounds(saveGameId, seasonYear, [...types], nextDate);
-    if (await mainTournamentComplete(saveGameId, seasonYear, division)) {
+    const types = divisions.flatMap(nationalTournamentTypesForDivision);
+    await advanceTournamentRounds(saveGameId, seasonYear, types, nextDate);
+    if (await mainTournamentComplete(saveGameId, seasonYear, divisions)) {
       phase = "OFFSEASON";
       offseasonResult = await runOffseason(saveGameId);
       const updated = await prisma.saveGame.findUniqueOrThrow({ where: { id: saveGameId } });

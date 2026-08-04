@@ -6,6 +6,7 @@ import { PRIORITY_KEYS, topPriorities, type PriorityProfile } from "../engine/pr
 import { clamp } from "../engine/rng";
 import { parsePipelineStates, bumpPipelineState } from "../engine/pipeline";
 import { computeStandings, winPct } from "../season/standings";
+import { aggregateCareerStats, type RawGameStatLine } from "../engine/careerStats";
 import { DIVISION_RULES, type Division } from "../types";
 
 export const transfersRouter = Router();
@@ -44,9 +45,22 @@ transfersRouter.get("/saves/:id/transfers", async (req, res) => {
     take: 200,
   });
 
+  // Real box-score history from their old school(s) — what they actually put
+  // up on the court, not just their scouted ratings.
+  const statRows = await prisma.playerGameStat.findMany({
+    where: { playerId: { in: players.map((p) => p.id) } },
+    include: { game: { select: { seasonYear: true } } },
+  });
+  const statsByPlayer = new Map<string, RawGameStatLine[]>();
+  for (const row of statRows) {
+    if (!statsByPlayer.has(row.playerId)) statsByPlayer.set(row.playerId, []);
+    statsByPlayer.get(row.playerId)!.push({ seasonYear: row.game.seasonYear, ...row });
+  }
+
   const board = players.map((p) => {
     const interest = p.transferInterest[0];
     const priorities = parsePriorities(p.prioritiesJson);
+    const careerStats = aggregateCareerStats(statsByPlayer.get(p.id) ?? []);
     return {
       id: p.id,
       firstName: p.firstName,
@@ -60,6 +74,7 @@ transfersRouter.get("/saves/:id/transfers", async (req, res) => {
       eligibilityYearsLeft: p.eligibilityYearsLeft,
       overall: playerOverall(p),
       topPriorities: topPriorities(priorities, 3),
+      careerStats,
       pipelineScore: p.previousSchool ? (transferPipeline[p.previousSchool] ?? 50) : null,
       // A transfer is a known college player — true ratings, no scouting noise.
       scoring: p.scoring,
@@ -121,6 +136,7 @@ transfersRouter.post("/saves/:id/transfers/:playerId/pursue", async (req, res) =
   };
 
   const teamInput: RecruitingTeamInput = {
+    division: team.division as Division,
     state: team.state,
     prestige: team.prestige,
     nilBudget: team.nilBudget,

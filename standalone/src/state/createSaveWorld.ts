@@ -6,7 +6,7 @@ import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
-import { generateSeasonSchedule } from "../engine/schedule";
+import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
@@ -34,7 +34,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   const careerEffects = playingCareerEffects(playingCareer);
   const combinedExtraDeltas = mergeDeltas(backgroundProfile?.deltas, careerEffects.deltas);
   const initialPipelineJson = JSON.stringify(seedPipeline(playingCareer.hometownState, playingCareer.collegeState));
-  const league = loadLeagueData(division);
+  const ALL_DIVISIONS: Division[] = ["D1", "D2", "D3"];
   const rng = mulberry32(Date.now() ^ Math.floor(Math.random() * 1e9));
 
   const seasonYear = new Date().getFullYear();
@@ -48,21 +48,24 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   const players: PlayerRow[] = [];
   const prospects: ProspectRow[] = [];
 
-  type PendingTeam = { id: string; conferenceId: string };
+  type PendingTeam = { id: string; conferenceId: string; division: Division };
   const pendingTeams: PendingTeam[] = [];
   let chosenTeamId: string | null = null;
 
-  for (const conf of league.conferences) {
+  for (const div of ALL_DIVISIONS) {
+    const league = loadLeagueData(div);
+
+    for (const conf of league.conferences) {
     const conferenceId = newId();
-    conferences.push({ id: conferenceId, name: conf.name, abbreviation: conf.abbreviation, division });
+    conferences.push({ id: conferenceId, name: conf.name, abbreviation: conf.abbreviation, division: div });
 
     for (const member of conf.members) {
       const teamId = newId();
       const coachId = newId();
       const prestige = prestigeTierToScore(member.prestigeTier);
-      const isPlayerControlled = member.school === teamSchoolName;
+      const isPlayerControlled = div === division && member.school === teamSchoolName;
       if (isPlayerControlled) chosenTeamId = teamId;
-      const baseSalary = salaryForTeam(rng, prestige, division);
+      const baseSalary = salaryForTeam(rng, prestige, div);
 
       const archetype: CoachArchetype = isPlayerControlled ? chosenArchetype : randomArchetype(rng);
       const background: CoachBackground | null = isPlayerControlled ? chosenBackground : null;
@@ -94,7 +97,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         careerWins: 0, careerLosses: 0, yearsAtCurrentJob: 0,
       });
 
-      const nilBudget = nilBudgetForTeam(rng, prestige, division);
+      const nilBudget = nilBudgetForTeam(rng, prestige, div);
       const facilitiesRating = facilitiesForTeam(rng, prestige);
       let internationalScoutingRating = internationalScoutingForTeam(rng, prestige);
       if (isPlayerControlled && chosenBackground === "INTERNATIONAL_SCOUT") {
@@ -104,7 +107,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         internationalScoutingRating = Math.round(clamp(internationalScoutingRating + 12, 5, 99));
       }
       const academicReputation = academicReputationForTeam(rng, prestige);
-      const venueCapacity = venueCapacityForTeam(rng, prestige, division);
+      const venueCapacity = venueCapacityForTeam(rng, prestige, div);
       const state = toStateAbbr(member.state);
 
       const adId = newId();
@@ -116,16 +119,16 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
       });
 
       teams.push({
-        id: teamId, name: member.school, state, division, conferenceId,
+        id: teamId, name: member.school, state, division: div, conferenceId,
         prestige, nilBudget, facilitiesRating, internationalScoutingRating, academicReputation, baseSalary, venueCapacity,
         arenaUpgradeRequestedThisSeason: false, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
       });
-      pendingTeams.push({ id: teamId, conferenceId });
+      pendingTeams.push({ id: teamId, conferenceId, division: div });
 
-      const rosterSize = DIVISION_RULES[division].rosterCap;
-      const scholarshipLimit = DIVISION_RULES[division].scholarshipLimit;
-      const roster = generateRosterForTeam(rng, prestige, division, rosterSize, internationalScoutingRating);
+      const rosterSize = DIVISION_RULES[div].rosterCap;
+      const scholarshipLimit = DIVISION_RULES[div].scholarshipLimit;
+      const roster = generateRosterForTeam(rng, prestige, div, rosterSize, internationalScoutingRating);
       roster.forEach((p, i) => {
         players.push({
           id: newId(), teamId,
@@ -142,6 +145,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
           onScholarship: i < scholarshipLimit,
         });
       });
+    }
     }
   }
 
@@ -190,11 +194,12 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     }
   }
 
-  // Sized off the division's actual roster cap (see runOffseason's matching
-  // comment) so D2/D3's bigger rosters aren't quietly under-supplied
-  // relative to D1.
-  const estimatedNeedPerTeam = DIVISION_RULES[division].rosterCap / 4;
-  const recruitingPoolTarget = Math.round(pendingTeams.length * estimatedNeedPerTeam * 1.6);
+  // Sized off each team's own division roster cap (see runOffseason's
+  // matching comment), summed across the whole merged league, so D2/D3's
+  // bigger rosters aren't quietly under-supplied relative to D1.
+  let totalDemand = 0;
+  for (const t of pendingTeams) totalDemand += DIVISION_RULES[t.division].rosterCap / 4;
+  const recruitingPoolTarget = Math.round(totalDemand * 1.6);
   const hsCount = Math.round(recruitingPoolTarget * (3 / 4.4));
   const jucoCount = Math.round(recruitingPoolTarget * (0.6 / 4.4));
   const internationalCount = Math.round(recruitingPoolTarget * (0.8 / 4.4));
@@ -208,8 +213,12 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     prospects.push(prospectFromGenerated(generateInternationalProspect(rng, seasonYear + 1)));
   }
 
-  const scheduleTeams = pendingTeams.map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
-  const schedule = generateSeasonSchedule(scheduleTeams, division, seasonYear, rng);
+  let schedule: ScheduledGame[] = [];
+  for (const d of ALL_DIVISIONS) {
+    const divTeams = pendingTeams.filter((t) => t.division === d).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
+    if (divTeams.length === 0) continue;
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, d, seasonYear, rng));
+  }
   const games: GameRow[] = schedule.map((g) => ({
     id: newId(), seasonYear, date: g.date, homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId,
     homeScore: null, awayScore: null, attendance: null, isPlayed: false, isConference: g.isConference,
