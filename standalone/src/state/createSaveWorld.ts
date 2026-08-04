@@ -273,5 +273,6 @@ function prospectFromGenerated(p: ReturnType<typeof generateHighSchoolProspect>)
     characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
     scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
     signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
+    playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
   };
 }

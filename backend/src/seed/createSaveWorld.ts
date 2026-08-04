@@ -357,5 +357,7 @@ function prospectFromGenerated(saveGameId: string, p: ReturnType<typeof generate
     scoutingNoise: p.scoutingNoise,
     graduationYear: p.graduationYear,
     prioritiesJson: JSON.stringify(p.priorities),
+    playedEYBL: p.playedEYBL,
+    eyblTeam: p.eyblTeam,
   };
 }

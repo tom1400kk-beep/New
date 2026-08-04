@@ -63,6 +63,8 @@ recruitingRouter.get("/saves/:id/recruiting", async (req, res) => {
       source: p.source,
       starRating: p.starRating,
       graduationYear: p.graduationYear,
+      playedEYBL: p.playedEYBL,
+      eyblTeam: p.eyblTeam,
       topPriorities: topPriorities(priorities, 3),
       pipelineScore: p.hometownState ? pipelineScore(pipeline, p.hometownState) : null,
       // scouted ratings include noise proportional to scoutingNoise — true ratings are hidden

@@ -64,6 +64,18 @@ export function topPriorities(profile: PriorityProfile, count = 3): PriorityKey[
   return [...PRIORITY_KEYS].sort((a, b) => profile[b] - profile[a]).slice(0, count);
 }
 
+// Nudges one key up by a flat amount and renormalizes back to ~100 — used to
+// reflect a prospect's real-world experience shifting what they care about
+// (e.g. a recruit who's already played in front of every staff in the
+// country on national TV naturally starts weighing brand/exposure more).
+export function boostPriority(profile: PriorityProfile, key: PriorityKey, amount: number): PriorityProfile {
+  const raw: Partial<PriorityProfile> = { ...profile, [key]: profile[key] + amount };
+  const total = PRIORITY_KEYS.reduce((s, k) => s + (raw[k] ?? 0), 0);
+  const normalized = {} as PriorityProfile;
+  for (const k of PRIORITY_KEYS) normalized[k] = Math.round(((raw[k] ?? 0) / total) * 100);
+  return normalized;
+}
+
 // ---------- Region + climate, used for the PROXIMITY_HOME and LIFESTYLE scores ----------
 
 const REGIONS: Record<string, string> = {

@@ -109,7 +109,14 @@ export default function RecruitingPage() {
                   </button>
                 </td>
                 <td>{p.position}</td>
-                <td>{"★".repeat(p.starRating)}</td>
+                <td>
+                  {"★".repeat(p.starRating)}
+                  {p.playedEYBL && (
+                    <span className="text-muted" style={{ marginLeft: 4, fontSize: "0.72rem" }} title={`Played EYBL for ${p.eyblTeam} — the Nike circuit that culminates each July at the Peach Jam`}>
+                      EYBL
+                    </span>
+                  )}
+                </td>
                 <td className={pipelineClass(p)} title={pipelineTitle(p)}>{homeLabel(p)}</td>
                 <td>{sourceLabel(p.source)}</td>
                 <td className="text-muted" style={{ fontFamily: "inherit", whiteSpace: "nowrap" }}>{priorityLabel(p)}</td>
@@ -143,6 +150,11 @@ export default function RecruitingPage() {
               {" · "}Class of {selectedRecruit.graduationYear}
               {" · "}{ORIGIN_LABELS[selectedRecruit.source] ?? selectedRecruit.source}
             </p>
+            {selectedRecruit.playedEYBL && (
+              <p className="text-muted" style={{ marginTop: -8 }}>
+                EYBL Circuit: {selectedRecruit.eyblTeam} — the Nike grassroots circuit culminating each July at the Peach Jam
+              </p>
+            )}
 
             <div className="player-detail-grid">
               <div>

@@ -281,6 +281,8 @@ model Prospect {
   source           String
   starRating       Int      // 1-5
   prioritiesJson   String   @default("{}") // JSON-encoded PriorityProfile — what this recruit actually cares about
+  playedEYBL       Boolean  @default(false) // elite HS circuit exposure (Nike EYBL) — set only for source === HIGH_SCHOOL
+  eyblTeam         String?  // circuit club name, set only when playedEYBL is true
 
   // True ratings (hidden ceiling of scouting accuracy is applied client-side via scoutingNoise)
   scoring          Int

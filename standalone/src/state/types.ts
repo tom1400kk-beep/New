@@ -199,6 +199,8 @@ export interface ProspectRow {
   signed: boolean;
   committedTeamId: string | null;
   prioritiesJson: string;
+  playedEYBL: boolean;
+  eyblTeam: string | null;
 }
 
 export interface RecruitInterestRow {

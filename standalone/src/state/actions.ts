@@ -57,6 +57,8 @@ export interface RecruitingBoardEntry {
   source: string;
   starRating: number;
   graduationYear: number;
+  playedEYBL: boolean;
+  eyblTeam: string | null;
   topPriorities: PriorityKey[];
   pipelineScore: number | null;
   scouted: {
@@ -86,6 +88,7 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
       return {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
         hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
+        playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
         topPriorities: topPriorities(parsePriorities(p.prioritiesJson), 3),
         pipelineScore: p.hometownState ? pipelineScore(pipeline, p.hometownState) : null,
         scouted: {

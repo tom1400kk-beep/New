@@ -690,6 +690,7 @@ export async function runOffseason(saveGameId: string): Promise<{
       characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
       scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
       prioritiesJson: JSON.stringify(p.priorities),
+      playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
     });
   }
   for (let i = 0; i < jucoCount; i++) {
@@ -703,6 +704,7 @@ export async function runOffseason(saveGameId: string): Promise<{
       characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
       scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
       prioritiesJson: JSON.stringify(p.priorities),
+      playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
     });
   }
   for (let i = 0; i < intlCount; i++) {
@@ -716,6 +718,7 @@ export async function runOffseason(saveGameId: string): Promise<{
       characterRating: p.ratings.characterRating, disciplineRating: p.ratings.disciplineRating,
       scoutingNoise: p.scoutingNoise, graduationYear: p.graduationYear,
       prioritiesJson: JSON.stringify(p.priorities),
+      playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
     });
   }
   for (let i = 0; i < nextProspects.length; i += 400) {

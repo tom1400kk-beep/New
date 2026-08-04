@@ -617,6 +617,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       potential: p.ratings.potential, characterRating: p.ratings.characterRating,
       disciplineRating: p.ratings.disciplineRating, scoutingNoise: p.scoutingNoise,
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
+      playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
     });
   }
   for (let i = 0; i < jucoCount; i++) {
@@ -629,6 +630,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       potential: p.ratings.potential, characterRating: p.ratings.characterRating,
       disciplineRating: p.ratings.disciplineRating, scoutingNoise: p.scoutingNoise,
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
+      playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
     });
   }
   for (let i = 0; i < intlCount; i++) {
@@ -641,6 +643,7 @@ export function runOffseason(state: WorldState): OffseasonResult {
       potential: p.ratings.potential, characterRating: p.ratings.characterRating,
       disciplineRating: p.ratings.disciplineRating, scoutingNoise: p.scoutingNoise,
       graduationYear: p.graduationYear, signed: false, committedTeamId: null, prioritiesJson: JSON.stringify(p.priorities),
+      playedEYBL: p.playedEYBL, eyblTeam: p.eyblTeam,
     });
   }
 

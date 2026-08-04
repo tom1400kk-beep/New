@@ -4,7 +4,7 @@ import { clamp, randInt, randNormal, weightedPick } from "./rng";
 import { weightedStateList, STATE_PROFILES } from "./regions";
 import { weightedCountryList, COUNTRY_PROFILES } from "./countries";
 import { pickCityForState } from "./cities";
-import { generateProspectPriorities, type PriorityProfile } from "./priorities";
+import { generateProspectPriorities, boostPriority, type PriorityProfile } from "./priorities";
 import type { ClassYear, Division, PlayerOrigin, PositionType, ProspectSource } from "../types";
 
 // A player's name follows their country of origin when set (foreign-born HS
@@ -105,7 +105,25 @@ export interface GeneratedProspect {
   scoutingNoise: number;
   ratings: GeneratedRatings;
   priorities: PriorityProfile;
+  playedEYBL: boolean;
+  eyblTeam: string | null;
 }
+
+// Real EYBL runs ~40 club teams across its circuits — a fixed pool this size
+// is plenty for flavor without needing a procedural name generator.
+const EYBL_TEAMS = [
+  "Atlanta Xpress", "Bay State Wolves", "Cali Supreme", "Carolina Rising", "Chicago Uprising",
+  "DMV Elite", "Dallas Mustangs", "Detroit Cartel", "Florida Rebels", "Garden State Prodigy",
+  "Georgia Stars", "Gulf Coast Heat", "Houston Defenders", "Indy Heat", "Jersey Shore Ballers",
+  "Lone Star Elite", "Memphis Tigers Elite", "Metro Atlanta Heat", "Midwest Uprising",
+  "New England Playaz", "NYC Renegades", "Ohio Basketball Club", "Pacific Northwest Elite",
+  "Palmetto State Ballers", "Philly Triple Threat", "Phoenix Rise", "Queen City Elite",
+  "Rocky Mountain Renegades", "South Florida Heat", "Southern Assault", "Texas Titans", "Tri-State Bandits",
+];
+
+// Virtually every 5-star plays the circuit; it thins out fast below that —
+// mirrors how real EYBL rosters skew toward the very top of a class.
+const EYBL_CHANCE_BY_STAR: Record<number, number> = { 5: 0.9, 4: 0.55, 3: 0.12, 2: 0, 1: 0 };
 
 const STAR_TIER_TALENT: Record<number, { base: number; variance: number }> = {
   5: { base: 88, variance: 5 },
@@ -137,6 +155,18 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
   const countryOfOrigin = rng() < 0.08 ? weightedPick(rng, weightedCountryList()) : null;
   const { firstName, lastName } = pickName(rng, countryOfOrigin);
 
+  // EYBL exposure: already-scouted-hard prospects care more about staying in
+  // the spotlight (brand/exposure priority bump) and are better-scouted
+  // overall (tighter noise) from playing in front of every staff nationally.
+  const playedEYBL = rng() < (EYBL_CHANCE_BY_STAR[starRating] ?? 0);
+  const eyblTeam = playedEYBL ? EYBL_TEAMS[Math.floor(rng() * EYBL_TEAMS.length)] : null;
+  let priorities = generateProspectPriorities(rng);
+  let scoutingNoise = randInt(rng, 4, 16);
+  if (playedEYBL) {
+    priorities = boostPriority(priorities, "BRAND_EXPOSURE", 15);
+    scoutingNoise = randInt(rng, 3, 10);
+  }
+
   return {
     firstName,
     lastName,
@@ -147,9 +177,11 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
     source: "HIGH_SCHOOL",
     starRating,
     graduationYear,
-    scoutingNoise: randInt(rng, 4, 16),
+    scoutingNoise,
     ratings,
-    priorities: generateProspectPriorities(rng),
+    priorities,
+    playedEYBL,
+    eyblTeam,
   };
 }
 
@@ -181,6 +213,8 @@ export function generateJucoProspect(rng: () => number, graduationYear: number):
     scoutingNoise: randInt(rng, 2, 10), // JUCO players have a track record, less scouting uncertainty
     ratings,
     priorities: generateProspectPriorities(rng),
+    playedEYBL: false,
+    eyblTeam: null,
   };
 }
 
@@ -211,6 +245,8 @@ export function generateInternationalProspect(rng: () => number, graduationYear:
     scoutingNoise: randInt(rng, 10, 24),
     ratings,
     priorities: generateProspectPriorities(rng),
+    playedEYBL: false,
+    eyblTeam: null,
   };
 }
 
