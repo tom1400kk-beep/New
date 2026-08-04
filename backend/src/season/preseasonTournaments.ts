@@ -106,6 +106,12 @@ export async function advancePreseasonBracketRounds(saveGameId: string, seasonYe
   });
 
   for (const t of tournaments) {
+    // D2/D3 formats that happen to share a field size with a bracket format
+    // (e.g. CLASSIC4 is 4 teams, same as BRACKET4) carry an explicit `format`
+    // tag precisely so this loop doesn't mistake them for an elimination
+    // bracket — every game in those formats is already scheduled up front.
+    if (t.format && t.format !== "BRACKET4" && t.format !== "BRACKET8") continue;
+
     const fieldSize = new Set(t.games.flatMap((g) => [g.homeTeamId, g.awayTeamId])).size;
     if (fieldSize !== 8 && fieldSize !== 4) continue; // pool-play events have no rounds to advance
 

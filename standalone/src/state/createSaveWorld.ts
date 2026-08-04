@@ -14,7 +14,9 @@ import { seedPipeline } from "../engine/pipeline";
 import { generateADTraits } from "../engine/athleticDirector";
 import { TRADITIONAL_RIVALRY_CHANCE, traditionalIntensity, sortedPair } from "../engine/rivalry";
 import { newId, type WorldState, type TeamRow, type CoachRow, type ConferenceRow, type PlayerRow, type ProspectRow, type GameRow, type AthleticDirectorRow, type RivalryRow, type TournamentRow } from "./types";
-import { generatePreseasonTournaments } from "./preseasonTournaments";
+import { generatePreseasonTournaments, type PreseasonTarget } from "./preseasonTournaments";
+import { generateDivisionInSeasonEvents } from "./inSeasonEvents";
+import type { PreseasonScheduleInfo } from "../engine/schedule";
 
 export interface CreateSaveInput {
   saveName: string;
@@ -49,7 +51,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   const players: PlayerRow[] = [];
   const prospects: ProspectRow[] = [];
 
-  type PendingTeam = { id: string; conferenceId: string; division: Division; prestige: number };
+  type PendingTeam = { id: string; name: string; state: string; conferenceId: string; division: Division; prestige: number };
   const pendingTeams: PendingTeam[] = [];
   let chosenTeamId: string | null = null;
 
@@ -126,7 +128,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         headCoachId: coachId, athleticDirectorId: adId,
         internationalTourCountry: null, internationalTourSeasonYear: null,
       });
-      pendingTeams.push({ id: teamId, conferenceId, division: div, prestige });
+      pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, division: div, prestige });
 
       const rosterSize = DIVISION_RULES[div].rosterCap;
       const scholarshipLimit = DIVISION_RULES[div].scholarshipLimit;
@@ -222,13 +224,25 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
   const nonConfWindowStart = new Date(Date.UTC(seasonYear, 10, 4)); // Nov 4, matches schedule.ts
   const d1TeamsForPreseason = pendingTeams.filter((t) => t.division === "D1").map((t) => ({ id: t.id, prestige: t.prestige }));
   const preseasonGames: GameRow[] = [];
-  const preseasonResult = generatePreseasonTournaments({ tournaments, games: preseasonGames }, seasonYear, d1TeamsForPreseason, nonConfWindowStart, rng);
+  const preseasonTarget: PreseasonTarget = { tournaments, games: preseasonGames };
+  const preseasonResult = generatePreseasonTournaments(preseasonTarget, seasonYear, d1TeamsForPreseason, nonConfWindowStart, rng);
+
+  // D2/D3 in-season events — same non-conference-slot bookkeeping, but the
+  // fields are procedurally generated per save (no fixed real-world list at
+  // this scale) and cover six formats instead of D1's four.
+  const preseasonByDivision: Partial<Record<Division, PreseasonScheduleInfo>> = { D1: preseasonResult };
+  for (const div of ["D2", "D3"] as const) {
+    const candidateTeams = pendingTeams.filter((t) => t.division === div)
+      .map((t) => ({ id: t.id, name: t.name, state: t.state, prestige: t.prestige, conferenceId: t.conferenceId }));
+    if (candidateTeams.length === 0) continue;
+    preseasonByDivision[div] = generateDivisionInSeasonEvents(preseasonTarget, seasonYear, div, candidateTeams, nonConfWindowStart, rng);
+  }
 
   let schedule: ScheduledGame[] = [];
   for (const d of ALL_DIVISIONS) {
     const divTeams = pendingTeams.filter((t) => t.division === d).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
     if (divTeams.length === 0) continue;
-    schedule = schedule.concat(generateSeasonSchedule(divTeams, d, seasonYear, rng, d === "D1" ? preseasonResult : undefined));
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, d, seasonYear, rng, preseasonByDivision[d]));
   }
   const games: GameRow[] = [...preseasonGames, ...schedule.map((g) => ({
     id: newId(), seasonYear, date: g.date, homeTeamId: g.homeTeamId, awayTeamId: g.awayTeamId,

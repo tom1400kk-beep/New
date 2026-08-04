@@ -257,6 +257,8 @@ export interface TournamentRow {
   seasonYear: number;
   type: string;
   name: string | null; // human-readable event name/location, set only for PRESEASON_INVITATIONAL
+  format: string | null; // InSeasonFormat, set only for D2/D3 PRESEASON_INVITATIONAL rows — disambiguates
+                          // formats that share a field size (e.g. CLASSIC4 vs BRACKET4) for round-advancement logic
   division: string;
   conferenceId: string | null;
 }

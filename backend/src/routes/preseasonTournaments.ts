@@ -15,15 +15,25 @@ function eventDefForTournamentName(name: string | null): PreseasonEventDef | und
   return PRESEASON_EVENTS.find((e) => name === `${e.name} — ${e.location}`);
 }
 
+// Every PRESEASON_INVITATIONAL tournament (D1's curated list and D2/D3's
+// procedurally generated ones alike) stores its full display name as
+// "Event Name — Location" — split that back apart for display.
+function splitNameLocation(fullName: string | null): { name: string; location: string | null } {
+  if (!fullName) return { name: "", location: null };
+  const idx = fullName.indexOf(" — ");
+  if (idx === -1) return { name: fullName, location: null };
+  return { name: fullName.slice(0, idx), location: fullName.slice(idx + 3) };
+}
+
 function isPrestigeEligible(userPrestige: number, field: { prestige: number }[]): boolean {
   if (field.length === 0) return true;
   const minFieldPrestige = Math.min(...field.map((f) => f.prestige));
   return userPrestige >= minFieldPrestige - PRESTIGE_GRACE_MARGIN;
 }
 
-async function loadFields(saveGameId: string, seasonYear: number) {
+async function loadFields(saveGameId: string, seasonYear: number, division?: string) {
   const tournaments = await prisma.tournament.findMany({
-    where: { saveGameId, seasonYear, type: "PRESEASON_INVITATIONAL" },
+    where: { saveGameId, seasonYear, type: "PRESEASON_INVITATIONAL", ...(division ? { division } : {}) },
     include: { games: { select: { homeTeamId: true, awayTeamId: true } } },
   });
   const teamIds = new Set<string>();
@@ -35,10 +45,10 @@ async function loadFields(saveGameId: string, seasonYear: number) {
 
 preseasonTournamentsRouter.get("/saves/:id/preseason-tournaments", async (req, res) => {
   const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
-  const { tournaments, teamById } = await loadFields(save.id, save.currentSeasonYear);
-
   const userTeamId = save.coachTeamId;
   const userTeam = userTeamId ? await prisma.team.findUnique({ where: { id: userTeamId }, select: { division: true, prestige: true } }) : null;
+
+  const { tournaments, teamById } = await loadFields(save.id, save.currentSeasonYear, userTeam?.division);
 
   const board = tournaments.map((t) => {
     const fieldIds = [...new Set(t.games.flatMap((g) => [g.homeTeamId, g.awayTeamId]))];
@@ -47,11 +57,13 @@ preseasonTournamentsRouter.get("/saves/:id/preseason-tournaments", async (req, r
       .filter((t): t is NonNullable<typeof t> => !!t)
       .sort((a, b) => b.prestige - a.prestige);
     const eventDef = eventDefForTournamentName(t.name);
+    const { name, location } = splitNameLocation(t.name);
     return {
       tournamentId: t.id,
-      name: t.name,
-      format: eventDef?.format ?? null,
+      name,
+      format: t.format ?? eventDef?.format ?? null,
       tier: eventDef?.tier ?? null,
+      location,
       field: field.map((f) => ({ teamId: f.id, name: f.name, prestige: f.prestige })),
       userTeamIn: !!userTeamId && fieldIds.includes(userTeamId),
       eligible: userTeam ? isPrestigeEligible(userTeam.prestige, field) : false,
@@ -105,7 +117,10 @@ preseasonTournamentsRouter.post("/saves/:id/preseason-tournaments/:tournamentId/
 
   const fieldTeams = await prisma.team.findMany({ where: { id: { in: fieldIds } }, select: { id: true, prestige: true } });
 
-  const userTeam = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, select: { prestige: true } });
+  const userTeam = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, select: { prestige: true, division: true } });
+  if (tournament.division !== userTeam.division) {
+    return res.status(400).json({ error: "That event isn't at your division" });
+  }
   if (!isPrestigeEligible(userTeam.prestige, fieldTeams)) {
     return res.status(400).json({ error: "Your program isn't competitive enough to draw an invite to this event" });
   }

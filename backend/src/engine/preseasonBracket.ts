@@ -94,6 +94,21 @@ export function buildBracket4SecondRound(round1: MTERoundResult[]): MTEMatchup[]
   ];
 }
 
+// 4-team "conference challenge" pod: two teams from one conference face two
+// teams from another over 2 days — no elimination, no seeding-based bracket,
+// and (by construction, since each side is single-conference) nobody ever
+// plays a conference-mate in this format. Each team finishes with 2 games.
+export function buildClassic4Games(sideA: [string, string], sideB: [string, string]): { day: number; teamA: string; teamB: string }[] {
+  const [a1, a2] = sideA;
+  const [b1, b2] = sideB;
+  return [
+    { day: 0, teamA: a1, teamB: b1 },
+    { day: 0, teamA: a2, teamB: b2 },
+    { day: 1, teamA: a1, teamB: b2 },
+    { day: 1, teamA: a2, teamB: b1 },
+  ];
+}
+
 // Standard "circle method" round-robin scheduling: splits every pairing
 // among an even-sized team list into rounds where each team appears exactly
 // once per round — so a 4-team pool plays out over 3 non-overlapping days
@@ -112,6 +127,19 @@ function scheduleRoundRobinRounds(teamIds: string[]): [string, string][][] {
     ids.splice(1, 0, ids.pop()!); // rotate all but the fixed first team
   }
   return rounds;
+}
+
+// Same rotation as a full round robin, but stops after `roundsWanted` rounds
+// instead of playing every possible pairing — for showcase formats where each
+// team plays a fixed, smaller number of games than a full round robin would
+// require (e.g. a 6-team field where each team only plays 2, not 5).
+export function buildPartialRoundRobin(teamIds: string[], roundsWanted: number): { round: number; teamA: string; teamB: string }[] {
+  const rounds = scheduleRoundRobinRounds(teamIds).slice(0, roundsWanted);
+  const games: { round: number; teamA: string; teamB: string }[] = [];
+  rounds.forEach((round, roundIndex) => {
+    for (const [teamA, teamB] of round) games.push({ round: roundIndex, teamA, teamB });
+  });
+  return games;
 }
 
 // Pool play: split the field into `poolCount` even pools via snake-draft

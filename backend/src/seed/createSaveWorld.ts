@@ -9,7 +9,8 @@ import { randomFirstName, randomLastName } from "../engine/names";
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { nilBudgetForTeam, facilitiesForTeam, internationalScoutingForTeam, academicReputationForTeam, salaryForTeam, venueCapacityForTeam } from "../engine/budget";
 import { generateSeasonSchedule, type ScheduledGame } from "../engine/schedule";
-import { generatePreseasonTournaments } from "../season/preseasonTournaments";
+import { generatePreseasonTournaments, type PreseasonGenerationResult } from "../season/preseasonTournaments";
+import { generateDivisionInSeasonEvents } from "../season/inSeasonEvents";
 import { generateCoachSkills, randomArchetype, mergeDeltas, type CoachArchetype } from "../engine/coachArchetypes";
 import { getBackgroundProfile, type CoachBackground } from "../engine/coachBackgrounds";
 import { playingCareerEffects, NO_PLAYING_CAREER, type PlayingCareerChoice } from "../engine/playingCareer";
@@ -294,13 +295,24 @@ export async function createSaveWorld(input: CreateSaveInput): Promise<CreateSav
   const d1TeamsForPreseason = pendingTeams.filter((t) => t.division === "D1").map((t) => ({ id: t.id, prestige: t.prestige }));
   const preseasonResult = await generatePreseasonTournaments(saveGame.id, seasonYear, d1TeamsForPreseason, nonConfWindowStart, rng);
 
+  // D2/D3 in-season events — same non-conference-slot bookkeeping, but the
+  // fields are procedurally generated per save (no fixed real-world list at
+  // this scale) and cover six formats instead of D1's four.
+  const preseasonByDivision: Partial<Record<Division, PreseasonGenerationResult>> = { D1: preseasonResult };
+  for (const div of ["D2", "D3"] as const) {
+    const candidateTeams = pendingTeams.filter((t) => t.division === div)
+      .map((t) => ({ id: t.id, name: t.name, state: t.state, prestige: t.prestige, conferenceId: t.conferenceId }));
+    if (candidateTeams.length === 0) continue;
+    preseasonByDivision[div] = await generateDivisionInSeasonEvents(saveGame.id, seasonYear, div, candidateTeams, nonConfWindowStart, rng);
+  }
+
   // Season schedule, generated separately per division so non-conference
   // pairings never cross divisions, then merged into one calendar.
   let schedule: ScheduledGame[] = [];
   for (const div of ALL_DIVISIONS) {
     const divTeams = pendingTeams.filter((t) => t.division === div).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
     if (divTeams.length === 0) continue;
-    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, seasonYear, rng, div === "D1" ? preseasonResult : undefined));
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, div, seasonYear, rng, preseasonByDivision[div]));
   }
   const gameRows = schedule.map((g) => ({
     id: randomUUID(),

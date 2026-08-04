@@ -682,6 +682,7 @@ export interface PreseasonTournamentBoardEntry {
   name: string | null;
   format: string | null;
   tier: string | null;
+  location: string | null;
   field: { teamId: string; name: string; prestige: number }[];
   userTeamIn: boolean;
   eligible: boolean;
@@ -690,6 +691,16 @@ export interface PreseasonTournamentBoardEntry {
 function eventDefForTournamentName(name: string | null): PreseasonEventDef | undefined {
   if (!name) return undefined;
   return PRESEASON_EVENTS.find((e) => name === `${e.name} — ${e.location}`);
+}
+
+// Every PRESEASON_INVITATIONAL tournament (D1's curated list and D2/D3's
+// procedurally generated ones alike) stores its full display name as
+// "Event Name — Location" — split that back apart for display.
+function splitNameLocation(fullName: string | null): { name: string; location: string | null } {
+  if (!fullName) return { name: "", location: null };
+  const idx = fullName.indexOf(" — ");
+  if (idx === -1) return { name: fullName, location: null };
+  return { name: fullName.slice(0, idx), location: fullName.slice(idx + 3) };
 }
 
 const TIER_RANK: Record<string, number> = { MAJOR: 0, MID: 1, SMALL: 2 };
@@ -710,7 +721,9 @@ export function getPreseasonTournaments(state: WorldState): { editable: boolean;
   const userTeamId = state.save.coachTeamId;
   const userTeam = userTeamId ? state.teams.find((t) => t.id === userTeamId) : undefined;
   const seasonYear = state.save.currentSeasonYear;
-  const tournaments = state.tournaments.filter((t) => t.seasonYear === seasonYear && t.type === "PRESEASON_INVITATIONAL");
+  const tournaments = state.tournaments.filter(
+    (t) => t.seasonYear === seasonYear && t.type === "PRESEASON_INVITATIONAL" && (!userTeam || t.division === userTeam.division),
+  );
 
   const board = tournaments.map((t) => {
     const games = state.games.filter((g) => g.tournamentId === t.id);
@@ -720,11 +733,13 @@ export function getPreseasonTournaments(state: WorldState): { editable: boolean;
       .filter((tt): tt is NonNullable<typeof tt> => !!tt)
       .sort((a, b) => b.prestige - a.prestige);
     const eventDef = eventDefForTournamentName(t.name);
+    const { name, location } = splitNameLocation(t.name);
     return {
       tournamentId: t.id,
-      name: t.name,
-      format: eventDef?.format ?? null,
+      name,
+      format: t.format ?? eventDef?.format ?? null,
       tier: eventDef?.tier ?? null,
+      location,
       field: field.map((f) => ({ teamId: f.id, name: f.name, prestige: f.prestige })),
       userTeamIn: !!userTeamId && fieldIds.includes(userTeamId),
       eligible: userTeam ? isPrestigeEligible(userTeam.prestige, field) : false,
@@ -765,6 +780,9 @@ export function joinPreseasonTournament(state: WorldState, tournamentId: string)
   const fieldTeams = fieldIds.map((id) => state.teams.find((t) => t.id === id)).filter((t): t is NonNullable<typeof t> => !!t);
 
   const userTeam = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+  if (tournament.division !== userTeam.division) {
+    throw new Error("That event isn't at your division");
+  }
   if (!isPrestigeEligible(userTeam.prestige, fieldTeams)) {
     throw new Error("Your program isn't competitive enough to draw an invite to this event");
   }

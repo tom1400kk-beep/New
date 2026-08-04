@@ -450,6 +450,8 @@ model Tournament {
   seasonYear   Int
   type         String
   name         String? // human-readable event name/location, set only for PRESEASON_INVITATIONAL
+  format       String? // InSeasonFormat, set only for D2/D3 PRESEASON_INVITATIONAL rows — disambiguates
+                        // formats that share a field size (e.g. CLASSIC4 vs BRACKET4) for round-advancement logic
   division     String
   conference   Conference? @relation(fields: [conferenceId], references: [id], onDelete: Cascade)
   conferenceId String?

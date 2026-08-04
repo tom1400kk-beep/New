@@ -15,8 +15,8 @@ export interface ScheduledGame {
 
 const TARGET_GAMES: Record<Division, { total: number; conferenceTarget: number }> = {
   D1: { total: 30, conferenceTarget: 18 },
-  D2: { total: 27, conferenceTarget: 18 },
-  D3: { total: 24, conferenceTarget: 16 },
+  D2: { total: 26, conferenceTarget: 18 },
+  D3: { total: 25, conferenceTarget: 16 },
 };
 
 interface Pairing {

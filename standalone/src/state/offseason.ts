@@ -10,6 +10,7 @@ import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedInt
 import { generateRosterForTeam, generateHighSchoolProspect, generateJucoProspect, generateInternationalProspect } from "../engine/generation";
 import { generateSeasonSchedule } from "../engine/schedule";
 import { generatePreseasonTournaments } from "./preseasonTournaments";
+import { generateDivisionInSeasonEvents } from "./inSeasonEvents";
 import { mulberry32, clamp, randNormal, randInt } from "../engine/rng";
 import { randomFirstName, randomLastName } from "../engine/names";
 import {
@@ -702,11 +703,22 @@ export function runOffseason(state: WorldState): OffseasonResult {
   const d1TeamsForPreseason = state.teams.filter((t) => t.division === "D1").map((t) => ({ id: t.id, prestige: t.prestige }));
   const preseasonResult = generatePreseasonTournaments(state, nextSeasonYear, d1TeamsForPreseason, nonConfWindowStart, rng);
 
+  // D2/D3 in-season events — same non-conference-slot bookkeeping, but the
+  // fields are procedurally generated per save (no fixed real-world list at
+  // this scale) and cover six formats instead of D1's four.
+  const preseasonByDivision: Partial<Record<Division, ReturnType<typeof generatePreseasonTournaments>>> = { D1: preseasonResult };
+  for (const div of ["D2", "D3"] as const) {
+    const candidateTeams = state.teams.filter((t) => t.division === div)
+      .map((t) => ({ id: t.id, name: t.name, state: t.state, prestige: t.prestige, conferenceId: t.conferenceId }));
+    if (candidateTeams.length === 0) continue;
+    preseasonByDivision[div] = generateDivisionInSeasonEvents(state, nextSeasonYear, div, candidateTeams, nonConfWindowStart, rng);
+  }
+
   let schedule: ReturnType<typeof generateSeasonSchedule> = [];
   for (const d of ["D1", "D2", "D3"] as Division[]) {
     const divTeams = state.teams.filter((t) => t.division === d).map((t) => ({ id: t.id, conferenceId: t.conferenceId }));
     if (divTeams.length === 0) continue;
-    schedule = schedule.concat(generateSeasonSchedule(divTeams, d, nextSeasonYear, rng, d === "D1" ? preseasonResult : undefined));
+    schedule = schedule.concat(generateSeasonSchedule(divTeams, d, nextSeasonYear, rng, preseasonByDivision[d]));
   }
   for (const g of schedule) {
     state.games.push({

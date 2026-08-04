@@ -7,6 +7,10 @@ const FORMAT_LABELS: Record<string, string> = {
   BRACKET4: "4-team bracket · 2 games",
   POOL8: "8-team pool play · 3 games",
   POOL16: "16-team pool play · 3 games",
+  CLASSIC4: "4-team classic (2 conferences) · 2 games",
+  CHALLENGE2: "Conference challenge · 1 game",
+  SHOWCASE6: "6-team showcase · 2 games",
+  MEGA: "Mega showcase · 3 games",
 };
 
 const TIER_LABELS: Record<string, string> = {
@@ -148,13 +152,8 @@ function PreseasonTournamentsSection() {
 
   if (!data) return <p>Loading…</p>;
 
-  if (data.userDivision !== "D1") {
-    return (
-      <p className="text-muted">
-        Preseason multi-team events (Maui Invitational, Battle 4 Atlantis, and the rest) are a D1-only tradition —
-        not available at this level.
-      </p>
-    );
+  if (!data.userDivision) {
+    return <p className="text-muted">Pick a team to see this season's non-conference events.</p>;
   }
 
   const current = data.tournaments.find((t: any) => t.userTeamIn);
@@ -162,9 +161,9 @@ function PreseasonTournamentsSection() {
   return (
     <div>
       <p className="text-muted">
-        Pick a preseason multi-team event for your non-conference slate. Joining swaps your entire early-season
-        schedule with the invite you're replacing — same dates, same opponents-for-opponents. You'll only draw a bid
-        from events your program's prestige can realistically compete in.
+        {data.userDivision === "D1"
+          ? "Pick a preseason multi-team event for your non-conference slate. Joining swaps your entire early-season schedule with the invite you're replacing — same dates, same opponents-for-opponents. You'll only draw a bid from events your program's prestige can realistically compete in."
+          : "This season's in-season tip-off classics, Thanksgiving events, and holiday showcases — hosted by member schools or at neutral sites, kept regionally realistic so nobody's flying across the country for a non-conference game. Joining swaps your entire early-season schedule with the invite you're replacing."}
         {!data.editable && " The schedule locks once the season begins, so this is read-only now."}
       </p>
 
@@ -182,12 +181,13 @@ function PreseasonTournamentsSection() {
       <div className="card" style={{ overflowX: "auto" }}>
         <table>
           <thead>
-            <tr><th>Event</th><th>Tier</th><th>Format</th><th>Field</th><th></th></tr>
+            <tr><th>Event</th><th>Location</th><th>Tier</th><th>Format</th><th>Field</th><th></th></tr>
           </thead>
           <tbody>
             {data.tournaments.map((t: any) => (
               <tr key={t.tournamentId} style={t.userTeamIn ? { background: "rgba(80, 160, 80, 0.12)" } : undefined}>
                 <td>{t.name}</td>
+                <td className="text-muted">{t.location ?? "—"}</td>
                 <td>{TIER_LABELS[t.tier] ?? t.tier ?? "—"}</td>
                 <td className="text-muted">{FORMAT_LABELS[t.format] ?? t.format ?? "—"}</td>
                 <td className="text-muted" style={{ maxWidth: 420 }}>
