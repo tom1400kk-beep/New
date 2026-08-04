@@ -1,5 +1,7 @@
-import { HashRouter, Routes, Route, NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { HashRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { SaveProvider, useSave } from "./SaveContext";
+import { api } from "./api";
 import SaveSelectPage from "./pages/SaveSelectPage";
 import DashboardPage from "./pages/DashboardPage";
 import RosterPage from "./pages/RosterPage";
@@ -12,6 +14,17 @@ import ContractPage from "./pages/ContractPage";
 
 function Shell() {
   const { activeSaveId } = useSave();
+  const location = useLocation();
+  const [hasTeam, setHasTeam] = useState(false);
+
+  useEffect(() => {
+    if (!activeSaveId) {
+      setHasTeam(false);
+      return;
+    }
+    api.getDashboard(activeSaveId).then((d) => setHasTeam(!!d.team));
+  }, [activeSaveId, location.pathname]);
+
   return (
     <div className="app-shell">
       <nav className="sidebar">
@@ -19,9 +32,9 @@ function Shell() {
         <NavLink to="/" end>
           Saves
         </NavLink>
-        {activeSaveId && (
+        {activeSaveId && <NavLink to="/dashboard">Dashboard</NavLink>}
+        {activeSaveId && hasTeam && (
           <>
-            <NavLink to="/dashboard">Dashboard</NavLink>
             <NavLink to="/contract">Contract</NavLink>
             <NavLink to="/roster">Roster</NavLink>
             <NavLink to="/schedule">Schedule</NavLink>
