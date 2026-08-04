@@ -19,9 +19,12 @@ import {
   JUNIOR_DECOMMIT_COACH_FIRED_CHANCE,
 } from "../engine/recruiting";
 import { generateCoachSkills, randomArchetype } from "../engine/coachArchetypes";
+import { maybeGenerateNILPoachingEvent, type NILPoachingContext } from "../engine/nilPoaching";
+import { poachingDestinationPool, generatePoachingInterest, type PortalCandidateTeam } from "../engine/portalPoaching";
+import { overall } from "../engine/simulate";
 import type { ClassYear, Division } from "../types";
 import { DIVISION_RULES } from "../types";
-import { newId, type WorldState, type RivalryRow } from "./types";
+import { newId, type WorldState, type RivalryRow, type GameEventRow } from "./types";
 
 const CLASS_PROGRESSION: Record<ClassYear, ClassYear | null> = { FR: "SO", SO: "JR", JR: "SR", SR: null, GR: null };
 
@@ -321,14 +324,60 @@ export function runOffseason(state: WorldState): OffseasonResult {
   const priorPortalPlayers = state.players.filter((p) => p.inTransferPortal);
 
   const PORTAL_BASE_CHANCE = 0.05;
+  const allCandidateTeams: PortalCandidateTeam[] = state.teams.map((t) => ({ teamId: t.id, division: t.division as Division, prestige: t.prestige }));
   for (const p of state.players) {
     if (!p.teamId) continue;
     const chance = clamp(PORTAL_BASE_CHANCE + (55 - p.characterRating) * 0.0015, 0.02, 0.16);
     if (rng() < chance) {
-      p.previousSchool = teamNameById.get(p.teamId) ?? null;
+      const sourceTeamId = p.teamId;
+      const sourceTeam = state.teams.find((t) => t.id === sourceTeamId);
+
+      p.previousSchool = teamNameById.get(sourceTeamId) ?? null;
       p.inTransferPortal = true;
       p.teamId = null;
       p.prioritiesJson = JSON.stringify(generateProspectPriorities(rng));
+
+      // Real portal movement skews upward — a genuine standout below the top
+      // level draws interest from stronger programs, not just whatever the
+      // user's own team happens to pursue.
+      if (sourceTeam) {
+        const pool = poachingDestinationPool(
+          allCandidateTeams.filter((t) => t.teamId !== sourceTeamId),
+          overall(p), sourceTeam.division as Division, sourceTeam.prestige,
+        );
+        for (const interest of generatePoachingInterest(rng, pool, overall(p))) {
+          state.transferInterests.push({
+            id: newId(), playerId: p.id, teamId: interest.teamId, interestLevel: interest.interestLevel,
+            pointsInvested: 0, offered: true,
+          });
+        }
+      }
+    }
+  }
+
+  // NIL poaching: at the same point the portal actually opens (not a random
+  // mid-season interrupt), a rival with real money might come after one of
+  // the user's own good players.
+  if (userTeamId && !userFired) {
+    const pendingCount = state.events.filter((e) => e.status === "PENDING").length;
+    if (pendingCount === 0) {
+      const nilRosterPlayers = state.players.filter((p) => p.teamId === userTeamId);
+      const userTeamRow = state.teams.find((t) => t.id === userTeamId)!;
+      const rivalTeams = state.teams.filter((t) => t.division === userTeamRow.division && t.id !== userTeamId);
+      const nilCtx: NILPoachingContext = {
+        players: nilRosterPlayers,
+        rivals: rivalTeams.map((r) => ({ teamId: r.id, teamName: r.name, prestige: r.prestige, nilBudget: r.nilBudget })),
+      };
+      const nilEvent = maybeGenerateNILPoachingEvent(rng, nilCtx);
+      if (nilEvent) {
+        const row: GameEventRow = {
+          id: newId(), seasonYear: seasonYear + 1, date: new Date(Date.UTC(seasonYear + 1, 9, 1)),
+          type: nilEvent.type, title: nilEvent.title, description: nilEvent.description,
+          teamId: userTeamId, playerId: nilEvent.playerId, status: "PENDING",
+          optionsJson: JSON.stringify(nilEvent.options), chosenOptionId: null,
+        };
+        state.events.push(row);
+      }
     }
   }
 

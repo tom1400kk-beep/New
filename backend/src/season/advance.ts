@@ -6,7 +6,6 @@ import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason } from "./offseason";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
-import { maybeGenerateNILPoachingEvent, type NILPoachingContext } from "../engine/nilPoaching";
 import { sortedPair } from "../engine/rivalry";
 import { computeTeamChemistry } from "../engine/chemistry";
 import { mulberry32 } from "../engine/rng";
@@ -170,33 +169,6 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
           coachBackground: coachTeam?.headCoach?.background ?? null,
         };
         ev = maybeGenerateEvent(rng, ctx);
-      }
-
-      // NIL tampering only makes sense while games are actually being played —
-      // not during the preseason schedule-editing window, and not during the
-      // offseason, which already has its own dedicated transfer portal flow.
-      const gamesAreBeingPlayed = ["REGULAR_SEASON", "CONFERENCE_TOURNAMENT", "NCAA_TOURNAMENT", "NIT"].includes(save.currentPhase);
-      if (!ev && gamesAreBeingPlayed) {
-        const nilRosterPlayers = await prisma.player.findMany({
-          where: { saveGameId, teamId: save.coachTeamId },
-          select: {
-            id: true, firstName: true, lastName: true, position: true, scoring: true, threePoint: true, finishing: true,
-            playmaking: true, rebounding: true, defense: true, athleticism: true, basketballIq: true, characterRating: true,
-            isInjured: true, isSuspended: true, onScholarship: true,
-          },
-        });
-        const userTeam = await prisma.team.findUnique({ where: { id: save.coachTeamId }, select: { division: true } });
-        const rivalTeams = userTeam
-          ? await prisma.team.findMany({
-              where: { saveGameId, division: userTeam.division, id: { not: save.coachTeamId } },
-              select: { id: true, name: true, prestige: true, nilBudget: true },
-            })
-          : [];
-        const nilCtx: NILPoachingContext = {
-          players: nilRosterPlayers,
-          rivals: rivalTeams.map((r) => ({ teamId: r.id, teamName: r.name, prestige: r.prestige, nilBudget: r.nilBudget })),
-        };
-        ev = maybeGenerateNILPoachingEvent(rng, nilCtx);
       }
 
       if (ev) {

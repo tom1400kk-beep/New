@@ -5,6 +5,9 @@ import { updateHotSeat, updatePrestige, updateReputation, shouldFire, generateJo
 import { parsePipelineStates, decayPipeline, bumpPipelineState } from "../engine/pipeline";
 import { generateProspectPriorities } from "../engine/priorities";
 import { generateADTraits, adTurnoverRoll, parseAdRelationships, updateAdRelationship } from "../engine/athleticDirector";
+import { maybeGenerateNILPoachingEvent, type NILPoachingContext } from "../engine/nilPoaching";
+import { poachingDestinationPool, generatePoachingInterest, type PortalCandidateTeam } from "../engine/portalPoaching";
+import { overall } from "../engine/simulate";
 import { driftPerception } from "../engine/media";
 import { atmosphereTarget, driftAtmosphere } from "../engine/atmosphere";
 import { sortedPair, growIntensityOnMeeting, decayIntensity, postseasonForgedIntensity, POSTSEASON_RIVALRY_THRESHOLD } from "../engine/rivalry";
@@ -352,6 +355,8 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
 
   const PORTAL_BASE_CHANCE = 0.05;
   const currentRoster = await prisma.player.findMany({ where: { saveGameId, teamId: { not: null } } });
+  const allCandidateTeams: PortalCandidateTeam[] = teams.map((t) => ({ teamId: t.id, division: t.division as Division, prestige: t.prestige }));
+  const poachingInterestRows: { id: string; playerId: string; teamId: string; interestLevel: number }[] = [];
   for (const p of currentRoster) {
     const chance = clamp(PORTAL_BASE_CHANCE + (55 - p.characterRating) * 0.0015, 0.02, 0.16);
     if (rng() < chance) {
@@ -364,6 +369,58 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
           prioritiesJson: JSON.stringify(generateProspectPriorities(rng)),
         },
       });
+
+      // Real portal movement skews upward — a genuine standout below the top
+      // level draws interest from stronger programs, not just whatever the
+      // user's own team happens to pursue.
+      const sourceTeam = teams.find((t) => t.id === p.teamId);
+      if (sourceTeam) {
+        const pool = poachingDestinationPool(
+          allCandidateTeams.filter((t) => t.teamId !== p.teamId),
+          overall(p), sourceTeam.division as Division, sourceTeam.prestige,
+        );
+        for (const interest of generatePoachingInterest(rng, pool, overall(p))) {
+          poachingInterestRows.push({ id: randomUUID(), playerId: p.id, teamId: interest.teamId, interestLevel: interest.interestLevel });
+        }
+      }
+    }
+  }
+  if (poachingInterestRows.length > 0) {
+    await prisma.transferInterest.createMany({
+      data: poachingInterestRows.map((r) => ({ id: r.id, playerId: r.playerId, teamId: r.teamId, interestLevel: r.interestLevel, pointsInvested: 0, offered: true })),
+    });
+  }
+
+  // ---- NIL poaching: at the same point the portal actually opens (not a
+  // random mid-season interrupt), a rival with real money might come after
+  // one of the user's own good players. ----
+  if (userTeamId && !userFired) {
+    const pendingCount = await prisma.gameEvent.count({ where: { saveGameId, status: "PENDING" } });
+    if (pendingCount === 0) {
+      const nilRosterPlayers = await prisma.player.findMany({
+        where: { saveGameId, teamId: userTeamId },
+        select: {
+          id: true, firstName: true, lastName: true, position: true, scoring: true, threePoint: true, finishing: true,
+          playmaking: true, rebounding: true, defense: true, athleticism: true, basketballIq: true, characterRating: true,
+          isInjured: true, isSuspended: true, onScholarship: true,
+        },
+      });
+      const userTeamRow = teams.find((t) => t.id === userTeamId)!;
+      const rivalTeams = teams.filter((t) => t.division === userTeamRow.division && t.id !== userTeamId);
+      const nilCtx: NILPoachingContext = {
+        players: nilRosterPlayers,
+        rivals: rivalTeams.map((r) => ({ teamId: r.id, teamName: r.name, prestige: r.prestige, nilBudget: r.nilBudget })),
+      };
+      const nilEvent = maybeGenerateNILPoachingEvent(rng, nilCtx);
+      if (nilEvent) {
+        await prisma.gameEvent.create({
+          data: {
+            id: randomUUID(), saveGameId, seasonYear: seasonYear + 1, date: new Date(Date.UTC(seasonYear + 1, 9, 1)),
+            type: nilEvent.type, title: nilEvent.title, description: nilEvent.description,
+            teamId: userTeamId, playerId: nilEvent.playerId, status: "PENDING", optionsJson: JSON.stringify(nilEvent.options),
+          },
+        });
+      }
     }
   }
 

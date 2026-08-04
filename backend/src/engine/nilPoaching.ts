@@ -1,6 +1,7 @@
 // A rival program's NIL collective goes after one of your rostered players
-// mid-season — match their offer to keep him, or he transfers out immediately
-// to whichever school made it. Distinct from the transfer portal: this is
+// at the same time real transfer portal activity resolves (see
+// season/offseason.ts) — match their offer to keep him, or he transfers to
+// whichever school made it. Distinct from the portal itself: this is
 // unsolicited tampering aimed at a player who hasn't entered the portal.
 
 import { clamp } from "./rng";
@@ -19,10 +20,10 @@ export interface NILPoachingContext {
   rivals: NILRivalCandidate[];
 }
 
-// Rare enough that it reads as a real scare, not a weekly nuisance — this is
-// checked only after the general event pool and media interview both miss
-// for the day, so the effective frequency is lower still.
-const BASE_FIRE_CHANCE = 0.05;
+// Checked once a year, at the same point the transfer portal actually opens
+// (see season/offseason.ts) — not a random mid-season interrupt. This is the
+// per-season odds a rival makes a play for one of your good players at all.
+const BASE_FIRE_CHANCE = 0.3;
 
 function weightedPick<T>(rng: () => number, items: { item: T; weight: number }[]): T | null {
   const total = items.reduce((s, w) => s + w.weight, 0);
