@@ -54,31 +54,11 @@ function colLabel(index: number): string {
   return "Much cheaper";
 }
 
-function atmosphereLabel(atmosphere: number): string {
-  if (atmosphere >= 90) return "Legendary";
-  if (atmosphere >= 75) return "Electric";
-  if (atmosphere >= 60) return "Buzzing";
-  if (atmosphere >= 40) return "Building";
-  if (atmosphere >= 25) return "Quiet";
-  return "Dead";
-}
-
 function rivalryLabel(intensity: number): string {
   if (intensity >= 80) return "Blood Feud";
   if (intensity >= 60) return "Heated";
   if (intensity >= 40) return "Rivalry";
   return "Budding Rivalry";
-}
-
-function offerLine(o: any): string {
-  const parts: string[] = [];
-  if (o.salaryDeltaPct !== null && o.salaryDeltaPct !== undefined) {
-    parts.push(o.salaryDeltaPct >= 0 ? `pays ${o.salaryDeltaPct}% more` : `pays ${Math.abs(o.salaryDeltaPct)}% less`);
-  }
-  if (o.colDeltaPct !== null && o.colDeltaPct !== undefined) {
-    parts.push(o.colDeltaPct >= 0 ? `cost of living ${o.colDeltaPct}% higher` : `cost of living ${Math.abs(o.colDeltaPct)}% lower`);
-  }
-  return parts.join(", ");
 }
 
 function playingCareerLine(coach: any): string | null {
@@ -101,12 +81,6 @@ export default function DashboardPage() {
   const [jobOffers, setJobOffers] = useState<any[]>([]);
   const [advancing, setAdvancing] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
-  const [raiseResult, setRaiseResult] = useState<any>(null);
-  const [askingRaise, setAskingRaise] = useState(false);
-  const [marketOpen, setMarketOpen] = useState(false);
-  const [marketLoading, setMarketLoading] = useState(false);
-  const [arenaResult, setArenaResult] = useState<any>(null);
-  const [upgradingArena, setUpgradingArena] = useState(false);
   const [rivalries, setRivalries] = useState<any[]>([]);
 
   async function refresh() {
@@ -120,7 +94,6 @@ export default function DashboardPage() {
       setRivalries([]);
     } else {
       setJobOffers([]);
-      setMarketOpen(false);
       const rivals = await api.getRivalries(activeSaveId);
       setRivalries(rivals);
     }
@@ -141,8 +114,6 @@ export default function DashboardPage() {
     try {
       const result = await api.advance(activeSaveId);
       setLastResult(result);
-      setRaiseResult(null);
-      setArenaResult(null);
       await refresh();
     } finally {
       setAdvancing(false);
@@ -160,55 +131,6 @@ export default function DashboardPage() {
     await api.acceptJob(activeSaveId, teamId);
     await refresh();
     navigate("/edit-schedule");
-  }
-
-  async function handleRequestRaise() {
-    if (!activeSaveId) return;
-    setAskingRaise(true);
-    try {
-      const result = await api.requestRaise(activeSaveId);
-      setRaiseResult(result);
-      await refresh();
-    } finally {
-      setAskingRaise(false);
-    }
-  }
-
-  async function handleUpgradeArena() {
-    if (!activeSaveId) return;
-    setUpgradingArena(true);
-    try {
-      const result = await api.upgradeArena(activeSaveId);
-      setArenaResult(result);
-      await refresh();
-    } catch (err: any) {
-      setArenaResult({ granted: false, error: err.message });
-    } finally {
-      setUpgradingArena(false);
-    }
-  }
-
-  async function testWaters() {
-    if (!activeSaveId) return;
-    if (marketOpen) {
-      setMarketOpen(false);
-      return;
-    }
-    setMarketLoading(true);
-    try {
-      const offers = await api.getJobOffers(activeSaveId);
-      setJobOffers(offers);
-      setMarketOpen(true);
-    } finally {
-      setMarketLoading(false);
-    }
-  }
-
-  async function resignAndAccept(teamId: string) {
-    if (!activeSaveId) return;
-    await api.resignAndAccept(activeSaveId, teamId);
-    setMarketOpen(false);
-    await refresh();
   }
 
   function exitToSaves() {
@@ -306,36 +228,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="card">
-        <h3>How You're Viewed</h3>
-        <div className="stat-row">
-        <div className="stat-tile">
-          <div className="stat-label">Team</div>
-          <div className={`stat-value ${team.headCoach.teamPerception < 40 ? "text-bad" : team.headCoach.teamPerception > 75 ? "text-good" : ""}`}>
-            {team.headCoach.teamPerception}/100
-          </div>
-        </div>
-        <div className="stat-tile">
-          <div className="stat-label">Athletic Director</div>
-          <div className={`stat-value ${team.adPerception != null && team.adPerception < 40 ? "text-bad" : team.adPerception != null && team.adPerception > 75 ? "text-good" : ""}`}>
-            {team.adPerception != null ? `${team.adPerception}/100` : "—"}
-          </div>
-        </div>
-        <div className="stat-tile">
-          <div className="stat-label">National</div>
-          <div className={`stat-value ${team.headCoach.nationalPerception > 75 ? "text-good" : ""}`}>
-            {team.headCoach.nationalPerception}/100
-          </div>
-        </div>
-        <div className="stat-tile">
-          <div className="stat-label">Local</div>
-          <div className={`stat-value ${team.headCoach.localPerception < 40 ? "text-bad" : team.headCoach.localPerception > 75 ? "text-good" : ""}`}>
-            {team.headCoach.localPerception}/100
-          </div>
-        </div>
-        </div>
-      </div>
-
       {rivalries.length > 0 && (
         <div className="card">
           <h3>Rivalries</h3>
@@ -349,72 +241,6 @@ export default function DashboardPage() {
           ))}
         </div>
       )}
-
-      <div className="card">
-        <h3>Contract</h3>
-        <p>
-          Current salary: <strong>{fmtMoney(team.headCoach.currentSalary)}/yr</strong>
-          {" "}· {team.state} — {colLabel(team.costOfLivingIndex)} cost of living
-        </p>
-        <button onClick={handleRequestRaise} disabled={askingRaise || team.headCoach.raiseRequestedThisSeason}>
-          {team.headCoach.raiseRequestedThisSeason ? "Already asked this season" : askingRaise ? "Asking..." : "Ask for a Raise"}
-        </button>
-        {raiseResult && (
-          <p className={raiseResult.granted ? "text-good" : "text-bad"} style={{ marginTop: 8 }}>
-            {raiseResult.granted
-              ? `Raise granted! New salary: ${fmtMoney(raiseResult.newSalary)}/yr`
-              : "The AD turned you down. Maybe it's time to test the waters elsewhere."}
-          </p>
-        )}
-
-        <p style={{ marginTop: 16 }}>
-          Arena capacity: <strong>{team.venueCapacity.toLocaleString()}</strong>
-          {team.avgTurnoutPct != null
-            ? <span className="text-muted"> · averaging {team.avgTurnoutPct}% full this season ({team.homeGamesPlayedThisSeason} home games)</span>
-            : <span className="text-muted"> · not enough home games played yet this season to gauge demand</span>}
-        </p>
-        <p className="text-muted" style={{ marginTop: -8 }}>
-          Campus atmosphere: <strong className={team.headCoach.campusAtmosphere >= 60 ? "text-good" : team.headCoach.campusAtmosphere < 25 ? "text-bad" : ""}>
-            {atmosphereLabel(team.headCoach.campusAtmosphere)}
-          </strong> ({team.headCoach.campusAtmosphere}/100) — built through sustained success and tenure, especially at this level
-        </p>
-        <button onClick={handleUpgradeArena} disabled={upgradingArena || team.arenaUpgradeRequestedThisSeason}>
-          {team.arenaUpgradeRequestedThisSeason ? "Already asked this season" : upgradingArena ? "Asking..." : "Ask AD to Expand Arena"}
-        </button>
-        {arenaResult && (
-          <p className={arenaResult.granted ? "text-good" : "text-bad"} style={{ marginTop: 8 }}>
-            {arenaResult.error
-              ? arenaResult.error
-              : arenaResult.granted
-                ? `Approved! New capacity: ${arenaResult.newCapacity.toLocaleString()} (up from ${arenaResult.oldCapacity.toLocaleString()})`
-                : "The AD isn't convinced it pays for itself right now — build a stronger case with wins and attendance."}
-          </p>
-        )}
-      </div>
-
-      <div className="card">
-        <h3>Job Market</h3>
-        <button onClick={testWaters} disabled={marketLoading}>
-          {marketLoading ? "..." : marketOpen ? "Hide Market" : "Test the Waters"}
-        </button>
-        {marketOpen && (
-          <div style={{ marginTop: 12 }}>
-            {jobOffers.length === 0 && <p className="text-muted">No other programs are open to talking right now.</p>}
-            {jobOffers.map((o) => (
-              <div key={o.teamId} className="divider-row">
-                <strong>{o.teamName}</strong> ({o.division}) — prestige {o.prestige}
-                {o.salary != null && <span className="text-muted"> · {fmtMoney(o.salary)}/yr</span>}
-                {o.costOfLivingIndex != null && <span className="text-muted"> · {colLabel(o.costOfLivingIndex)} cost of living</span>}
-                {offerLine(o) && <span className="text-muted"> ({offerLine(o)})</span>}
-                {o.athleticDirectorName && <span className="text-muted"> · AD: {o.athleticDirectorName}</span>}
-                {o.adRemembersYou && <span className="text-good"> — remembers you well from a previous job together</span>}
-                {" "}
-                <button onClick={() => resignAndAccept(o.teamId)}>Leave for This Job</button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {events.length > 0 && (
         <div className="card">

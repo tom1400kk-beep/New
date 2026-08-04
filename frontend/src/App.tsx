@@ -8,6 +8,7 @@ import EditSchedulePage from "./pages/EditSchedulePage";
 import RecruitingPage from "./pages/RecruitingPage";
 import TransfersPage from "./pages/TransfersPage";
 import StandingsPage from "./pages/StandingsPage";
+import ContractPage from "./pages/ContractPage";
 
 function Shell() {
   const { activeSaveId } = useSave();
@@ -21,6 +22,7 @@ function Shell() {
         {activeSaveId && (
           <>
             <NavLink to="/dashboard">Dashboard</NavLink>
+            <NavLink to="/contract">Contract</NavLink>
             <NavLink to="/roster">Roster</NavLink>
             <NavLink to="/schedule">Schedule</NavLink>
             <NavLink to="/edit-schedule">Edit Schedule</NavLink>
@@ -34,6 +36,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<SaveSelectPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/contract" element={<ContractPage />} />
           <Route path="/roster" element={<RosterPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/edit-schedule" element={<EditSchedulePage />} />

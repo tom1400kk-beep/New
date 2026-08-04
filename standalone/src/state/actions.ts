@@ -586,6 +586,7 @@ export interface PreseasonTournamentBoardEntry {
   tier: string | null;
   field: { teamId: string; name: string; prestige: number }[];
   userTeamIn: boolean;
+  eligible: boolean;
 }
 
 function eventDefForTournamentName(name: string | null): PreseasonEventDef | undefined {
@@ -595,9 +596,21 @@ function eventDefForTournamentName(name: string | null): PreseasonEventDef | und
 
 const TIER_RANK: Record<string, number> = { MAJOR: 0, MID: 1, SMALL: 2 };
 
+// How far below the field's current weakest invite a team's prestige can sit
+// and still plausibly get a bid — mirrors the real-world gap between one
+// prestige tier and the next (~14-18 points), so it's a genuine invite, not
+// a rubber stamp.
+const PRESTIGE_GRACE_MARGIN = 10;
+
+function isPrestigeEligible(userPrestige: number, field: { prestige: number }[]): boolean {
+  if (field.length === 0) return true;
+  const minFieldPrestige = Math.min(...field.map((f) => f.prestige));
+  return userPrestige >= minFieldPrestige - PRESTIGE_GRACE_MARGIN;
+}
+
 export function getPreseasonTournaments(state: WorldState): { editable: boolean; userDivision: string | null; tournaments: PreseasonTournamentBoardEntry[] } {
   const userTeamId = state.save.coachTeamId;
-  const userDivision = userTeamId ? state.teams.find((t) => t.id === userTeamId)?.division ?? null : null;
+  const userTeam = userTeamId ? state.teams.find((t) => t.id === userTeamId) : undefined;
   const seasonYear = state.save.currentSeasonYear;
   const tournaments = state.tournaments.filter((t) => t.seasonYear === seasonYear && t.type === "PRESEASON_INVITATIONAL");
 
@@ -616,12 +629,13 @@ export function getPreseasonTournaments(state: WorldState): { editable: boolean;
       tier: eventDef?.tier ?? null,
       field: field.map((f) => ({ teamId: f.id, name: f.name, prestige: f.prestige })),
       userTeamIn: !!userTeamId && fieldIds.includes(userTeamId),
+      eligible: userTeam ? isPrestigeEligible(userTeam.prestige, field) : false,
     };
   });
 
   board.sort((a, b) => (TIER_RANK[a.tier ?? ""] ?? 3) - (TIER_RANK[b.tier ?? ""] ?? 3));
 
-  return { editable: state.save.currentPhase === "PRESEASON", userDivision, tournaments: board };
+  return { editable: state.save.currentPhase === "PRESEASON", userDivision: userTeam?.division ?? null, tournaments: board };
 }
 
 // Swaps a team's entire non-conference slate (including any preseason
@@ -651,6 +665,12 @@ export function joinPreseasonTournament(state: WorldState, tournamentId: string)
   if (fieldIds.includes(state.save.coachTeamId)) throw new Error("Already in this event");
 
   const fieldTeams = fieldIds.map((id) => state.teams.find((t) => t.id === id)).filter((t): t is NonNullable<typeof t> => !!t);
+
+  const userTeam = state.teams.find((t) => t.id === state.save.coachTeamId)!;
+  if (!isPrestigeEligible(userTeam.prestige, fieldTeams)) {
+    throw new Error("Your program isn't competitive enough to draw an invite to this event");
+  }
+
   const partner = [...fieldTeams].sort((a, b) => a.prestige - b.prestige)[0];
   if (!partner) throw new Error("Event has no field to swap into");
 

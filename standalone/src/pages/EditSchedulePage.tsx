@@ -72,7 +72,8 @@ export default function EditSchedulePage() {
       <h1>Edit Schedule</h1>
       <p className="text-muted">
         Pick a preseason multi-team event for your non-conference slate. Joining swaps your entire early-season
-        schedule with the invite you're replacing — same dates, same opponents-for-opponents.
+        schedule with the invite you're replacing — same dates, same opponents-for-opponents. You'll only draw a bid
+        from events your program's prestige can realistically compete in.
         {!data.editable && " The schedule locks once the season begins, so this is read-only now."}
       </p>
 
@@ -99,13 +100,19 @@ export default function EditSchedulePage() {
                 <td>{TIER_LABELS[t.tier] ?? t.tier ?? "—"}</td>
                 <td className="text-muted">{FORMAT_LABELS[t.format] ?? t.format ?? "—"}</td>
                 <td className="text-muted" style={{ maxWidth: 420 }}>
-                  {t.field.map((f: any) => f.name).join(", ")}
+                  <strong>({t.field.length} teams)</strong> {t.field.map((f: any) => f.name).join(", ")}
                 </td>
                 <td>
                   {data.editable && !t.userTeamIn && (
-                    <button className="secondary" disabled={busy} onClick={() => join(t.tournamentId)}>
-                      Join
-                    </button>
+                    t.eligible ? (
+                      <button className="secondary" disabled={busy} onClick={() => join(t.tournamentId)}>
+                        Join
+                      </button>
+                    ) : (
+                      <span className="text-muted" title="Your program's prestige isn't high enough to draw an invite to this event">
+                        Not eligible
+                      </span>
+                    )
                   )}
                 </td>
               </tr>

@@ -4,9 +4,21 @@ import { PRESEASON_EVENTS, type PreseasonEventDef } from "../engine/preseasonEve
 
 export const preseasonTournamentsRouter = Router();
 
+// How far below the field's current weakest invite a team's prestige can sit
+// and still plausibly get a bid — mirrors the real-world gap between one
+// prestige tier and the next (~14-18 points), so it's a genuine invite, not
+// a rubber stamp.
+const PRESTIGE_GRACE_MARGIN = 10;
+
 function eventDefForTournamentName(name: string | null): PreseasonEventDef | undefined {
   if (!name) return undefined;
   return PRESEASON_EVENTS.find((e) => name === `${e.name} — ${e.location}`);
+}
+
+function isPrestigeEligible(userPrestige: number, field: { prestige: number }[]): boolean {
+  if (field.length === 0) return true;
+  const minFieldPrestige = Math.min(...field.map((f) => f.prestige));
+  return userPrestige >= minFieldPrestige - PRESTIGE_GRACE_MARGIN;
 }
 
 async function loadFields(saveGameId: string, seasonYear: number) {
@@ -26,6 +38,8 @@ preseasonTournamentsRouter.get("/saves/:id/preseason-tournaments", async (req, r
   const { tournaments, teamById } = await loadFields(save.id, save.currentSeasonYear);
 
   const userTeamId = save.coachTeamId;
+  const userTeam = userTeamId ? await prisma.team.findUnique({ where: { id: userTeamId }, select: { division: true, prestige: true } }) : null;
+
   const board = tournaments.map((t) => {
     const fieldIds = [...new Set(t.games.flatMap((g) => [g.homeTeamId, g.awayTeamId]))];
     const field = fieldIds
@@ -40,6 +54,7 @@ preseasonTournamentsRouter.get("/saves/:id/preseason-tournaments", async (req, r
       tier: eventDef?.tier ?? null,
       field: field.map((f) => ({ teamId: f.id, name: f.name, prestige: f.prestige })),
       userTeamIn: !!userTeamId && fieldIds.includes(userTeamId),
+      eligible: userTeam ? isPrestigeEligible(userTeam.prestige, field) : false,
     };
   });
 
@@ -47,7 +62,7 @@ preseasonTournamentsRouter.get("/saves/:id/preseason-tournaments", async (req, r
 
   res.json({
     editable: save.currentPhase === "PRESEASON",
-    userDivision: userTeamId ? (await prisma.team.findUnique({ where: { id: userTeamId }, select: { division: true } }))?.division ?? null : null,
+    userDivision: userTeam?.division ?? null,
     tournaments: board,
   });
 });
@@ -89,6 +104,12 @@ preseasonTournamentsRouter.post("/saves/:id/preseason-tournaments/:tournamentId/
   if (fieldIds.includes(save.coachTeamId)) return res.status(400).json({ error: "Already in this event" });
 
   const fieldTeams = await prisma.team.findMany({ where: { id: { in: fieldIds } }, select: { id: true, prestige: true } });
+
+  const userTeam = await prisma.team.findUniqueOrThrow({ where: { id: save.coachTeamId }, select: { prestige: true } });
+  if (!isPrestigeEligible(userTeam.prestige, fieldTeams)) {
+    return res.status(400).json({ error: "Your program isn't competitive enough to draw an invite to this event" });
+  }
+
   const partner = [...fieldTeams].sort((a, b) => a.prestige - b.prestige)[0];
   if (!partner) return res.status(400).json({ error: "Event has no field to swap into" });
 
