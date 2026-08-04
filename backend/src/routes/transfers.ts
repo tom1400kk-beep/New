@@ -54,6 +54,7 @@ transfersRouter.get("/saves/:id/transfers", async (req, res) => {
       position: p.position,
       classYear: p.classYear,
       hometownState: p.hometownState,
+      hometownCity: p.hometownCity,
       countryOfOrigin: p.countryOfOrigin,
       previousSchool: p.previousSchool,
       eligibilityYearsLeft: p.eligibilityYearsLeft,

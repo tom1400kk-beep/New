@@ -10,7 +10,8 @@ function sourceLabel(source: string): string {
 }
 
 function homeLabel(p: any): string {
-  return p.source === "INTERNATIONAL" ? p.countryOfOrigin : p.hometownState;
+  if (p.source === "INTERNATIONAL") return p.countryOfOrigin;
+  return p.hometownCity ? `${p.hometownCity}, ${p.hometownState}` : p.hometownState;
 }
 
 // Pipeline strength (a coach's persistent, per-state recruiting connection)

@@ -8,8 +8,9 @@ function overall(p: any): number {
 
 function homeLabel(p: any): string {
   if (p.origin === "INTERNATIONAL") return p.countryOfOrigin;
-  if (p.countryOfOrigin) return `${p.hometownState} (${p.countryOfOrigin})`;
-  return p.hometownState;
+  const town = p.hometownCity ? `${p.hometownCity}, ${p.hometownState}` : p.hometownState;
+  if (p.countryOfOrigin) return `${town} (${p.countryOfOrigin})`;
+  return town;
 }
 
 function formatHeight(inches: number): string {

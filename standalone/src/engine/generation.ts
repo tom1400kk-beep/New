@@ -3,6 +3,7 @@ import { randomInternationalFirstName, randomInternationalLastName } from "./int
 import { clamp, randInt, randNormal, weightedPick } from "./rng";
 import { weightedStateList, STATE_PROFILES } from "./regions";
 import { weightedCountryList, COUNTRY_PROFILES } from "./countries";
+import { pickCityForState } from "./cities";
 import { generateProspectPriorities, type PriorityProfile } from "./priorities";
 import type { ClassYear, Division, PlayerOrigin, PositionType, ProspectSource } from "../types";
 
@@ -96,6 +97,7 @@ export interface GeneratedProspect {
   lastName: string;
   position: PositionType;
   hometownState: string;
+  hometownCity: string; // real US city/town matching hometownState; "" for international prospects
   countryOfOrigin: string | null; // null = USA; set for international prospects and foreign-born HS players
   source: ProspectSource;
   starRating: number;
@@ -140,6 +142,7 @@ export function generateHighSchoolProspect(rng: () => number, graduationYear: nu
     lastName,
     position,
     hometownState: state,
+    hometownCity: pickCityForState(rng, state),
     countryOfOrigin,
     source: "HIGH_SCHOOL",
     starRating,
@@ -170,6 +173,7 @@ export function generateJucoProspect(rng: () => number, graduationYear: number):
     lastName: jucoName.lastName,
     position,
     hometownState: state,
+    hometownCity: pickCityForState(rng, state),
     countryOfOrigin: jucoCountryOfOrigin,
     source: "JUCO",
     starRating,
@@ -197,6 +201,7 @@ export function generateInternationalProspect(rng: () => number, graduationYear:
     lastName: intlName.lastName,
     position,
     hometownState: "",
+    hometownCity: "",
     countryOfOrigin: country,
     source: "INTERNATIONAL",
     starRating,
@@ -217,6 +222,7 @@ export interface GeneratedPlayer {
   position: PositionType;
   classYear: ClassYear;
   hometownState: string;
+  hometownCity: string;
   countryOfOrigin: string | null;
   origin: PlayerOrigin;
   eligibilityYearsLeft: number;
@@ -282,6 +288,7 @@ export function generateRosterForTeam(
       position,
       classYear,
       hometownState: state,
+      hometownCity: pickCityForState(rng, state),
       countryOfOrigin,
       origin,
       eligibilityYearsLeft: ELIGIBILITY_BY_CLASS[classYear],

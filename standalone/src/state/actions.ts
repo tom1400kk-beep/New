@@ -45,6 +45,7 @@ export interface RecruitingBoardEntry {
   lastName: string;
   position: string;
   hometownState: string;
+  hometownCity: string;
   countryOfOrigin: string | null;
   source: string;
   starRating: number;
@@ -77,7 +78,7 @@ export function getRecruitingBoard(state: WorldState): RecruitingBoardEntry[] {
       const interest = state.interests.find((i) => i.prospectId === p.id && i.teamId === teamId);
       return {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position,
-        hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
+        hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating, graduationYear: p.graduationYear,
         topPriorities: topPriorities(parsePriorities(p.prioritiesJson), 3),
         pipelineScore: p.hometownState ? pipelineScore(pipeline, p.hometownState) : null,
         scouted: {
@@ -160,6 +161,7 @@ export interface TransferBoardEntry {
   position: string;
   classYear: string;
   hometownState: string;
+  hometownCity: string;
   countryOfOrigin: string | null;
   previousSchool: string | null;
   eligibilityYearsLeft: number;
@@ -189,7 +191,7 @@ export function getTransferBoard(state: WorldState): TransferBoardEntry[] {
       const interest = state.transferInterests.find((i) => i.playerId === p.id && i.teamId === teamId);
       return {
         id: p.id, firstName: p.firstName, lastName: p.lastName, position: p.position, classYear: p.classYear,
-        hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, previousSchool: p.previousSchool,
+        hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, previousSchool: p.previousSchool,
         eligibilityYearsLeft: p.eligibilityYearsLeft, overall: playerOverall(p),
         topPriorities: topPriorities(parsePriorities(p.prioritiesJson), 3),
         pipelineScore: p.previousSchool ? pipelineScore(transferPipeline, p.previousSchool) : null,
@@ -551,7 +553,7 @@ export function addWalkOn(state: WorldState, candidateId: string) {
 
   const player = {
     id: newId(), teamId: team.id, firstName: candidate.firstName, lastName: candidate.lastName, position: candidate.position,
-    classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, countryOfOrigin: candidate.countryOfOrigin,
+    classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, hometownCity: candidate.hometownCity, countryOfOrigin: candidate.countryOfOrigin,
     origin: candidate.origin,
     scoring: candidate.scoring, threePoint: candidate.threePoint, finishing: candidate.finishing,
     playmaking: candidate.playmaking, rebounding: candidate.rebounding, defense: candidate.defense,

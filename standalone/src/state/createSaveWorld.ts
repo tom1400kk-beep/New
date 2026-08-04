@@ -130,7 +130,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         players.push({
           id: newId(), teamId,
           firstName: p.firstName, lastName: p.lastName, position: p.position, classYear: p.classYear,
-          heightInches: p.ratings.heightInches, hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, origin: p.origin,
+          heightInches: p.ratings.heightInches, hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, origin: p.origin,
           scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
           playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
           athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
@@ -226,7 +226,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
 function prospectFromGenerated(p: ReturnType<typeof generateHighSchoolProspect>): ProspectRow {
   return {
     id: newId(), firstName: p.firstName, lastName: p.lastName, position: p.position,
-    hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+    hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
     scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
     playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
     athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,

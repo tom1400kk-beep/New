@@ -42,7 +42,7 @@ teamRouter.post("/saves/:id/walkons/:candidateId/add", async (req, res) => {
     data: {
       id: randomUUID(), saveGameId: save.id, teamId: team.id,
       firstName: candidate.firstName, lastName: candidate.lastName, position: candidate.position,
-      classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, countryOfOrigin: candidate.countryOfOrigin,
+      classYear: "FR", heightInches: 76, hometownState: candidate.hometownState, hometownCity: candidate.hometownCity, countryOfOrigin: candidate.countryOfOrigin,
       origin: candidate.origin,
       scoring: candidate.scoring, threePoint: candidate.threePoint, finishing: candidate.finishing,
       playmaking: candidate.playmaking, rebounding: candidate.rebounding, defense: candidate.defense,

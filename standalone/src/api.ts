@@ -47,9 +47,18 @@ async function ensureLoaded(saveId: string): Promise<WorldState> {
     if (p.onScholarship === undefined) p.onScholarship = true;
     if (p.previousSchool === undefined) p.previousSchool = null;
     if (p.prioritiesJson === undefined) p.prioritiesJson = "{}";
+    if (p.hometownCity === undefined) p.hometownCity = "";
   }
   for (const c of loaded.coaches) {
     if (c.transferPipelineJson === undefined) c.transferPipelineJson = "{}";
+  }
+  // Saves persisted before the hometown-city feature won't have this field on
+  // existing prospects/walk-on candidates either.
+  for (const p of loaded.prospects) {
+    if (p.hometownCity === undefined) p.hometownCity = "";
+  }
+  for (const c of loaded.walkOnCandidates) {
+    if (c.hometownCity === undefined) c.hometownCity = "";
   }
   cache = loaded;
   return loaded;

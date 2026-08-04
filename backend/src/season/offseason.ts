@@ -516,7 +516,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
       data: {
         id: randomUUID(), saveGameId, teamId: finalTeamId,
         firstName: prospect.firstName, lastName: prospect.lastName, position: prospect.position,
-        classYear: "FR", heightInches: 76, hometownState: prospect.hometownState,
+        classYear: "FR", heightInches: 76, hometownState: prospect.hometownState, hometownCity: prospect.hometownCity,
         countryOfOrigin: prospect.countryOfOrigin,
         origin: prospect.source,
         scoring: prospect.scoring, threePoint: prospect.threePoint, finishing: prospect.finishing,
@@ -538,7 +538,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const p = generateHighSchoolProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
-      hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
@@ -551,7 +551,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const p = generateJucoProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
-      hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
@@ -564,7 +564,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const p = generateInternationalProspect(rng, seasonYear + 2);
     nextProspects.push({
       id: randomUUID(), saveGameId, firstName: p.firstName, lastName: p.lastName, position: p.position,
-      hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
+      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, source: p.source, starRating: p.starRating,
       scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
       playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
       athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
@@ -597,7 +597,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
         ...reachedOutCandidates.map((p) => ({ ...p, source: "REACHED_OUT" as const })),
       ].map((p) => ({
         id: randomUUID(), saveGameId, teamId: team.id, firstName: p.firstName, lastName: p.lastName,
-        position: p.position, hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, origin: p.origin, source: p.source,
+        position: p.position, hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, origin: p.origin, source: p.source,
         scoring: p.ratings.scoring, threePoint: p.ratings.threePoint, finishing: p.ratings.finishing,
         playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding, defense: p.ratings.defense,
         athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq, potential: p.ratings.potential,
@@ -611,7 +611,7 @@ export async function runOffseason(saveGameId: string): Promise<{ userFired: boo
     const rows = roster.map((p) => ({
       id: randomUUID(), saveGameId, teamId: team.id, firstName: p.firstName, lastName: p.lastName,
       position: p.position, classYear: "FR" as ClassYear, heightInches: p.ratings.heightInches,
-      hometownState: p.hometownState, countryOfOrigin: p.countryOfOrigin, origin: p.origin, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
+      hometownState: p.hometownState, hometownCity: p.hometownCity, countryOfOrigin: p.countryOfOrigin, origin: p.origin, scoring: p.ratings.scoring, threePoint: p.ratings.threePoint,
       finishing: p.ratings.finishing, playmaking: p.ratings.playmaking, rebounding: p.ratings.rebounding,
       defense: p.ratings.defense, athleticism: p.ratings.athleticism, basketballIq: p.ratings.basketballIq,
       stamina: Math.round(clamp(randNormal(rng, 65, 15), 20, 99)), potential: p.ratings.potential,

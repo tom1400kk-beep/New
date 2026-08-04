@@ -100,6 +100,7 @@ export interface PlayerRow {
   classYear: string;
   heightInches: number;
   hometownState: string;
+  hometownCity: string;
   countryOfOrigin: string | null;
   origin: string;
   scoring: number;
@@ -142,6 +143,7 @@ export interface WalkOnCandidateRow {
   lastName: string;
   position: string;
   hometownState: string;
+  hometownCity: string;
   countryOfOrigin: string | null;
   origin: string;
   source: string; // "LOCAL" | "REACHED_OUT"
@@ -164,6 +166,7 @@ export interface ProspectRow {
   lastName: string;
   position: string;
   hometownState: string;
+  hometownCity: string;
   countryOfOrigin: string | null;
   source: string;
   starRating: number;

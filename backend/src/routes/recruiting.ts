@@ -58,6 +58,7 @@ recruitingRouter.get("/saves/:id/recruiting", async (req, res) => {
       lastName: p.lastName,
       position: p.position,
       hometownState: p.hometownState,
+      hometownCity: p.hometownCity,
       countryOfOrigin: p.countryOfOrigin,
       source: p.source,
       starRating: p.starRating,
