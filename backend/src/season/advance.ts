@@ -246,3 +246,64 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
 
   return { gamesPlayedToday: todaysGames.length, newPhase: phase, event: generatedEvent, offseasonResult };
 }
+
+export interface AutoAdvanceResult {
+  daysAdvanced: number;
+  gamesPlayedTotal: number;
+  userGamePlayed: boolean;
+  events: any[];
+  finalPhase: string;
+  offseasonResult?: AdvanceResult["offseasonResult"];
+  stopReason: "USER_GAME" | "EVENT" | "OFFSEASON" | "PHASE_CHANGE" | "DAY_LIMIT" | "STALLED";
+}
+
+const AUTO_ADVANCE_MAX_DAYS = 60;
+
+// Repeatedly calls advanceOneDay, stopping the moment something worth the
+// coach's attention happens — their own team playing a game, a random event
+// or media interview firing, the season transitioning into a new phase, or
+// the offseason resolving — rather than blindly burning through a fixed
+// number of days. Also bails out if the calendar stalls (e.g. the coach was
+// just fired and there's no job to accept yet), so it can never spin forever.
+export async function advanceMultipleDays(saveGameId: string, maxDays: number): Promise<AutoAdvanceResult> {
+  const cappedMax = Math.max(1, Math.min(Math.floor(maxDays) || 1, AUTO_ADVANCE_MAX_DAYS));
+  let daysAdvanced = 0;
+  let gamesPlayedTotal = 0;
+  let userGamePlayed = false;
+  const events: any[] = [];
+  let finalPhase = "";
+  let offseasonResult: AdvanceResult["offseasonResult"];
+  let stopReason: AutoAdvanceResult["stopReason"] = "DAY_LIMIT";
+
+  for (let i = 0; i < cappedMax; i++) {
+    const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: saveGameId } });
+    const phaseBefore = save.currentPhase;
+    const dateBefore = save.currentDate;
+
+    let hasUserGameToday = false;
+    if (save.coachTeamId) {
+      const myGame = await prisma.game.findFirst({
+        where: { saveGameId, isPlayed: false, date: dateBefore, OR: [{ homeTeamId: save.coachTeamId }, { awayTeamId: save.coachTeamId }] },
+        select: { id: true },
+      });
+      hasUserGameToday = !!myGame;
+    }
+
+    const result = await advanceOneDay(saveGameId);
+    daysAdvanced++;
+    gamesPlayedTotal += result.gamesPlayedToday;
+    finalPhase = result.newPhase;
+    if (result.event) events.push(result.event);
+    if (result.offseasonResult) offseasonResult = result.offseasonResult;
+
+    if (hasUserGameToday && result.gamesPlayedToday > 0) { userGamePlayed = true; stopReason = "USER_GAME"; break; }
+    if (result.event) { stopReason = "EVENT"; break; }
+    if (result.offseasonResult) { stopReason = "OFFSEASON"; break; }
+    if (result.newPhase !== phaseBefore) { stopReason = "PHASE_CHANGE"; break; }
+
+    const saveAfter = await prisma.saveGame.findUniqueOrThrow({ where: { id: saveGameId } });
+    if (saveAfter.currentDate.getTime() === dateBefore.getTime()) { stopReason = "STALLED"; break; }
+  }
+
+  return { daysAdvanced, gamesPlayedTotal, userGamePlayed, events, finalPhase, offseasonResult, stopReason };
+}

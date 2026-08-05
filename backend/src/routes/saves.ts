@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { createSaveWorld } from "../seed/createSaveWorld";
 import { loadLeagueData, prestigeTierToScore, divisionDataAvailable } from "../seed/leagueData";
-import { advanceOneDay } from "../season/advance";
+import { advanceOneDay, advanceMultipleDays } from "../season/advance";
 import { computeStandings, winPct } from "../season/standings";
 import { COACH_ARCHETYPES, type CoachArchetype } from "../engine/coachArchetypes";
 import { COACH_BACKGROUNDS, type CoachBackground } from "../engine/coachBackgrounds";
@@ -460,6 +460,19 @@ savesRouter.post("/saves/:id/conference-invite/respond", async (req, res) => {
 savesRouter.post("/saves/:id/advance", async (req, res) => {
   try {
     const result = await advanceOneDay(req.params.id);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message, stack: err.stack });
+  }
+});
+
+// Repeatedly advances one day at a time (same simulation as /advance) up to
+// maxDays, stopping early the moment something happens worth the coach's
+// attention — see advanceMultipleDays for the exact stop conditions.
+savesRouter.post("/saves/:id/auto-advance", async (req, res) => {
+  try {
+    const maxDays = Number(req.body?.maxDays) || 14;
+    const result = await advanceMultipleDays(req.params.id, maxDays);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message, stack: err.stack });

@@ -52,6 +52,8 @@ export const api = {
   getCoachProfile: (saveId: string, coachId: string) => request<any>(`/saves/${saveId}/coaches/${coachId}`),
   getADProfile: (saveId: string, adId: string) => request<any>(`/saves/${saveId}/athletic-directors/${adId}`),
   advance: (saveId: string) => request<any>(`/saves/${saveId}/advance`, { method: "POST" }),
+  autoAdvance: (saveId: string, maxDays: number) =>
+    request<any>(`/saves/${saveId}/auto-advance`, { method: "POST", body: JSON.stringify({ maxDays }) }),
 
   getRecruitingBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/recruiting`),
   pursueRecruit: (saveId: string, prospectId: string, points: number) =>

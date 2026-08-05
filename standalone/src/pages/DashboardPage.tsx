@@ -135,6 +135,17 @@ function rivalryLabel(intensity: number): string {
   return "Budding Rivalry";
 }
 
+function stopReasonLabel(reason: string): string {
+  switch (reason) {
+    case "USER_GAME": return "your team played a game";
+    case "EVENT": return "something came up that needs your attention";
+    case "OFFSEASON": return "the season ended and the offseason resolved";
+    case "PHASE_CHANGE": return "the season moved to a new phase";
+    case "STALLED": return "nothing more to do right now";
+    default: return "reached the day limit";
+  }
+}
+
 function playingCareerLine(coach: any): string | null {
   const parts: string[] = [];
   if (coach.hometownState) parts.push(`From ${coach.hometownState}`);
@@ -155,6 +166,9 @@ export default function DashboardPage() {
   const [jobOffers, setJobOffers] = useState<any[]>([]);
   const [advancing, setAdvancing] = useState(false);
   const [lastResult, setLastResult] = useState<any>(null);
+  const [autoAdvancing, setAutoAdvancing] = useState(false);
+  const [autoAdvanceDays, setAutoAdvanceDays] = useState(14);
+  const [autoAdvanceResult, setAutoAdvanceResult] = useState<any>(null);
   const [rivalries, setRivalries] = useState<any[]>([]);
   const [preview, setPreview] = useState<any>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -194,6 +208,7 @@ export default function DashboardPage() {
   async function handleAdvance() {
     if (!activeSaveId) return;
     setAdvancing(true);
+    setAutoAdvanceResult(null);
     try {
       const result = await api.advance(activeSaveId);
       setLastResult(result);
@@ -201,6 +216,20 @@ export default function DashboardPage() {
       await refresh();
     } finally {
       setAdvancing(false);
+    }
+  }
+
+  async function handleAutoAdvance() {
+    if (!activeSaveId) return;
+    setAutoAdvancing(true);
+    setLastResult(null);
+    try {
+      const result = await api.autoAdvance(activeSaveId, autoAdvanceDays);
+      setAutoAdvanceResult(result);
+      if (result.offseasonResult?.conferenceInvite) setConferenceInvite(result.offseasonResult.conferenceInvite);
+      await refresh();
+    } finally {
+      setAutoAdvancing(false);
     }
   }
 
@@ -387,14 +416,34 @@ export default function DashboardPage() {
         ) : (
           <p>No games scheduled right now.</p>
         )}
-        <div style={{ marginTop: nextGame ? 12 : 0 }}>
-          <button onClick={handleAdvance} disabled={advancing}>
-            {advancing ? "Simulating..." : "Advance"}
+        <div style={{ marginTop: nextGame ? 12 : 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={handleAdvance} disabled={advancing || autoAdvancing}>
+            {advancing ? "Simulating..." : "Advance 1 Day"}
+          </button>
+          <span className="text-muted">or</span>
+          <input
+            type="number" min={1} max={60} value={autoAdvanceDays}
+            onChange={(e) => setAutoAdvanceDays(Math.max(1, Math.min(60, Number(e.target.value) || 1)))}
+            style={{ width: 56 }}
+          />
+          <button onClick={handleAutoAdvance} disabled={advancing || autoAdvancing}>
+            {autoAdvancing ? "Simulating..." : "Auto-Advance"}
           </button>
         </div>
+        <p className="text-muted" style={{ fontSize: "0.78rem", marginTop: 6 }}>
+          Auto-Advance skips ahead up to the chosen number of days, but stops the moment your team plays,
+          something needs your attention, or the season moves to a new phase — whichever comes first.
+        </p>
         {lastResult && (
           <p className="text-muted" style={{ marginTop: 8 }}>
             {lastResult.gamesPlayedToday} game(s) played today · Phase: {lastResult.newPhase}
+          </p>
+        )}
+        {autoAdvanceResult && (
+          <p className="text-muted" style={{ marginTop: 8 }}>
+            Advanced {autoAdvanceResult.daysAdvanced} day{autoAdvanceResult.daysAdvanced === 1 ? "" : "s"} ·{" "}
+            {autoAdvanceResult.gamesPlayedTotal} game(s) played · Phase: {autoAdvanceResult.finalPhase}
+            <br />Stopped because {stopReasonLabel(autoAdvanceResult.stopReason)}.
           </p>
         )}
       </div>

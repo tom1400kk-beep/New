@@ -1,6 +1,6 @@
 import * as persistence from "./state/persistence";
 import { createSaveWorld } from "./state/createSaveWorld";
-import { advanceOneDay } from "./state/advance";
+import { advanceOneDay, advanceMultipleDays } from "./state/advance";
 import { loadLeagueData, prestigeTierToScore } from "./state/leagueData";
 import * as queries from "./state/queries";
 import * as actions from "./state/actions";
@@ -169,6 +169,12 @@ export const api = {
   advance: async (saveId: string) => {
     const state = await ensureLoaded(saveId);
     const result = advanceOneDay(state);
+    await persistence.persistSave(state);
+    return result;
+  },
+  autoAdvance: async (saveId: string, maxDays: number) => {
+    const state = await ensureLoaded(saveId);
+    const result = advanceMultipleDays(state, maxDays);
     await persistence.persistSave(state);
     return result;
   },
