@@ -120,3 +120,50 @@ gamePreviewRouter.get("/saves/:id/games/:gameId/preview", async (req, res) => {
     homeTeam: homePayload, awayTeam: awayPayload, odds,
   });
 });
+
+const EMPTY_BOX_TOTALS = {
+  points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0,
+  fgm: 0, fga: 0, threepm: 0, threepa: 0, ftm: 0, fta: 0,
+};
+
+// Full per-player box score for one already-played game — the data is
+// generated and stored every game (see playGames.ts) but otherwise only
+// ever gets re-aggregated into season averages, never shown for a specific
+// game on its own.
+gamePreviewRouter.get("/saves/:id/games/:gameId/boxscore", async (req, res) => {
+  const save = await prisma.saveGame.findUniqueOrThrow({ where: { id: req.params.id } });
+  const game = await prisma.game.findUniqueOrThrow({
+    where: { id: req.params.gameId },
+    include: { homeTeam: true, awayTeam: true },
+  });
+  if (game.saveGameId !== save.id) return res.status(400).json({ error: "Game not in this save" });
+  if (!game.isPlayed) return res.status(400).json({ error: "Game hasn't been played yet" });
+
+  const stats = await prisma.playerGameStat.findMany({ where: { gameId: game.id }, include: { player: true } });
+
+  function teamBox(teamId: string, name: string, score: number | null) {
+    const players = stats
+      .filter((s) => s.teamId === teamId)
+      .map((s) => ({
+        playerId: s.playerId, name: `${s.player.firstName} ${s.player.lastName}`,
+        position: s.player.position, classYear: s.player.classYear,
+        minutes: s.minutes, points: s.points, rebounds: s.rebounds, assists: s.assists,
+        steals: s.steals, blocks: s.blocks, turnovers: s.turnovers,
+        fgm: s.fgm, fga: s.fga, threepm: s.threepm, threepa: s.threepa, ftm: s.ftm, fta: s.fta,
+      }))
+      .sort((a, b) => b.minutes - a.minutes);
+    const totals = players.reduce((acc, p) => ({
+      points: acc.points + p.points, rebounds: acc.rebounds + p.rebounds, assists: acc.assists + p.assists,
+      steals: acc.steals + p.steals, blocks: acc.blocks + p.blocks, turnovers: acc.turnovers + p.turnovers,
+      fgm: acc.fgm + p.fgm, fga: acc.fga + p.fga, threepm: acc.threepm + p.threepm, threepa: acc.threepa + p.threepa,
+      ftm: acc.ftm + p.ftm, fta: acc.fta + p.fta,
+    }), { ...EMPTY_BOX_TOTALS });
+    return { teamId, name, score, players, totals };
+  }
+
+  res.json({
+    gameId: game.id, date: game.date, isConference: game.isConference,
+    home: teamBox(game.homeTeamId, game.homeTeam.name, game.homeScore),
+    away: teamBox(game.awayTeamId, game.awayTeam.name, game.awayScore),
+  });
+});

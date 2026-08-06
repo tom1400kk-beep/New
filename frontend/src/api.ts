@@ -80,6 +80,7 @@ export const api = {
     request<any>(`/saves/${saveId}/international-tour`, { method: "POST", body: JSON.stringify({ country }) }),
 
   getGamePreview: (saveId: string, gameId: string) => request<any>(`/saves/${saveId}/games/${gameId}/preview`),
+  getGameBoxScore: (saveId: string, gameId: string) => request<any>(`/saves/${saveId}/games/${gameId}/boxscore`),
 
   getPendingEvents: (saveId: string) => request<any[]>(`/saves/${saveId}/events/pending`),
   resolveEvent: (saveId: string, eventId: string, optionId: string) =>

@@ -126,6 +126,52 @@ export function getSchedule(state: WorldState) {
   return { teamName, games };
 }
 
+const EMPTY_BOX_TOTALS = {
+  points: 0, rebounds: 0, assists: 0, steals: 0, blocks: 0, turnovers: 0,
+  fgm: 0, fga: 0, threepm: 0, threepa: 0, ftm: 0, fta: 0,
+};
+
+// Full per-player box score for one already-played game — the data is
+// generated and stored every game (see playGames.ts) but otherwise only
+// ever gets re-aggregated into season averages, never shown for a specific
+// game on its own.
+export function getGameBoxScore(state: WorldState, gameId: string) {
+  const game = state.games.find((g) => g.id === gameId);
+  if (!game || !game.isPlayed) return null;
+  const homeTeam = state.teams.find((t) => t.id === game.homeTeamId);
+  const awayTeam = state.teams.find((t) => t.id === game.awayTeamId);
+  if (!homeTeam || !awayTeam) return null;
+
+  function teamBox(teamId: string, name: string, score: number | null) {
+    const players = state.stats
+      .filter((s) => s.gameId === gameId && s.teamId === teamId)
+      .map((s) => {
+        const p = state.players.find((pl) => pl.id === s.playerId);
+        return {
+          playerId: s.playerId, name: p ? `${p.firstName} ${p.lastName}` : "Unknown",
+          position: p?.position ?? "", classYear: p?.classYear ?? "",
+          minutes: s.minutes, points: s.points, rebounds: s.rebounds, assists: s.assists,
+          steals: s.steals, blocks: s.blocks, turnovers: s.turnovers,
+          fgm: s.fgm, fga: s.fga, threepm: s.threepm, threepa: s.threepa, ftm: s.ftm, fta: s.fta,
+        };
+      })
+      .sort((a, b) => b.minutes - a.minutes);
+    const totals = players.reduce((acc, p) => ({
+      points: acc.points + p.points, rebounds: acc.rebounds + p.rebounds, assists: acc.assists + p.assists,
+      steals: acc.steals + p.steals, blocks: acc.blocks + p.blocks, turnovers: acc.turnovers + p.turnovers,
+      fgm: acc.fgm + p.fgm, fga: acc.fga + p.fga, threepm: acc.threepm + p.threepm, threepa: acc.threepa + p.threepa,
+      ftm: acc.ftm + p.ftm, fta: acc.fta + p.fta,
+    }), { ...EMPTY_BOX_TOTALS });
+    return { teamId, name, score, players, totals };
+  }
+
+  return {
+    gameId, date: game.date, isConference: game.isConference,
+    home: teamBox(homeTeam.id, homeTeam.name, game.homeScore),
+    away: teamBox(awayTeam.id, awayTeam.name, game.awayScore),
+  };
+}
+
 // Full profile for an arbitrary team (not just the user's own) — powers the
 // "click any team name" feature across the UI. KenPom/RPI are D1-only,
 // mirroring the rest of the app's ranking pages.
