@@ -164,6 +164,13 @@ export const api = {
   getSeasonCalendar: async (saveId: string) => queries.getSeasonCalendar(await ensureLoaded(saveId)),
   getHotSeatBoard: async (saveId: string) => queries.getHotSeatBoard(await ensureLoaded(saveId)),
   getStatLeaders: async (saveId: string) => queries.getStatLeaders(await ensureLoaded(saveId)),
+  getDepthChart: async (saveId: string) => queries.getDepthChart(await ensureLoaded(saveId)),
+  setDepthChart: async (saveId: string, chart: { pg: string | null; sg: string | null; sf: string | null; pf: string | null; c: string | null; bench: string[] }) => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.setDepthChart(state, chart);
+    await persistence.persistSave(state);
+    return result;
+  },
   getPlayerProfile: async (saveId: string, playerId: string) => queries.getPlayerProfile(await ensureLoaded(saveId), playerId),
   getCoachProfile: async (saveId: string, coachId: string) => queries.getCoachProfile(await ensureLoaded(saveId), coachId),
   getADProfile: async (saveId: string, adId: string) => queries.getADProfile(await ensureLoaded(saveId), adId),

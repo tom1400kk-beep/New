@@ -20,6 +20,8 @@ import { PRESEASON_EVENTS, type PreseasonEventDef } from "../engine/preseasonEve
 import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, isTourAffordable, simulateTourGames } from "../engine/internationalTour";
 import type { SimTeam } from "../engine/simulate";
 import { overall } from "../engine/simulate";
+import { serializeDepthChart, type DepthChart } from "../engine/depthChart";
+import { getDepthChart } from "./queries";
 import { normalizeScholarshipsForDivision } from "../engine/conferenceRealignment";
 
 function noisy(rng: () => number, value: number, noise: number): number {
@@ -991,4 +993,13 @@ export function bookInternationalTour(state: WorldState, country: string) {
   team.internationalTourSeasonYear = seasonYear;
 
   return { ok: true, country, games };
+}
+
+// Only the user's own team ever gets a manual depth chart — see getDepthChart.
+export function setDepthChart(state: WorldState, chart: DepthChart) {
+  if (!state.save.coachTeamId) throw new Error("No team for this save");
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) throw new Error("No team for this save");
+  team.depthChartJson = serializeDepthChart(chart);
+  return getDepthChart(state);
 }

@@ -1,4 +1,5 @@
 import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
+import { parseDepthChart, depthChartOrder } from "../engine/depthChart";
 import { computeAttendance } from "../engine/attendance";
 import { homeCourtBonus } from "../engine/atmosphere";
 import { sortedPair } from "../engine/rivalry";
@@ -53,11 +54,13 @@ export function playGames(state: WorldState, gameIds: string[]): void {
       id: homeTeam.id, players: playersByTeam.get(homeTeam.id) ?? [],
       offenseSkill: (homeCoach?.offenseSkill ?? 50) + filmStudyBonus(homeCoach) + crowdBonus,
       defenseSkill: (homeCoach?.defenseSkill ?? 50) + filmStudyBonus(homeCoach) + crowdBonus,
+      depthChartOrder: depthChartOrder(parseDepthChart(homeTeam.depthChartJson)),
     };
     const away: SimTeam = {
       id: awayTeam.id, players: playersByTeam.get(awayTeam.id) ?? [],
       offenseSkill: (awayCoach?.offenseSkill ?? 50) + filmStudyBonus(awayCoach),
       defenseSkill: (awayCoach?.defenseSkill ?? 50) + filmStudyBonus(awayCoach),
+      depthChartOrder: depthChartOrder(parseDepthChart(awayTeam.depthChartJson)),
     };
 
     const result = simulateGame(home, away);

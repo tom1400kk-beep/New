@@ -49,6 +49,9 @@ export const api = {
   getSeasonCalendar: (saveId: string) => request<any>(`/saves/${saveId}/calendar`),
   getHotSeatBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/hot-seat`),
   getStatLeaders: (saveId: string) => request<any>(`/saves/${saveId}/stat-leaders`),
+  getDepthChart: (saveId: string) => request<any>(`/saves/${saveId}/depth-chart`),
+  setDepthChart: (saveId: string, chart: any) =>
+    request<any>(`/saves/${saveId}/depth-chart`, { method: "POST", body: JSON.stringify(chart) }),
   getPlayerProfile: (saveId: string, playerId: string) => request<any>(`/saves/${saveId}/players/${playerId}`),
   getCoachProfile: (saveId: string, coachId: string) => request<any>(`/saves/${saveId}/coaches/${coachId}`),
   getADProfile: (saveId: string, adId: string) => request<any>(`/saves/${saveId}/athletic-directors/${adId}`),

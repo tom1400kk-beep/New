@@ -14,6 +14,7 @@ import { calendarRouter } from "./routes/calendar";
 import { hotSeatRouter } from "./routes/hotSeat";
 import { profilesRouter } from "./routes/profiles";
 import { statsRouter } from "./routes/stats";
+import { depthChartRouter } from "./routes/depthChart";
 
 const app = express();
 app.use(cors());
@@ -33,6 +34,7 @@ app.use("/api", calendarRouter);
 app.use("/api", hotSeatRouter);
 app.use("/api", profilesRouter);
 app.use("/api", statsRouter);
+app.use("/api", depthChartRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

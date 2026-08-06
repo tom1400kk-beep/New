@@ -4,7 +4,8 @@ import { computeStandings } from "../season/standings";
 import { computeKenPomRatings } from "../engine/kenpom";
 import { computeRPI } from "../engine/rpi";
 import { computeGameOdds, type OddsTeamInput } from "../engine/gameOdds";
-import { overall, type SimPlayer } from "../engine/simulate";
+import { overall, buildRotation, type SimPlayer } from "../engine/simulate";
+import { parseDepthChart, depthChartOrder } from "../engine/depthChart";
 import { aggregateCareerStats, type RawGameStatLine } from "../engine/careerStats";
 import { d1Teams, buildKenPomBoxScores, buildRPIResults } from "./rankings";
 
@@ -71,20 +72,20 @@ gamePreviewRouter.get("/saves/:id/games/:gameId/preview", async (req, res) => {
     return lines.find((l) => l.seasonYear === save.currentSeasonYear) ?? null;
   }
 
-  function rosterPayload(teamId: string) {
-    const teamRoster = roster.filter((p) => p.teamId === teamId);
-    const eligible = teamRoster.filter((p) => !p.isInjured && !p.isSuspended);
-    const starters = [...eligible]
-      .sort((a, b) => overall(b as unknown as SimPlayer) - overall(a as unknown as SimPlayer))
-      .slice(0, 5)
-      .map((p) => {
-        const line = seasonLineFor(p.id);
-        return {
-          playerId: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, classYear: p.classYear,
-          overall: overall(p as unknown as SimPlayer),
-          ppg: line?.ppg ?? null, rpg: line?.rpg ?? null, apg: line?.apg ?? null,
-        };
-      });
+  function rosterPayload(team: typeof game.homeTeam) {
+    const teamRoster = roster.filter((p) => p.teamId === team.id);
+    // Same buildRotation the actual game sim uses (see playGames.ts), so a
+    // manually-set depth chart shows up here exactly as it'll actually play out.
+    const rotation = buildRotation(teamRoster as unknown as SimPlayer[], depthChartOrder(parseDepthChart(team.depthChartJson)));
+    const starters = rotation.slice(0, 5).map(({ player }) => {
+      const p = teamRoster.find((r) => r.id === player.id)!;
+      const line = seasonLineFor(p.id);
+      return {
+        playerId: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, classYear: p.classYear,
+        overall: overall(p as unknown as SimPlayer),
+        ppg: line?.ppg ?? null, rpg: line?.rpg ?? null, apg: line?.apg ?? null,
+      };
+    });
     const injuryReport = teamRoster
       .filter((p) => p.isInjured || p.isSuspended)
       .map((p) => ({
@@ -96,7 +97,7 @@ gamePreviewRouter.get("/saves/:id/games/:gameId/preview", async (req, res) => {
   }
 
   function teamPayload(team: typeof game.homeTeam, record: { wins: number; losses: number; confWins: number; confLosses: number }) {
-    const { starters, injuryReport } = rosterPayload(team.id);
+    const { starters, injuryReport } = rosterPayload(team);
     return {
       teamId: team.id, name: team.name, division: team.division, prestige: team.prestige,
       record, gamesPlayed: record.wins + record.losses,

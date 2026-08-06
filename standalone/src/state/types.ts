@@ -40,6 +40,7 @@ export interface TeamRow {
   athleticDirectorId: string;
   internationalTourCountry: string | null;
   internationalTourSeasonYear: number | null;
+  depthChartJson: string;
 }
 
 export interface InternationalTourRow {

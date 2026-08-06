@@ -14,6 +14,7 @@ import ContractPage from "./pages/ContractPage";
 import CalendarPage from "./pages/CalendarPage";
 import HotSeatPage from "./pages/HotSeatPage";
 import StatsPage from "./pages/StatsPage";
+import DepthChartPage from "./pages/DepthChartPage";
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -77,6 +78,7 @@ function Shell() {
           <>
             <NavLink to="/contract">Contract</NavLink>
             <NavLink to="/roster">Roster</NavLink>
+            <NavLink to="/depth-chart">Depth Chart</NavLink>
             <NavLink to="/schedule">Schedule</NavLink>
             {isPreseason && <NavLink to="/edit-schedule">Edit Schedule</NavLink>}
             <NavLink to="/standings">Standings</NavLink>
@@ -94,6 +96,7 @@ function Shell() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/contract" element={<ContractPage />} />
           <Route path="/roster" element={<RosterPage />} />
+          <Route path="/depth-chart" element={<DepthChartPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/edit-schedule" element={<EditSchedulePage />} />
           <Route path="/standings" element={<StandingsPage />} />

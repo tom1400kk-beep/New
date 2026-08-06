@@ -22,6 +22,7 @@ export interface SimTeam {
   players: SimPlayer[];
   offenseSkill: number; // coach modifier, 1-100
   defenseSkill: number; // coach modifier, 1-100
+  depthChartOrder?: (string | null)[]; // user lineup preference, see engine/depthChart.ts; undefined/all-empty = auto
 }
 
 export interface PlayerBoxScore {
@@ -63,11 +64,36 @@ export function overall(p: SimPlayer): number {
 // Top 8-9 available (non-injured) players form the rotation; minutes taper off the bench.
 const MINUTES_CURVE = [34, 32, 30, 28, 24, 18, 14, 10, 10];
 
-function buildRotation(players: SimPlayer[]): { player: SimPlayer; minutes: number }[] {
+// depthChartOrder (see engine/depthChart.ts) is an optional user lineup
+// preference: named players fill the front of the rotation in that order
+// (skipping anyone injured/suspended/unlisted), and any remaining slots up
+// to 9 are backfilled with the best available players by overall — exactly
+// the auto behavior below, so a partial or empty depth chart degrades
+// gracefully rather than fielding fewer than 9 players.
+export function buildRotation(players: SimPlayer[], depthChartOrder?: (string | null)[]): { player: SimPlayer; minutes: number }[] {
   const available = players.filter((p) => !p.isInjured && !p.isSuspended);
-  const sorted = [...available].sort((a, b) => overall(b) - overall(a));
-  const rotation = sorted.slice(0, Math.min(9, sorted.length));
-  return rotation.map((player, i) => ({ player, minutes: MINUTES_CURVE[i] ?? 6 }));
+  const byId = new Map(available.map((p) => [p.id, p]));
+
+  const chosen: SimPlayer[] = [];
+  const usedIds = new Set<string>();
+  if (depthChartOrder) {
+    for (const id of depthChartOrder) {
+      if (!id || usedIds.has(id)) continue;
+      const p = byId.get(id);
+      if (p) {
+        chosen.push(p);
+        usedIds.add(id);
+      }
+    }
+  }
+
+  const remaining = available.filter((p) => !usedIds.has(p.id)).sort((a, b) => overall(b) - overall(a));
+  const rotationSize = Math.min(9, available.length);
+  while (chosen.length < rotationSize && remaining.length > 0) {
+    chosen.push(remaining.shift()!);
+  }
+
+  return chosen.map((player, i) => ({ player, minutes: MINUTES_CURVE[i] ?? 6 }));
 }
 
 interface TeamProfile {
@@ -78,7 +104,7 @@ interface TeamProfile {
 }
 
 function profileTeam(team: SimTeam): TeamProfile {
-  const rotation = buildRotation(team.players);
+  const rotation = buildRotation(team.players, team.depthChartOrder);
   const totalMinutes = rotation.reduce((s, r) => s + r.minutes, 0) || 1;
 
   let offense = 0;

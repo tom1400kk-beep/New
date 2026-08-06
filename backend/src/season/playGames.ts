@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../db";
 import { simulateGame, type SimTeam, type SimPlayer } from "../engine/simulate";
+import { parseDepthChart, depthChartOrder } from "../engine/depthChart";
 import { computeAttendance } from "../engine/attendance";
 import { homeCourtBonus } from "../engine/atmosphere";
 import { sortedPair } from "../engine/rivalry";
@@ -73,12 +74,14 @@ export async function playGames(saveGameId: string, gameIds: string[]): Promise<
       players: playersByTeam.get(homeTeam.id) ?? [],
       offenseSkill: (homeTeam.headCoach?.offenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach) + crowdBonus,
       defenseSkill: (homeTeam.headCoach?.defenseSkill ?? 50) + filmStudyBonus(homeTeam.headCoach) + crowdBonus,
+      depthChartOrder: depthChartOrder(parseDepthChart(homeTeam.depthChartJson)),
     };
     const away: SimTeam = {
       id: awayTeam.id,
       players: playersByTeam.get(awayTeam.id) ?? [],
       offenseSkill: (awayTeam.headCoach?.offenseSkill ?? 50) + filmStudyBonus(awayTeam.headCoach),
       defenseSkill: (awayTeam.headCoach?.defenseSkill ?? 50) + filmStudyBonus(awayTeam.headCoach),
+      depthChartOrder: depthChartOrder(parseDepthChart(awayTeam.depthChartJson)),
     };
 
     const [pairA, pairB] = sortedPair(homeTeam.id, awayTeam.id);

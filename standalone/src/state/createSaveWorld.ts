@@ -151,6 +151,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         arenaUpgradeRequestedThisSeason: false, isPlayerControlled,
         headCoachId: coachId, athleticDirectorId: adId,
         internationalTourCountry: null, internationalTourSeasonYear: null,
+        depthChartJson: "",
       });
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, division: div, prestige });
 
