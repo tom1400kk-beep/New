@@ -63,10 +63,6 @@ function TeamBoxTable({ team }: { team: any }) {
   );
 }
 
-// Full per-player box score for an already-played game — fetches on demand
-// (the data isn't included in the lightweight schedule list) and shows both
-// teams' stat lines plus team totals, following the same fetch-on-click
-// modal pattern as TeamLink/PlayerLink/CoachLink/ADLink.
 export default function BoxScoreModal({ gameId, onClose }: { gameId: string; onClose: () => void }) {
   const { activeSaveId } = useSave();
   const [box, setBox] = useState<any>(null);
