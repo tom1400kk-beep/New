@@ -15,6 +15,7 @@ import CalendarPage from "./pages/CalendarPage";
 import HotSeatPage from "./pages/HotSeatPage";
 import StatsPage from "./pages/StatsPage";
 import DepthChartPage from "./pages/DepthChartPage";
+import AwardsPage from "./pages/AwardsPage";
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
@@ -83,6 +84,7 @@ function Shell() {
             {isPreseason && <NavLink to="/edit-schedule">Edit Schedule</NavLink>}
             <NavLink to="/standings">Standings</NavLink>
             <NavLink to="/stats">Stat Leaders</NavLink>
+            <NavLink to="/awards">Awards</NavLink>
             <NavLink to="/recruiting">Recruiting</NavLink>
             <NavLink to="/transfers">Transfers</NavLink>
             <NavLink to="/calendar">Calendar</NavLink>
@@ -97,6 +99,7 @@ function Shell() {
           <Route path="/contract" element={<ContractPage />} />
           <Route path="/roster" element={<RosterPage />} />
           <Route path="/depth-chart" element={<DepthChartPage />} />
+          <Route path="/awards" element={<AwardsPage />} />
           <Route path="/schedule" element={<SchedulePage />} />
           <Route path="/edit-schedule" element={<EditSchedulePage />} />
           <Route path="/standings" element={<StandingsPage />} />

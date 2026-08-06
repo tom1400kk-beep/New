@@ -289,6 +289,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
     internationalTours: [],
     coachSeasonRecords: [],
     pollSnapshots: [],
+    seasonAwards: [],
   };
 }
 

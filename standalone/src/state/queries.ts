@@ -233,14 +233,22 @@ export function getPlayerProfile(state: WorldState, playerId: string) {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return null;
   const team = player.teamId ? state.teams.find((t) => t.id === player.teamId) : null;
-  return { ...player, overall: Math.round(overall(player as unknown as SimPlayer)), teamId: team?.id ?? null, teamName: team?.name ?? null };
+  const awards = state.seasonAwards
+    .filter((a) => a.playerId === playerId)
+    .map((a) => ({ seasonYear: a.seasonYear, type: a.type }))
+    .sort((a, b) => b.seasonYear - a.seasonYear);
+  return { ...player, overall: Math.round(overall(player as unknown as SimPlayer)), teamId: team?.id ?? null, teamName: team?.name ?? null, awards };
 }
 
 export function getCoachProfile(state: WorldState, coachId: string) {
   const coach = state.coaches.find((c) => c.id === coachId);
   if (!coach) return null;
   const team = state.teams.find((t) => t.headCoachId === coach.id) ?? null;
-  return { ...coach, teamId: team?.id ?? null, teamName: team?.name ?? null };
+  const awards = state.seasonAwards
+    .filter((a) => a.coachId === coachId)
+    .map((a) => ({ seasonYear: a.seasonYear, type: a.type }))
+    .sort((a, b) => b.seasonYear - a.seasonYear);
+  return { ...coach, teamId: team?.id ?? null, teamName: team?.name ?? null, awards };
 }
 
 export function getADProfile(state: WorldState, adId: string) {
@@ -748,4 +756,71 @@ export function getStatLeaders(state: WorldState) {
     .filter((p) => p.gamesPlayed >= MIN_GAMES_PLAYED);
 
   return { seasonYear: state.save.currentSeasonYear, minGamesPlayed: MIN_GAMES_PLAYED, players };
+}
+
+interface AwardEntry {
+  type: string;
+  playerId: string | null;
+  playerName: string | null;
+  coachId: string | null;
+  coachName: string | null;
+  teamId: string | null;
+  teamName: string | null;
+}
+
+// Season/division-scoped view of end-of-regular-season honors (see
+// engine/awards.ts + state/awards.ts for how these get computed and stored).
+// Defaults to the most recent season with any awards, and D1, so the page
+// has something to show without the caller needing prior knowledge.
+export function getAwards(state: WorldState, requestedSeasonYear?: number, requestedDivision?: string) {
+  const availableSeasons = [...new Set(state.seasonAwards.map((a) => a.seasonYear))].sort((a, b) => b - a);
+  const seasonYear = requestedSeasonYear ?? availableSeasons[0] ?? null;
+  const division = requestedDivision ?? "D1";
+
+  if (seasonYear === null) {
+    return { seasonYear: null, division, availableSeasons, playerOfYear: null, coachOfYear: null, allAmerican: { first: [], second: [], third: [] }, allConference: [] };
+  }
+
+  const awards = state.seasonAwards.filter((a) => a.seasonYear === seasonYear);
+  const conferences = state.conferences.filter((c) => c.division === division);
+  const conferenceIds = new Set(conferences.map((c) => c.id));
+
+  function toEntry(a: (typeof awards)[number]): AwardEntry {
+    const player = a.playerId ? state.players.find((p) => p.id === a.playerId) : null;
+    const coach = a.coachId ? state.coaches.find((c) => c.id === a.coachId) : null;
+    const team = a.teamId ? state.teams.find((t) => t.id === a.teamId) : null;
+    return {
+      type: a.type,
+      playerId: a.playerId, playerName: player ? `${player.firstName} ${player.lastName}` : null,
+      coachId: a.coachId, coachName: coach?.name ?? null,
+      teamId: a.teamId, teamName: team?.name ?? null,
+    };
+  }
+
+  const nationalAwards = awards.filter((a) => a.division === division);
+  const poyRow = nationalAwards.find((a) => a.type === "PLAYER_OF_YEAR");
+  const coyRow = nationalAwards.find((a) => a.type === "COACH_OF_YEAR");
+
+  const allAmerican = {
+    first: nationalAwards.filter((a) => a.type === "ALL_AMERICAN_FIRST").map(toEntry),
+    second: nationalAwards.filter((a) => a.type === "ALL_AMERICAN_SECOND").map(toEntry),
+    third: nationalAwards.filter((a) => a.type === "ALL_AMERICAN_THIRD").map(toEntry),
+  };
+
+  const confAwards = awards.filter((a) => a.conferenceId && conferenceIds.has(a.conferenceId));
+  const allConference = conferences
+    .map((c) => ({
+      conferenceId: c.id,
+      conferenceName: c.name,
+      first: confAwards.filter((a) => a.conferenceId === c.id && a.type === "ALL_CONFERENCE_FIRST").map(toEntry),
+      second: confAwards.filter((a) => a.conferenceId === c.id && a.type === "ALL_CONFERENCE_SECOND").map(toEntry),
+    }))
+    .filter((c) => c.first.length > 0 || c.second.length > 0);
+
+  return {
+    seasonYear, division, availableSeasons,
+    playerOfYear: poyRow ? toEntry(poyRow) : null,
+    coachOfYear: coyRow ? toEntry(coyRow) : null,
+    allAmerican, allConference,
+  };
 }

@@ -18,11 +18,18 @@ profilesRouter.get("/saves/:id/players/:playerId", async (req, res) => {
   });
   if (player.saveGameId !== save.id) return res.status(404).json({ error: "Player not found in this save" });
 
+  const awards = await prisma.seasonAward.findMany({
+    where: { saveGameId: save.id, playerId: player.id },
+    select: { seasonYear: true, type: true },
+    orderBy: { seasonYear: "desc" },
+  });
+
   res.json({
     ...player,
     overall: Math.round(overall(player as unknown as SimPlayer)),
     teamId: player.team?.id ?? null,
     teamName: player.team?.name ?? null,
+    awards,
   });
 });
 
@@ -34,7 +41,13 @@ profilesRouter.get("/saves/:id/coaches/:coachId", async (req, res) => {
   });
   if (coach.saveGameId !== save.id) return res.status(404).json({ error: "Coach not found in this save" });
 
-  res.json({ ...coach, teamId: coach.team?.id ?? null, teamName: coach.team?.name ?? null });
+  const awards = await prisma.seasonAward.findMany({
+    where: { saveGameId: save.id, coachId: coach.id },
+    select: { seasonYear: true, type: true },
+    orderBy: { seasonYear: "desc" },
+  });
+
+  res.json({ ...coach, teamId: coach.team?.id ?? null, teamName: coach.team?.name ?? null, awards });
 });
 
 profilesRouter.get("/saves/:id/athletic-directors/:adId", async (req, res) => {

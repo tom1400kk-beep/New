@@ -49,6 +49,13 @@ export const api = {
   getSeasonCalendar: (saveId: string) => request<any>(`/saves/${saveId}/calendar`),
   getHotSeatBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/hot-seat`),
   getStatLeaders: (saveId: string) => request<any>(`/saves/${saveId}/stat-leaders`),
+  getAwards: (saveId: string, seasonYear?: number, division?: string) => {
+    const params = new URLSearchParams();
+    if (seasonYear != null) params.set("seasonYear", String(seasonYear));
+    if (division) params.set("division", division);
+    const qs = params.toString();
+    return request<any>(`/saves/${saveId}/awards${qs ? `?${qs}` : ""}`);
+  },
   getDepthChart: (saveId: string) => request<any>(`/saves/${saveId}/depth-chart`),
   setDepthChart: (saveId: string, chart: any) =>
     request<any>(`/saves/${saveId}/depth-chart`, { method: "POST", body: JSON.stringify(chart) }),

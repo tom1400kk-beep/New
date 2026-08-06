@@ -3,6 +3,16 @@ import { api } from "../api";
 import { useSave } from "../SaveContext";
 import TeamLink from "./TeamLink";
 
+const AWARD_LABELS: Record<string, string> = {
+  PLAYER_OF_YEAR: "Player of the Year",
+  COACH_OF_YEAR: "Coach of the Year",
+  ALL_AMERICAN_FIRST: "First Team All-American",
+  ALL_AMERICAN_SECOND: "Second Team All-American",
+  ALL_AMERICAN_THIRD: "Third Team All-American",
+  ALL_CONFERENCE_FIRST: "First Team All-Conference",
+  ALL_CONFERENCE_SECOND: "Second Team All-Conference",
+};
+
 const ORIGIN_LABELS: Record<string, string> = {
   HIGH_SCHOOL: "High School",
   JUCO: "Junior College",
@@ -93,6 +103,15 @@ export default function PlayerLink({ playerId, name }: { playerId: string; name:
                   <div><div className="label">Character</div><div className="value">{player.characterRating}</div></div>
                   <div><div className="label">Discipline</div><div className="value">{player.disciplineRating}</div></div>
                 </div>
+
+                {player.awards && player.awards.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div className="label">Awards</div>
+                    {player.awards.map((a: { seasonYear: number; type: string }, i: number) => (
+                      <div key={i} className="value">{a.seasonYear}–{a.seasonYear + 1}: {AWARD_LABELS[a.type] ?? a.type}</div>
+                    ))}
+                  </div>
+                )}
 
                 {(player.isInjured || player.isSuspended) && (
                   <p className="text-bad">

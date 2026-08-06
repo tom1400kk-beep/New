@@ -15,6 +15,7 @@ import { hotSeatRouter } from "./routes/hotSeat";
 import { profilesRouter } from "./routes/profiles";
 import { statsRouter } from "./routes/stats";
 import { depthChartRouter } from "./routes/depthChart";
+import { awardsRouter } from "./routes/awards";
 
 const app = express();
 app.use(cors());
@@ -35,6 +36,7 @@ app.use("/api", hotSeatRouter);
 app.use("/api", profilesRouter);
 app.use("/api", statsRouter);
 app.use("/api", depthChartRouter);
+app.use("/api", awardsRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

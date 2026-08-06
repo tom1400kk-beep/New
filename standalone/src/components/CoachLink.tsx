@@ -12,6 +12,16 @@ const ARCHETYPE_LABELS: Record<string, string> = {
   DISCIPLINARIAN: "Disciplinarian",
 };
 
+const AWARD_LABELS: Record<string, string> = {
+  PLAYER_OF_YEAR: "Player of the Year",
+  COACH_OF_YEAR: "Coach of the Year",
+  ALL_AMERICAN_FIRST: "First Team All-American",
+  ALL_AMERICAN_SECOND: "Second Team All-American",
+  ALL_AMERICAN_THIRD: "Third Team All-American",
+  ALL_CONFERENCE_FIRST: "First Team All-Conference",
+  ALL_CONFERENCE_SECOND: "Second Team All-Conference",
+};
+
 const BACKGROUND_LABELS: Record<string, string> = {
   HIGH_SCHOOL_COACH: "Former High School Coach",
   BLUE_BLOOD_ASSISTANT: "Longtime Blue-Blood Assistant",
@@ -105,6 +115,15 @@ export default function CoachLink({ coachId, name }: { coachId: string; name: st
                   <div><div className="label">Recruiting</div><div className="value">{coach.recruitingSkill}</div></div>
                   <div><div className="label">Development</div><div className="value">{coach.developmentSkill}</div></div>
                 </div>
+
+                {coach.awards && coach.awards.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div className="label">Awards</div>
+                    {coach.awards.map((a: { seasonYear: number; type: string }, i: number) => (
+                      <div key={i} className="value">{a.seasonYear}–{a.seasonYear + 1}: {AWARD_LABELS[a.type] ?? a.type}</div>
+                    ))}
+                  </div>
+                )}
 
                 <button style={{ marginTop: 12 }} onClick={close}>Close</button>
               </>

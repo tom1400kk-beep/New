@@ -320,6 +320,22 @@ export interface PollSnapshotRow {
   rankingsJson: string; // JSON array of {rank, teamId, wins, losses, score}
 }
 
+// One flexible row shape covers every end-of-season award type (see
+// engine/awards.ts) — division is set for national awards (Player of the
+// Year, Coach of the Year, All-American), conferenceId for All-Conference
+// teams; the other is left null.
+export interface SeasonAwardRow {
+  id: string;
+  seasonYear: number;
+  type: string;
+  division: string | null;
+  conferenceId: string | null;
+  playerId: string | null;
+  coachId: string | null;
+  teamId: string | null;
+  createdAt: Date;
+}
+
 export interface WorldState {
   save: SaveGameRow;
   conferences: ConferenceRow[];
@@ -341,6 +357,7 @@ export interface WorldState {
   internationalTours: InternationalTourRow[];
   coachSeasonRecords: CoachSeasonRecordRow[];
   pollSnapshots: PollSnapshotRow[];
+  seasonAwards: SeasonAwardRow[];
 }
 
 export function newId(): string {

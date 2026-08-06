@@ -164,6 +164,8 @@ export const api = {
   getSeasonCalendar: async (saveId: string) => queries.getSeasonCalendar(await ensureLoaded(saveId)),
   getHotSeatBoard: async (saveId: string) => queries.getHotSeatBoard(await ensureLoaded(saveId)),
   getStatLeaders: async (saveId: string) => queries.getStatLeaders(await ensureLoaded(saveId)),
+  getAwards: async (saveId: string, seasonYear?: number, division?: string) =>
+    queries.getAwards(await ensureLoaded(saveId), seasonYear, division),
   getDepthChart: async (saveId: string) => queries.getDepthChart(await ensureLoaded(saveId)),
   setDepthChart: async (saveId: string, chart: { pg: string | null; sg: string | null; sf: string | null; pf: string | null; c: string | null; bench: string[] }) => {
     const state = await ensureLoaded(saveId);

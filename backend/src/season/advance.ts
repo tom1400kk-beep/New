@@ -5,6 +5,7 @@ import { startConferenceTournaments, advanceTournamentRounds, startNationalTourn
 import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason } from "./offseason";
 import { updateApPollSnapshots } from "./apPoll";
+import { computeAndApplySeasonAwards } from "./awards";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { sortedPair } from "../engine/rivalry";
@@ -201,6 +202,9 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
   } else if (phase === "REGULAR_SEASON") {
     const remaining = await prisma.game.count({ where: { saveGameId, seasonYear, tournamentId: null, isPlayed: false } });
     if (remaining === 0) {
+      // Every division's regular season just finished simultaneously (they
+      // share one calendar) — the one point per season this can run exactly once.
+      await computeAndApplySeasonAwards(saveGameId, seasonYear);
       phase = "CONFERENCE_TOURNAMENT";
       for (const d of divisions) await startConferenceTournaments(saveGameId, seasonYear, d, nextDate);
     }

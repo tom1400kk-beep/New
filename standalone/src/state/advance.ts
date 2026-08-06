@@ -3,6 +3,7 @@ import { startConferenceTournaments, advanceTournamentRounds, startNationalTourn
 import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason, type OffseasonResult } from "./offseason";
 import { updateApPollSnapshots } from "./apPoll";
+import { computeAndApplySeasonAwards } from "./awards";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { sortedPair } from "../engine/rivalry";
@@ -163,6 +164,9 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
   } else if (phase === "REGULAR_SEASON") {
     const remaining = state.games.filter((g) => g.seasonYear === seasonYear && g.tournamentId === null && !g.isPlayed).length;
     if (remaining === 0) {
+      // Every division's regular season just finished simultaneously (they
+      // share one calendar) — the one point per season this can run exactly once.
+      computeAndApplySeasonAwards(state, seasonYear);
       phase = "CONFERENCE_TOURNAMENT";
       for (const d of divisions) startConferenceTournaments(state, seasonYear, d, nextDate);
     }
