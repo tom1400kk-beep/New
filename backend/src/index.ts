@@ -16,6 +16,7 @@ import { profilesRouter } from "./routes/profiles";
 import { statsRouter } from "./routes/stats";
 import { depthChartRouter } from "./routes/depthChart";
 import { awardsRouter } from "./routes/awards";
+import { practiceRouter } from "./routes/practice";
 
 const app = express();
 app.use(cors());
@@ -37,6 +38,7 @@ app.use("/api", profilesRouter);
 app.use("/api", statsRouter);
 app.use("/api", depthChartRouter);
 app.use("/api", awardsRouter);
+app.use("/api", practiceRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

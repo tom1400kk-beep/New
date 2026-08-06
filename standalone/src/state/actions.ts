@@ -21,7 +21,8 @@ import { TOUR_COOLDOWN_YEARS, TOUR_COUNTRIES, isTourEligible, isTourAffordable, 
 import type { SimTeam } from "../engine/simulate";
 import { overall } from "../engine/simulate";
 import { serializeDepthChart, type DepthChart } from "../engine/depthChart";
-import { getDepthChart } from "./queries";
+import { getDepthChart, getPracticeFocus } from "./queries";
+import { PRACTICE_FOCUS_OPTIONS, type PracticeFocus } from "../engine/practice";
 import { normalizeScholarshipsForDivision } from "../engine/conferenceRealignment";
 
 function noisy(rng: () => number, value: number, noise: number): number {
@@ -1002,4 +1003,13 @@ export function setDepthChart(state: WorldState, chart: DepthChart) {
   if (!team) throw new Error("No team for this save");
   team.depthChartJson = serializeDepthChart(chart);
   return getDepthChart(state);
+}
+
+export function setPracticeFocus(state: WorldState, focus: PracticeFocus) {
+  if (!state.save.coachTeamId) throw new Error("No team for this save");
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) throw new Error("No team for this save");
+  if (!PRACTICE_FOCUS_OPTIONS.includes(focus)) throw new Error("Invalid practice focus");
+  team.practiceFocus = focus;
+  return getPracticeFocus(state);
 }

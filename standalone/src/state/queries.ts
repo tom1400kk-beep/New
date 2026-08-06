@@ -602,6 +602,24 @@ export function getDepthChart(state: WorldState) {
   return { chart, roster };
 }
 
+export function getPracticeFocus(state: WorldState) {
+  if (!state.save.coachTeamId) return null;
+  const team = state.teams.find((t) => t.id === state.save.coachTeamId);
+  if (!team) return null;
+  const coach = state.coaches.find((c) => c.id === team.headCoachId);
+  const roster = state.players
+    .filter((p) => p.teamId === team.id)
+    .slice()
+    .sort((a, b) => a.lastName.localeCompare(b.lastName))
+    .map((p) => ({
+      playerId: p.id, name: `${p.firstName} ${p.lastName}`, position: p.position, classYear: p.classYear,
+      potential: p.potential, isInjured: p.isInjured,
+      scoring: p.scoring, threePoint: p.threePoint, finishing: p.finishing, playmaking: p.playmaking,
+      rebounding: p.rebounding, defense: p.defense, athleticism: p.athleticism, basketballIq: p.basketballIq, stamina: p.stamina,
+    }));
+  return { focus: team.practiceFocus, developmentSkill: coach?.developmentSkill ?? 50, roster };
+}
+
 function nationalTournamentType(division: Division): string {
   return division === "D1" ? "NCAA_TOURNAMENT" : division === "D2" ? "D2_NATIONAL" : "D3_NATIONAL";
 }

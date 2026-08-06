@@ -86,6 +86,7 @@ model Team {
   internationalTourSeasonYear Int?    // season the last tour happened; gates the once-every-4-years cooldown
 
   depthChartJson     String   @default("") // user-set starters/bench order (JSON DepthChart); "" means fully auto (top overall)
+  practiceFocus      String   @default("BALANCED") // weekly practice emphasis (see engine/practice.ts) — only meaningful for the user's own team
 
   players           Player[]
   prospectInterest  RecruitInterest[]

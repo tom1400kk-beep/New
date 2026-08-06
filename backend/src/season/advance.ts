@@ -6,6 +6,7 @@ import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason } from "./offseason";
 import { updateApPollSnapshots } from "./apPoll";
 import { computeAndApplySeasonAwards } from "./awards";
+import { applyWeeklyPracticeForSave } from "./practice";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { sortedPair } from "../engine/rivalry";
@@ -244,6 +245,13 @@ export async function advanceOneDay(saveGameId: string): Promise<AdvanceResult> 
   // a real poll behaves, unlike KenPom/RPI which always reflect the latest game.
   if (nextDate.getDay() === 1 && phase !== "OFFSEASON") {
     await updateApPollSnapshots(saveGameId, seasonYear, divisions, nextDate);
+  }
+
+  // Weekly practice: preseason and regular season only — tournament weeks
+  // are all business (travel, scouting the next opponent), not general
+  // skill-building practice.
+  if (nextDate.getDay() === 1 && (phase === "PRESEASON" || phase === "REGULAR_SEASON")) {
+    await applyWeeklyPracticeForSave(saveGameId);
   }
 
   await prisma.saveGame.update({ where: { id: saveGameId }, data: { currentDate: nextDate, currentPhase: phase } });

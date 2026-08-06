@@ -152,6 +152,7 @@ export function createSaveWorld(input: CreateSaveInput): WorldState {
         headCoachId: coachId, athleticDirectorId: adId,
         internationalTourCountry: null, internationalTourSeasonYear: null,
         depthChartJson: "",
+        practiceFocus: "BALANCED",
       });
       pendingTeams.push({ id: teamId, name: member.school, state, conferenceId, division: div, prestige });
 

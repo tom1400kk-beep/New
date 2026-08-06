@@ -41,6 +41,7 @@ export interface TeamRow {
   internationalTourCountry: string | null;
   internationalTourSeasonYear: number | null;
   depthChartJson: string;
+  practiceFocus: string;
 }
 
 export interface InternationalTourRow {

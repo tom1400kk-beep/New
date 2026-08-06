@@ -166,6 +166,13 @@ export const api = {
   getStatLeaders: async (saveId: string) => queries.getStatLeaders(await ensureLoaded(saveId)),
   getAwards: async (saveId: string, seasonYear?: number, division?: string) =>
     queries.getAwards(await ensureLoaded(saveId), seasonYear, division),
+  getPracticeFocus: async (saveId: string): Promise<any> => queries.getPracticeFocus(await ensureLoaded(saveId)),
+  setPracticeFocus: async (saveId: string, focus: string): Promise<any> => {
+    const state = await ensureLoaded(saveId);
+    const result = actions.setPracticeFocus(state, focus as any);
+    await persistence.persistSave(state);
+    return result;
+  },
   getDepthChart: async (saveId: string) => queries.getDepthChart(await ensureLoaded(saveId)),
   setDepthChart: async (saveId: string, chart: { pg: string | null; sg: string | null; sf: string | null; pf: string | null; c: string | null; bench: string[] }) => {
     const state = await ensureLoaded(saveId);

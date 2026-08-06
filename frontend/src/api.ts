@@ -49,6 +49,9 @@ export const api = {
   getSeasonCalendar: (saveId: string) => request<any>(`/saves/${saveId}/calendar`),
   getHotSeatBoard: (saveId: string) => request<any[]>(`/saves/${saveId}/hot-seat`),
   getStatLeaders: (saveId: string) => request<any>(`/saves/${saveId}/stat-leaders`),
+  getPracticeFocus: (saveId: string) => request<any>(`/saves/${saveId}/practice`),
+  setPracticeFocus: (saveId: string, focus: string) =>
+    request<any>(`/saves/${saveId}/practice`, { method: "POST", body: JSON.stringify({ focus }) }),
   getAwards: (saveId: string, seasonYear?: number, division?: string) => {
     const params = new URLSearchParams();
     if (seasonYear != null) params.set("seasonYear", String(seasonYear));

@@ -4,6 +4,7 @@ import { advancePreseasonBracketRounds } from "./preseasonTournaments";
 import { runOffseason, type OffseasonResult } from "./offseason";
 import { updateApPollSnapshots } from "./apPoll";
 import { computeAndApplySeasonAwards } from "./awards";
+import { applyWeeklyPracticeForSave } from "./practice";
 import { maybeGenerateEvent, type EventContext } from "../engine/events";
 import { maybeGenerateMediaInterview, type MediaContext } from "../engine/media";
 import { sortedPair } from "../engine/rivalry";
@@ -194,6 +195,13 @@ export function advanceOneDay(state: WorldState): AdvanceResult {
   // a real poll behaves, unlike KenPom/RPI which always reflect the latest game.
   if (nextDate.getDay() === 1 && phase !== "OFFSEASON") {
     updateApPollSnapshots(state, seasonYear, divisions, nextDate);
+  }
+
+  // Weekly practice: preseason and regular season only — tournament weeks
+  // are all business (travel, scouting the next opponent), not general
+  // skill-building practice.
+  if (nextDate.getDay() === 1 && (phase === "PRESEASON" || phase === "REGULAR_SEASON")) {
+    applyWeeklyPracticeForSave(state);
   }
 
   state.save.currentDate = nextDate;
