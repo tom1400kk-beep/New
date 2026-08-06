@@ -13,6 +13,7 @@ import { coachStatsRouter } from "./routes/coachStats";
 import { calendarRouter } from "./routes/calendar";
 import { hotSeatRouter } from "./routes/hotSeat";
 import { profilesRouter } from "./routes/profiles";
+import { statsRouter } from "./routes/stats";
 
 const app = express();
 app.use(cors());
@@ -31,6 +32,7 @@ app.use("/api", coachStatsRouter);
 app.use("/api", calendarRouter);
 app.use("/api", hotSeatRouter);
 app.use("/api", profilesRouter);
+app.use("/api", statsRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

@@ -675,3 +675,58 @@ export function getHotSeatBoard(state: WorldState) {
 
   return board;
 }
+
+// Below this many games played this season, a hot-start outlier (e.g. 30pts
+// in a single early game) would otherwise sit atop the leaderboard — matches
+// the threshold spirit of real "qualified" statistical leader lists.
+const MIN_GAMES_PLAYED = 5;
+
+// League-wide per-game stat leaders for the save's current season, aggregated
+// from every PlayerGameStatRow generated so far (see playGames.ts). Returns
+// one row per qualifying player with every average computed — the frontend
+// sorts/slices by whichever category tab is active rather than us precomputing
+// five separate top-N lists here.
+export function getStatLeaders(state: WorldState) {
+  const gameIdsThisSeason = new Set(
+    state.games.filter((g) => g.seasonYear === state.save.currentSeasonYear && g.isPlayed).map((g) => g.id)
+  );
+  const statRows = state.stats.filter((s) => gameIdsThisSeason.has(s.gameId));
+
+  const byPlayer = new Map<string, typeof statRows>();
+  for (const row of statRows) {
+    if (!byPlayer.has(row.playerId)) byPlayer.set(row.playerId, []);
+    byPlayer.get(row.playerId)!.push(row);
+  }
+
+  const round1 = (n: number) => Math.round(n * 10) / 10;
+  const sum = (rows: typeof statRows, key: "points" | "rebounds" | "assists" | "steals" | "blocks" | "fgm" | "fga") =>
+    rows.reduce((s, r) => s + r[key], 0);
+
+  const players = [...byPlayer.entries()]
+    .map(([playerId, rows]) => {
+      const n = rows.length;
+      const p = state.players.find((pl) => pl.id === playerId);
+      const teamId = rows[0].teamId;
+      const team = state.teams.find((t) => t.id === teamId);
+      const fgm = sum(rows, "fgm");
+      const fga = sum(rows, "fga");
+      return {
+        playerId,
+        name: p ? `${p.firstName} ${p.lastName}` : "Unknown",
+        position: p?.position ?? "",
+        classYear: p?.classYear ?? "",
+        teamId,
+        teamName: team?.name ?? "—",
+        gamesPlayed: n,
+        ppg: round1(sum(rows, "points") / n),
+        rpg: round1(sum(rows, "rebounds") / n),
+        apg: round1(sum(rows, "assists") / n),
+        spg: round1(sum(rows, "steals") / n),
+        bpg: round1(sum(rows, "blocks") / n),
+        fgPct: fga > 0 ? round1((fgm / fga) * 100) : 0,
+      };
+    })
+    .filter((p) => p.gamesPlayed >= MIN_GAMES_PLAYED);
+
+  return { seasonYear: state.save.currentSeasonYear, minGamesPlayed: MIN_GAMES_PLAYED, players };
+}
